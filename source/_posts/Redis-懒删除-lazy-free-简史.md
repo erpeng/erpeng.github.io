@@ -1,7 +1,7 @@
 ---
 title: Redis 懒删除(lazy free)简史
 date: 2018-12-15 13:29:12
-tags:
+tags: Redis
 ---
 ## Redis是单进程单线程模式吗
 

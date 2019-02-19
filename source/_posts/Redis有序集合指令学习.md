@@ -1,7 +1,7 @@
 ---
 title: Redis有序集合指令学习
 date: 2018-07-11 13:21:01
-tags:
+tags: Redis
 ---
 ## ZADD
 ZADD key [NX|XX] [CH] [INCR]score member [score member ...]

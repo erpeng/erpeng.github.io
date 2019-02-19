@@ -1,7 +1,7 @@
 ---
 title: Redis scan命令原理
 date: 2018-06-22 22:57:39
-tags:
+tags: Redis
 ---
 
 ## scan类型命令

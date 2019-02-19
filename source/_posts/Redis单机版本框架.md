@@ -1,7 +1,7 @@
 ---
 title: Redis单机版本框架
 date: 2018-06-07 13:07:29
-tags:
+tags: Redis
 ---
 ## Redis主流程伪代码
 ```
