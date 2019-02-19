@@ -83,3 +83,11 @@ deploy:
   type: git
   repository: https://github.com/erpeng/erpeng.github.io.git
   branch: master
+
+#google analytics
+google_analytics: UA-134622925-1
+
+#google sitemap
+google_site_verification: KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk
+
+
