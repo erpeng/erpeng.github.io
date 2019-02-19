@@ -97,7 +97,7 @@ So this was the first thing I tried: create a new timer function, and perform th
      * for a few calls every time previous and current memory raise. */
 	
 	//只要内存有一次显示是增加的趋势，则接下来即使内存不再增加，还是会有连续六次mem_is_raising都是1，即判断为增加。
-	//注意mem_is_raising的值是根据mem_trend和0.1来比较。即第一次0.9,第二次为0.9*0.9,第三次为0.81*0.81.第六次之后才会小于0.1
+	//注意mem_is_raising的值是根据mem_trend和0.1来比较。 即第一次0.9,第二次为0.9*0.9,第三次为0.81*0.81.第六次之后才会小于0.1  (勘误:应该为0.9^22 之后小于0.1)
 	//这也就是上边注释描述的会偏向于认为只要有一次内存是增加的，就会连续几次加快执行调用删除任务的频率
     if (prev_mem < mem) mem_trend = 1; 
     mem_trend *= 0.9; /* Make it slowly forget. */
@@ -130,12 +130,13 @@ when the lazy free cycle was very busy, operations per second were reduced to ar
 于是redis作者antirez开始考虑异步线程回收。
 
 ## 异步线程
-### 异步线程为何不能有共享数据
+### 共享对象
+#### 异步线程为何不能有共享数据
 共享数据越多，多线程之间发生争用的可能性越大。所以为了性能，必须首先将共享数据消灭掉。
 
 那么redis在什么地方会用到共享数据呢
 
-### 如何共享
+#### 如何共享
 如下代码示例为Redis2.8.24.
 
 先看执行sadd时底层数据是如何保存的
@@ -276,7 +277,7 @@ void addReplyBulk(redisClient *c, robj *obj) {
 并且客户端传入参数也是一个个robj对象，会直接作为值保存到对象中
 
 
-### 共享时如何删除
+#### 共享时如何删除
 那么，共享对象在单线程情况下是如何删除的呢？
 
 看看del命令的实现
@@ -348,7 +349,7 @@ void addReplyBulkCBuffer(client *c, const void *p, size_t len) {
 }
 ```
 
-### 效果如何
+#### 效果如何
 效果如何呢？
 
 首先取值的时候从robj的间接引用变为了一个sds的直接引用。
@@ -366,7 +367,7 @@ But, the most interesting thing is, Redis is now faster in all the operations I 
 
 二是更少的间接引用导致redis比以前更加快，而且客户端输出更加简洁和快速。
 
-## 异步线程
+### 异步线程
 异步线程的实现以后在详细描述
 
 问题
