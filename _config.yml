@@ -4,7 +4,7 @@
 
 # Site
 title: erpeng's code area
-subtitle: https://github.com/erpeng
+subtitle: 
 description:
 keywords:
 author: erpeng
@@ -18,6 +18,8 @@ root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
 
+
+  
 # Directory
 source_dir: source
 public_dir: public
@@ -73,7 +75,7 @@ pagination_dir: page
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: landscape
+theme: next
 
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
