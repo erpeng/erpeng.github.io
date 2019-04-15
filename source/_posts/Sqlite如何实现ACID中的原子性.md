@@ -303,7 +303,7 @@ PRAGMA journal_mode=TRUNCATE;
 
 ### 测试Sqlite的原子性
 
-因为Sqlite开发者使用了大量的自动化的密集的'crash tests'模拟Sqlite在掉电或者系统crash时后的恢复情况,所以对Sqlite的可靠性很有信息.
+因为Sqlite开发者使用了大量的自动化的密集的'crash tests'模拟Sqlite在掉电或者系统crash时后的恢复情况,所以对Sqlite的可靠性很有信心.
 
 Sqlite的'crash tests'使用一个修改过的vfs模拟系统crash或者掉电后的文件系统损坏.例如sector只写了一部分,写操作未完成导致pages中有垃圾信息,写操作乱序等等不同的节点.通过模拟不同的场景一遍遍测试Sqlite事务,验证其最终是否能够保持原子性.
 
@@ -319,13 +319,13 @@ Sqlite使用文件系统锁去保证同时只有一个进程或者连接操作�
 
 #### 刷盘的实现
 
-Sqlite在Unix使用fsync,windows使用FlushFileBuffers去刷盘,但是这两个函数在许多系统上可能并不可靠.例如我们收到返回说Windows可以使用注册表禁用禁用掉FlushFileBuffers,一些老的Linux版本的fsync在有些文件系统下不执行任何操作.即使fsync和FlushFileBuffers能够正常工作,一些IDE磁盘执行之后也只是把数据保存在控制器缓存中而不是真正落盘.
+Sqlite在Unix使用fsync,windows使用FlushFileBuffers去刷盘,但是这两个函数在许多系统上可能并不可靠.例如我们收到反馈说Windows可以使用注册表禁用禁用掉FlushFileBuffers,一些老的Linux版本的fsync在有些文件系统下不执行任何操作.即使fsync和FlushFileBuffers能够正常工作,一些IDE磁盘执行之后也只是把数据保存在控制器缓存中而不是真正落盘.
 
 ....(Mac相关的配置...)
 
 #### 文件删除操作不保证原子性
 
-文件删除操作从应用视角看需要保持原子性,即删除一般后掉电的话应用要么完全看不到该文件要么需要看到一个完整的文件,不能只看到删了一般的文件(rollback journal如果只删了一半,会执行恢复操作,但是因为journal已经不完整了,恢复的数据也会不完整)
+文件删除操作从应用视角看需要保持原子性,即删除部分数据后掉电的话应用要么完全看不到该文件要么需要看到一个完整的文件,不能只看到删了部分的文件(rollback journal如果只删了一半,会执行恢复操作,但是因为journal已经不完整了,恢复的数据也会不完整)
 
 #### 文件中有垃圾数据
 
