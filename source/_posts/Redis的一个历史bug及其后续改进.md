@@ -24,6 +24,7 @@ ziplist各字段解释如下:
 * zllen:ziplist中entry的个数.
 * entry:每个元素
 * 0xFF:ziplist的结束标志
+
 每个entry的字段解释如下:
 * prev_entry_len:前一个entry占用的字节大小,占用1个或者5个字节.**当小于254时,占用1字节,当大于等于254时,占用5字节**
 * encoding:当前entry内容的编码格式及其长度
@@ -85,7 +86,7 @@ ziplist各字段解释如下:
 接着执行第7条命令,删除了第3个entry,此时第4个entry的前一个entry长度由255字节变为5字节,所以prev_entry_len字段由占用5个字节变为占用1个字节.参见图中中间列的黄框.
 注意此时会发生连锁更新,因为篮框部分的prev_entry_len此时等于253,也可以更新为1个字节.但Redis中在连锁更新的情况下为了避免频繁的realloc操作,这种情况下不进行缩容.
 接着执行第8条命令,插入绿框中的数据,此时篮筐中的prev_entry_len是5个字节,绿框中的数据只占用2字节,当将prev_entry_len更新为1字节后,prev_entry_len多余的4字节可以完整的容纳绿框中的数据.
-即虽然插入了数据,但realloc之后反而缩小了占用的内存,从而导致ziplist中的数据损坏.
+**即虽然插入了数据,但realloc之后反而缩小了占用的内存,从而导致ziplist中的数据损坏.**
 
 修复这个bug的代码也就很容易理解了,即图中右列蓝框的prev_entry_len仍然保留为5个字节.
 
