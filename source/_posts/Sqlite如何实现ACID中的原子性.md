@@ -4,10 +4,8 @@ date: 2019-04-13 09:42:00
 tags: Sqlite
 ---
 
-```
-这个文章序列关注Sqlite的原子性实现.首先翻译一篇官方文章,介绍Sqlite的 rollback journal,然后结合一些问题通过源码分析一下具体实现.后续几篇关注Sqlite3.7.0之后的另一种保证原子性的实现 WAL(write ahead log).
-注意Sqlite以静态或者动态库的形式提供给程序调用,并不是C/S模式.另外,Sqlite每个库都保存在一个单独的文件之中.通过attch命令能够将其他文件中的库引入.
-```
+>这个文章序列关注Sqlite的原子性实现.首先翻译一篇官方文章,介绍Sqlite的 rollback journal,然后结合一些问题通过源码分析一下具体实现.后续几篇关注Sqlite3.7.0之后的另一种保证原子性的实现 WAL(write ahead log).
+> 注意Sqlite以静态或者动态库的形式提供给程序调用,并不是C/S模式.另外,Sqlite每个库都保存在一个单独的文件之中.通过attch命令能够将其他文件中的库引入.
 
 ## Sqlite如何实现ACID中的原子性
 原文链接:https://www.sqlite.org/atomiccommit.html
