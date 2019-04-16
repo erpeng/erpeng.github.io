@@ -1,5 +1,5 @@
 ---
-title: Sqlite Write-Ahead Loggin
+title: Sqlite Write-Ahead Logging
 date: 2019-04-16
 tags: Sqlite
 ---
@@ -37,13 +37,13 @@ WAL相比rollback journal也有如下的9方面缺点:
 
 WAL和rollback journal是反过来的,数据库文件并不会直接修改,而是将修改append到一个WAL文件中,当事务的记录都已经append到WAL文件之后,事务就可以结束了.因此读操作可以继续读原来的数据库文件,多个写操作也可以同时往一个WAL文件进行append操作.(**回滚操作只要将append到WAL的内容清除即可**)
 
-#### 2.1checkpointing
+#### 2.1 checkpointing
 
 把WAL文件中的事务逐步写回数据库文件的过程称为'checkpoint'(**为什么需要写回呢?考虑读取的情况,读取时除了需要读取数据库文件,也得读取WAL中已经提交完成的事务所做的修改,当WAL很大时会影响读取效率**)
 
 checkpoint可以通过配置SQLITE_DEFAULT_WAL_AUTOCHECKPOINT该选项决定WAL多大时执行自动的checkpoint.默认为1000 pages.当然也可以关掉该功能,通过另外的线程在空闲时去执行checkpoint.
 
-#### 2.2并行性
+#### 2.2 并行性
 当开启一个读取操作后,首先需要记录一下当前最后一个在WAL提交的有效记录,记为'end mark'.因为WAL日志在不停增长,因此不同的读取操作会有自己的'end mark'.但在整个事务中,每个读取操作的 'end mark'不会改变.
 
 读取一个page时,首先从WAL中(本读取操作的'end mark'之前)获取一份最新的page,如果没有找到则从数据库文件中获取.为了防止读取操作每次都遍历WAL获取一个page(WAL可能会很大),在共享内存中提供了一个'wal index'的结构,能够快速定位WAL中的一个page.这也是为何WAL机制的所有连接必须处于同一台机器,并且不能通过网络文件系统使用的原因.
@@ -54,7 +54,7 @@ checkpoint从WAL的开头往后顺序执行,直到到达任意一个正在执行
 
 当一个写操作执行的时候,如果发现整个WAL文件都被checkpoint完成并且进行了刷盘并且当前没有任何读取操作的话,会重新开始从WAL的头部开始写入事务.从而避免WAL文件一直增长
 
-#### 2.3性能考虑 
+#### 2.3 性能考虑 
 写入时由于只需要写一次(rollback journal需要写两次)并且是顺序写,因此性能会高一些
 读取时需要遍历WAL文件,虽然有共享内存中的WAL-index,随着文件增大,读取性能还是会受影响.因此为了获得好的读取性能,建议定期执行checkpoint.
 checkpoint时需要进行数据库文件的刷盘和寻道操作,虽然checkpoint尽量做到顺序写入page(**如何做到**),但是仍然需要花费很多寻道的时间,因此checkpoint会比写入要慢.
@@ -69,7 +69,7 @@ checkpoint时需要进行数据库文件的刷盘和寻道操作,虽然checkpoin
 ```
 该配置会设置为WAL模式.如果VFS不支持共享内存原语,则会继续使用 'journal_mode = delete'即rollback journal模式
 
-#### 3.1自动checkpoint
+#### 3.1 自动checkpoint
 当WAL文件中发生一个commit之后会调用通过sqlite3_wal_hook()注册的回调函数.例如可以使用sqlite3_wal_checkpoint()或者sqlite3_wal_checkpoint_v2()来执行checkpoint.自动checkpoint也是在sqlite3_wal_hook()之上简单的进行了包装.
 
 ```
@@ -77,12 +77,12 @@ pragma wal_autocheckpoint
 ```
 该配置用来修改自动执行checkpoint的配置
 
-#### 3.2应用启动的checkpoint
+#### 3.2 应用启动的checkpoint
 
 通过调用sqlite3_wal_checkpoint可以启动一个passive类型的checkpoint,该类型的checkpoint不会影响其他连接的读写操作.
 通过调用sqlite3_wal_checkpoint_v2可以启动一个full或者restart类型的checkpoint,这两种类型会将checkpoint执行直到完成
 
-#### 3.3WAL配置的持久性
+#### 3.3 WAL配置的持久性
 当配置如下时
 ```
 PRAGMA journal_mode=WAL
