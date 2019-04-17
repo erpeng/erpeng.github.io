@@ -114,3 +114,4 @@ listpack主要做了如下两点改进:
 * https://gist.github.com/antirez/66ffab20190ece8a7485bd9accfbc175
 * https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES
 * https://github.com/antirez/redis/commit/8327b813#diff-b109b27001207a835769c556a54ff1b3
+* https://github.com/antirez/redis/commit/8327b813#diff-b109b27001207a835769c556a54ff1b3
