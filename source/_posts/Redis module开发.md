@@ -36,7 +36,7 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
     return REDISMODULE_OK;
 }
 ```
-如上函数类似一个模板,只需要填充自己的模快名称和相应的命令即可.重点是调用RedisModule_CreateCommand时的第三个参数-即回调函数.
+如上函数类似一个模板,只需要填充自己的模块名称和相应的命令即可.重点是调用RedisModule_CreateCommand时的第三个参数-即回调函数.
 
 ### 2.2 定义回调函数
 ```
@@ -111,9 +111,9 @@ ld -o pushpersistenceinfo.so pushpersistenceinfo.o -shared -Bsymbolic -lc
 加载模块
 
 ```
-127.0.0.1:1234> module load /home/xiaoju/redis-5.0.0/src/modules/pushpersistenceinfo.so
+127.0.0.1> module load $RedisSourcePath/src/modules/pushpersistenceinfo.so
 OK
-127.0.0.1:1234> module list
+127.0.0.1> module list
 1) 1) "name"
    2) "pushpersistenceinfo"
    3) "ver"
@@ -122,7 +122,7 @@ OK
 
 执行命令(首先订阅pinfo渠道)
 ```
-redis-cli -p 1234 subscribe pinfo
+redis-cli  subscribe pinfo
 Reading messages... (press Ctrl-C to quit)
 1) "subscribe"
 2) "pinfo"
@@ -131,7 +131,7 @@ Reading messages... (press Ctrl-C to quit)
 执行模块中的命令
 
 ```
-127.0.0.1:1234> PUSHPERSISTENCEINFO.timer
+127.0.0.1> PUSHPERSISTENCEINFO.timer
 OK
 ```
 
@@ -148,19 +148,20 @@ OK
 停止定时器
 
 ```
-127.0.0.1:1234> PUSHPERSISTENCEINFO.stop
+127.0.0.1> PUSHPERSISTENCEINFO.stop
 OK
 ```
 
 卸载模块
 
 ```
-127.0.0.1:1234> module unload pushpersistenceinfo
+127.0.0.1> module unload pushpersistenceinfo
 OK
 ```
+该模块代码地址:https://github.com/erpeng/redis-modules
+
 
 ## 3 参考文档
-如上代码地址:https://github.com/erpeng/redis-modules
 * https://redislabs.com/blog/writing-redis-modules/ 
 * https://redis.io/topics/modules-intro
 * https://redis.io/topics/modules-api-ref
