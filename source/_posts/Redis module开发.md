@@ -4,18 +4,18 @@ date: 2019-04-17
 tags: Redis
 ---
 
-## 1.module的作用
+## module的作用
 
 redis通过对外提供一套API和一些数据类型, 可以供开发者开发自己的模块并且加载到redis中.通过API可以直接操作redis中的数据,也可以通过调用redis命令来操作数据(类似lua script).
 通过编写模块可以注册自己的命令到redis中.
 
-## 2.编写一个module
+## 编写一个module
 
 我们通过编写一个简单的module来体验一下该功能.该module对外提供两个命令,一个是启动一个定时任务,每隔5s将redis持久化相关的信息发送到pinfo这个channel中,另一个是关闭该定时任务.
 
 注册该模块后,我们可以通过"subscribe pinfo"来订阅该渠道,然后就可以定时收到redis持久化相关的信息,以便做一些监控或相应的应对措施 
 
-### 2.1 注册命令到redis中
+### 注册命令到redis中
 ```
 //每个模块都必须有该函数.该函数是redis加载模块的入口,我们通过该函数可以注册相关的命令进去
 int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
@@ -38,7 +38,7 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
 ```
 如上函数类似一个模板,只需要填充自己的模块名称和相应的命令即可.重点是调用RedisModule_CreateCommand时的第三个参数-即回调函数.
 
-### 2.2 定义回调函数
+### 定义回调函数
 ```
 #define REDISMODULE_EXPERIMENTAL_API
 #include "../redismodule.h"
@@ -99,7 +99,7 @@ void  publishPersistenceStatus(RedisModuleCtx *ctx,RedisModuleString **infoStr){
 
 执行pushpersistenceinfo.timer和pushpersistenceinfo.stop命令后会分别回调TimerCommand_RedisCommand和TimerStopCommand_RedisCommand这两个回调函数.前者会创建一个定时任务,定时任务回调函数为timerHandler,如果off不为1,则回调函数中会再次创建定时任务;后者会将off置为1,不再执行定时任务.
 
-### 2.3 演示
+### 演示
 将模块置于redis源码目录的src/modules/目录中,然后执行如下命令编译模块
 
 ```
@@ -161,7 +161,7 @@ OK
 该模块代码地址:https://github.com/erpeng/redis-modules
 
 
-## 3 参考文档
+## 参考文档
 * https://redislabs.com/blog/writing-redis-modules/ 
 * https://redis.io/topics/modules-intro
 * https://redis.io/topics/modules-api-ref
