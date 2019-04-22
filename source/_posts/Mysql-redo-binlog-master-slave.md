@@ -158,7 +158,8 @@ select master_pos_wait(file, pos[, timeout]);
 ```
 超时返回1,执行返回0
 
-
+## 参考链接
+![mysql](/img/mysql.jpeg)
 
 
 
