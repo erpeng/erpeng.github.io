@@ -1,10 +1,10 @@
 ---
 title: Mysql redo binlog 主从及其延迟
-date: 2019-04-20 
+date: 2019-04-22 
 tags: Mysql
 ---
 ## 引言
-通过构造示例,理解Mysql的redo log,binlog,主从及其延迟
+理解Mysql的redo log,binlog,主从及其延迟
 参考极客时间**mysql45讲**之第2讲,12讲,15讲,23讲,24讲,25讲,26讲,27讲,28讲
 
 ## redolog与binlog
