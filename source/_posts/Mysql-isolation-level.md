@@ -20,7 +20,7 @@ create table T(c int) engine=InnoDB;
 insert into T(c) values (1);
 ```
 
-***在四种模式下分试验例子1**
+**在四种模式下分别试验例子1**
 
 ```
 例子1:
