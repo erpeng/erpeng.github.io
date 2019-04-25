@@ -5,7 +5,7 @@ tags: Mysql
 ---
 ## 引言
 理解Mysql的索引
-参考极客时间**mysql45讲**之第4讲,5讲,9讲,10讲,11将
+参考极客时间**mysql45讲**之第4讲,5讲,9讲,10讲,11讲,18讲
 
 ### 不同的索引
 ||哈希索引|有序数组|树|
@@ -95,6 +95,44 @@ from SUser;
 特例:如果不需要范围查询,只需要等值查询,可以使用如下方法:
 * 倒序存储.例如身份证号只取前六位区分度不高,则可以使用倒序之后的六位
 * 哈希存储.新增加哈希字段,文中为crc32,则查询时首先走crc32字段的索引查,然后精确匹配(防止冲突)
+
+
+
+##索引使用注意事项
+```
+表结构
+mysql> CREATE TABLE `tradelog` (
+  `id` int(11) NOT NULL,
+  `tradeid` varchar(32) DEFAULT NULL,
+  `operator` int(11) DEFAULT NULL,
+  `t_modified` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `tradeid` (`tradeid`),
+  KEY `t_modified` (`t_modified`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+```
+索引字段做函数操作
+```
+不会用到id索引
+select * from tradelog where id + 1 = 10000
+不会用到t_modified索引
+select count(*) from tradelog where month(t_modified)=7;
+month替换为substr(t_modified,1,2)这样更易理解.即函数会破坏掉索引的有序性,MySQL认为扫描索引不再有效
+```
+隐式类型转换
+```
+tradeid为varchar(32)
+mysql> select * from tradelog where tradeid=110717;
+```
+mysql中的转换规则是字符串转数字,于是上述语句相当于
+```
+mysql> select * from tradelog where  CAST(tradid AS signed int) = 110717;
+```
+隐式编码类型转换
+
+一个表是utfmb4,一个是uft8,mysql会将utf8中的字段转换为uft8mb4,还是会触发上边的规则
+
 
 ## 参考链接
 ![mysql](/img/mysql.jpeg)
