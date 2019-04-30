@@ -6,13 +6,10 @@ tags: Redis
 ## stream简介
 append-only mode
 数据结构为一个前缀树加listpack,listpack的介绍详见 [Redis的一个历史bug及其后续改进]一文.
-前缀树中保存的为ID,ID由两部分组成,毫秒级时间戳+该ms内的递增计数
+前缀树中保存的为ID,ID由两部分组成,毫秒级时间戳+该ms内的递增计数.stream结构可以理解为如下三种模式:
 1. 一个sorted set,score是时间,member是一个hash,时间序列存储,可以按时间范围遍历
-2. 一个pub/sub模式的消息队列,但是可以将消息分区之后pub给不同的消费组,并且会持久化保存数据,不像pub/sub,推送之后就删除了
-3. 阻塞模式下,类似一个日志系统,可以按tail -f 查看日志
-
-pub/sub模式可以将stream分发给多个client,client可以一起处理,消费组模式会将消息分区后分发给不同的消费组,消费组可以分别处理不同的数据
-
+2. 阻塞模式下,类似一个日志系统,可以按tail -f 查看日志
+3. 一个pub/sub模式的消息队列,但是可以将消息分区之后pub给消费组中的不同消费者(负载均衡);会保存数据,不像pub/sub,推送之后就删除了.
 
 
 ## stream实现
@@ -29,7 +26,6 @@ XADD mystream MAXLEN ~ 1000 * ... entry fields here ...
 XDEL mystream 1526654999635-0
 ```
 ### xrange
-遍历,ID中有时间
 ```
 xrange key  start end  count N
 start:-,时间戳或者entry id
@@ -38,9 +34,10 @@ end:+,时间戳或者entry id
 ```
 ### xrevrange
 ```
+查看最后一条数据
+
 XREVRANGE mystream + - COUNT 1
 ```
-查看最后一条数据
 
 
 ### xread
@@ -53,7 +50,6 @@ XREAD BLOCK 0 STREAMS mystream $
 
 ```
 
-#### pub/sub
 ### xgroup
 ```
 group的增删改查
@@ -75,6 +71,7 @@ XREADGROUP GROUP mygroup Alice COUNT 1 STREAMS mystream >
 
 ```
 确认已经消费了某条信息
+XACK mystream mygroup 1526569495631-0
 ```
 
 ### xpending
@@ -112,7 +109,7 @@ XTRIM mystream MAXLEN 10
 ```
 ## stream其他
  
-* dead letter.根据投递次数,如果投递次数大于某个值可以认为该消息不需要继续处理,可以放入其他的stream中
+* dead letter:根据投递次数,如果投递次数大于某个值可以认为该消息不需要继续处理,可以放入其他的stream中
 * xadd 中可以指定maxlen,指明stream中保存的最大条目个数
 
 
