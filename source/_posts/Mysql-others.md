@@ -4,7 +4,7 @@ date: 2019-04-25
 tags: Mysql
 ---
 ## 引言
-理解Mysql的 order by,count(*),MDL语句,onlineDDl,insert即自增主键
+理解Mysql的 order by,count(*),MDL语句,onlineDDl,insert及自增主键
 参考极客时间**mysql45讲**之第6讲,13讲,14讲,16讲,17讲,29讲,31讲,33讲,39讲,40讲
 
 ## 重建表

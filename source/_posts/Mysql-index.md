@@ -98,7 +98,7 @@ from SUser;
 
 
 
-##索引使用注意事项
+## 索引使用注意事项
 ```
 表结构
 mysql> CREATE TABLE `tradelog` (
