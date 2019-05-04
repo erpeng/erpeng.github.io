@@ -33,7 +33,7 @@ ziplist各字段解释如下:
 注意ziplist中有一个zltail字段是最后一个entry的偏移量,通过该字段定位到最后一个entry后,读取prev_entry_len可以继续向前定位上一个entry的起始地址.也就是说**ziplist适合于从后往前遍历**.
 
 ## bug原因及其复现
-首先看下代码中是如何修复该bug的:
+首先看下代码中是如何修复该bug的,然后通过把代码反向修改回来,可以构造示例复现该bug.通过复现过程详细描述该bug的产生过程
 ```
 @@ -778,7 +778,12 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
      /* When the insert position is not equal to the tail, we need to
@@ -61,9 +61,30 @@ ziplist各字段解释如下:
          /* Update offset for tail */
          ZIPLIST_TAIL_OFFSET(zl) =
 ```
-通过把代码反向修改回来,编译之后执行如下命令可以导致Redis crash:
+可以看到代码中增加了一个判断
 ```
-     	0.redis-cli del list
+if (nextdiff == -4 && reqlen < 4) 
+```
+我们看看nextdiff是如何计算的
+```
+int zipPrevLenByteDiff(unsigned char *p, unsigned int len) {
+    unsigned int prevlensize;
+    //宏,展开之后根据p[0]处的值计算出prevlensize,如果p[0]<254,prevlensize为1,否则为5
+    ZIP_DECODE_PREVLENSIZE(p, prevlensize);
+    //zipStorePrevEntryLength函数如果第一个参数为NULL,则根据len字段计算需要的字节数,同理,len<254为1个字节,否则为5个字节
+    return zipStorePrevEntryLength(NULL, len) - prevlensize;
+}
+```
+如上函数计算nextdiff,可以看出,根据插入位置p当前保存prev_entry_len字段的字节数和即将插入的entry需要的字节数相减得出nextdiff.值有三种类型
+* 0: 空间相等
+* 4：需要更多空间
+* -4：空间富余
+
+bug修复过程首先判断nextdiff等于-4,即p位置的prev_entry_len为5个字节,而当前要插入的entry的长度只需要1个字节去保存.然后判断reqlen < 4.看到此处可能读者会有疑惑,既然prev_entry_len长度已经为5个字节了,那么新插入的值prev_entry_len+encoding+content字段肯定会大于5字节,为什么会出现小于4的情况呢?
+这种情况确实比较费解,通过下文的构造示例我们能够看出,在连锁更新的时候,为了防止大量的重新分配空间的动作,如果一个entry的长度只需要1个字节就能够保存,但是连锁更新时如果原先已经为prev_entry_len分配了5个字节,不会进行缩容操作.
+把bug修复代码反向修改回来,编译之后执行如下命令可以导致Redis crash(注意前边是命令编号,下文通过该编号解释Redis中ziplist内存的变化情况):
+```
+     	  0.redis-cli del list
         1.redis-cli rpush list one
         2.redis-cli rpush list two
         3.redis-cli rpush list
@@ -78,17 +99,26 @@ ziplist各字段解释如下:
         AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA 10
         9.redis-cli lrange list 0 -1
 ```
-我们将以上命令的内存占用情况以图画出来,表示如下:
+前6条命令会往一个list中分别插入'one','two',252个'A',250个'A','three','a'六个元素.此时内存占用情况如下:
+![orig](/img/zl3.png)
+
+**每个小矩形框表示占用内存字节数,大矩形框表示一个个entry,每个entry有三项,分别为prev_entry_len,encoding和content字段**
+
+
+接着执行第7条命令,内存占用情况如图,表示如下:
 ![cascade update](/img/zl2.png)
 
-每个小矩形框表示占用内存字节数,大矩形框表示一个个entry,每个entry有三项,参见上文ziplist entry的格式介绍
-左列是执行到第6条命令之后的内存占用情况
-接着执行第7条命令,删除了第3个entry,此时第4个entry的前一个entry长度由255字节变为5字节,所以prev_entry_len字段由占用5个字节变为占用1个字节.参见图中中间列的黄框.
-注意此时会发生连锁更新,因为篮框部分的prev_entry_len此时等于253,也可以更新为1个字节.但Redis中在连锁更新的情况下为了避免频繁的realloc操作,这种情况下不进行缩容.
-接着执行第8条命令,插入绿框中的数据,此时篮筐中的prev_entry_len是5个字节,绿框中的数据只占用2字节,当将prev_entry_len更新为1字节后,prev_entry_len多余的4字节可以完整的容纳绿框中的数据.
+删除了第3个entry,此时第4个entry的前一个entry长度由255字节变为5字节(第2个entry此时为第4个entry的前一个entry),所以prev_entry_len字段由占用5个字节变为占用1个字节.**参见图中黄框部分**.
+
+
+注意此时会发生连锁更新,因为蓝框部分的prev_entry_len由257字节变为253,也可以更新为1个字节.但Redis中在连锁更新的情况下为了避免频繁的realloc操作,这种情况下不进行缩容.
+
+接着执行第8条命令,插入绿框中的数据,此时蓝筐中的prev_entry_len是5个字节,绿框中的数据只占用2字节,当将prev_entry_len更新为1字节后,prev_entry_len多余的4字节可以完整的容纳绿框中的数据.
 **即虽然插入了数据,但realloc之后反而缩小了占用的内存,从而导致ziplist中的数据损坏.**
 
 修复这个bug的代码也就很容易理解了,即图中右列蓝框的prev_entry_len仍然保留为5个字节.
+
+**可以进一步构造另一种情况,即第6步构造为rpush list 10,则此时不会造成redis crash,而是会丢失10这个元素.读者可以画出内存占用图自行分析**
 
 ## redis作者对该bug的思考
 
