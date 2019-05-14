@@ -74,7 +74,7 @@ var writer *bufio.Writer
 
 func init() {
 	maxBufferSize = 1 * 1024 * 1024
-	fileNameBuffer = "/tmp/logger1.log"
+	fileNameBuffer = "/tmp/loggerbuffer.log"
 	var err error
 	fileHandleBuffer, err = os.OpenFile(fileNameBuffer, os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
@@ -231,4 +231,4 @@ ok      copywriter.io/logger    4.868s
 ## 结论
 
 缓冲写入>udp写入>直接写入
-观察测试结果可以看到,随着写入数据的增加,直接写入会有一个寻址时间导致逐步变慢.而缓冲写入和udp写入不受写入时间影响.并且缓冲写入几乎等价于内存操作,但缺点是系统崩溃时可能会丢失部分日志数据
+观察测试结果可以看到,随着写入数据的增加,直接写入会有一个寻址时间导致逐步变慢.而缓冲写入和udp写入不受影响.并且缓冲写入几乎等价于内存操作,但缺点是系统崩溃时可能会丢失部分日志数据
