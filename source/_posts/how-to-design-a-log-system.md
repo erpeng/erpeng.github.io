@@ -27,14 +27,15 @@ tags: architecture
 package logger
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"sync"
 )
 
 var fileName string
 var fileHandle *os.File
 var err error
+var mu sync.Mutex
 
 func init() {
 	fileName = "/tmp/logger.log"
@@ -46,13 +47,17 @@ func init() {
 
 //Logger direct logger
 func Logger(log string) {
-	fmt.Fprint(fileHandle, log)
+	//fmt.Fprint(fileHandle, log)
+	defer mu.Unlock()
+	mu.Lock()
+	fileHandle.WriteString(log)
 }
 
 //Close close logger filehandle
 func Close() {
 	fileHandle.Close()
 }
+
 ```
 
 * 缓冲写入
@@ -62,7 +67,6 @@ package logger
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 )
@@ -85,10 +89,13 @@ func init() {
 
 //BufferLogger buffer logger
 func BufferLogger(log string) {
+	defer mu.Unlock()
+	mu.Lock()
 	if writer.Available() < len(log) {
 		writer.Flush()
 	}
-	fmt.Fprint(writer, log)
+	//fmt.Fprint(writer, log)
+	writer.WriteString(log)
 }
 
 //BufferFlush destruct buffer logger
@@ -100,6 +107,7 @@ func BufferFlush() {
 func BufferClose() {
 	fileHandleBuffer.Close()
 }
+
 
 ```
 
@@ -128,6 +136,8 @@ func init() {
 
 //UDPLogger buffer logger
 func UDPLogger(log string) {
+	defer mu.Unlock()
+	mu.Lock()
 	conn.Write([]byte(log))
 }
 
