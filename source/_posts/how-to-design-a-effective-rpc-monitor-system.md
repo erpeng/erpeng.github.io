@@ -1,5 +1,5 @@
 ---
-title: 如何设计一个高效的监控系统
+title: 如何设计一个高效的rpc监控系统
 date: 2019-05-17
 tags: architecture
 ---
