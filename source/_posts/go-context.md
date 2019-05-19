@@ -3,10 +3,10 @@ title: go context包源码分析
 date: 2019-05-19
 tags: go
 ---
->go的context包可以用来实现goroutine间的数据同步与控制goroutine的生命周期
+>go的context包可以用来实现goroutine间的数据同步或控制goroutine的生命周期
 
 ## 最佳实践
-* Context最好显式的作为函数的第一个函数进行传递,而非保存在一个结构体中
+* Context最好显式的作为函数的第一个参数进行传递,而非保存在一个结构体中
 * 不要传递一个nil的context,如果不知道需要使用哪种context,传递context.TODO
 * 使用context Values保存请求级别的数据而不是用来传递函数的参数
 * WithCancel,WithDeadline,WithTimeout接收一个parent context并且返回一个衍生出的child context和一个CancelFunc.调用CancelFunc之后会取消child context和child context对应的children,并且删除掉parent context对child context的引用,停止相关连的timers.
@@ -38,7 +38,7 @@ type cancelCtx struct {
 	err      error                 // set to non-nil by the first cancel call
 }
 ```
-cancelCtx中children字段保存context的父子关系.WithCancel函数创建子context以及cancel()函数中取消一个context的时候会相应的建立children结构以及取消子context.下文对应的函数中详述.
+cancelCtx中children字段保存context的父子关系.WithCancel函数创建子context以及cancel函数.当创建子context或者取消一个context的时候会相应的建立和使用children字段.下文对应的函数中详述.
                  
 首先看一下WithCancel()函数:
 ```
