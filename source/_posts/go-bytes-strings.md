@@ -12,7 +12,7 @@ func Equal(a, b []byte) bool
 func Compare(a, b []byte) int
 func IndexByte(b []byte, c byte) int
 ```
-如上三个基础函数即其他一些函数分体系结构使用汇编分别编写
+如上三个基础函数及其他一些函数分体系结构使用汇编分别编写
 
 go doc bytes可以看到如下一些函数签名:
 ```
@@ -107,7 +107,7 @@ func (b *Buffer) tryGrowByReslice(n int) (int, bool)
 该结构可以用来高效的拼接生成一个字符串.可以读取写入并且按需增长buffer,还可以UnreadByte.
 
 
-### 
+### Reader
 
 ```
 go doc -u bytes.Reader
