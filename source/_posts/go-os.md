@@ -133,3 +133,66 @@ func main() {
 FileMode整体为32个bit位,最低9位表示权限,其余位置代表是否是普通文件或者是否是目录或者命名管道或者链接等等
 
 
+### Process
+
+```
+type ProcAttr struct {
+	Dir string
+	Env []string
+	Files []*File
+	Sys *syscall.SysProcAttr
+}
+
+type Process struct {
+	Pid    int
+	handle uintptr      // handle is accessed atomically on Windows
+	isdone uint32       // process has been successfully waited on, non zero if true
+	sigMu  sync.RWMutex // avoid race between wait and signal
+}
+
+type ProcessState struct {
+	pid    int                // The process's id.
+	status syscall.WaitStatus // System-dependent status info.
+	rusage *syscall.Rusage
+}
+
+type Signal interface {
+	String() string
+	Signal() // to distinguish from other Stringers
+}
+```
+一个例子 
+```
+	argv := []string{"/etc/"}
+	attr := &os.ProcAttr{Env: []string{"foo=bar", "foo1=bar1"}}
+	p, err := os.StartProcess("/bin/ls", argv, attr) //开启一个进程,函数签名如下:
+	//func StartProcess(name string, argv []string, attr *ProcAttr) (*Process, error)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Println(p.Pid)
+	ps, err := p.Wait() //释放资源退出并且返回一个ProcessState结构
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
+	fmt.Println(ps.Pid())
+	fmt.Println(ps.UserTime())
+	fmt.Println(ps.SystemTime())
+
+	fmt.Println(ps.String())
+	fmt.Println(ps.Exited())
+	fmt.Println(ps.Sys())
+输出如下:
+	44294
+	44294
+	632µs
+	1.049ms
+	exit status 0
+	true
+	0
+```
+
+
+
