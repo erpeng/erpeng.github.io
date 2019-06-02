@@ -87,3 +87,95 @@ void bar(void)
 	assert (a == 1);
 }
 ```
+此种情形下也会导致断言失败,CPU0首先将a = 1放入store buffer,然后执行b = 1(假设CPU0执行foo,并且持有b,CPU1执行bar,并且持有a.).CPU1读到了b = 1但是a仍然在store buffer中还没有被处理
+
+由于CPU无法知道变量之间的关联关系,因此提供了memory-barrier这个指令允许软件开发者能够告诉CPU这种关联关系.代码改为如下:
+```
+void foo(void)
+{
+	a = 1;
+	smp_mb();
+	b = 1;
+}
+
+void bar(void)
+{
+	while (b == 0) continue;
+	assert (a == 1);
+}
+```
+memory-barrier会告诉CPU在应用后续cache line之前必须先把store buffer中的数据flush.或者是通过stall一段时间直到store buffer清空,或者使用store buffer把后续指令也缓存,直到之前的指令已执行完成.
+
+## store result引发的新问题
+
+由于加memory-barrier之后,会将后续指令都放入store buffer,但是store buffer空间有限,此时需要等待invalidate完成之后才能够将store buffer腾出空间继续使用.因此解决方案为使invalidate acknowledge更快到达,因此每个cpu引入了一个 invalidate queues.
+
+### Invalidate Queues
+CPU可以在没有真正invalidate一个cache之前先发送invalidate消息然后将要invalidate的cache放到一个queue中
+
+放入invalidate queue之后就可以发送invalidate acknowledge,但是继续对invalidate queue中涉及到的cacheline操作之前,必须先将invalidate queue中的数据先处理完毕
+
+类似store buffer的引入是为了解决cpu stall,但会导致一些问题,因此需要memory-barrier,同理,invalidate queue的引入也会导致一些问题.
+
+```
+void foo(void)
+{
+	a = 1;
+	smp_mb();
+	b = 1;
+}
+
+void bar(void)
+{
+	while (b == 0) continue;
+	assert (a == 1);
+}
+``` 
+继续看这段代码,假设a是shared,b被cpu0拥有(处于exclusive或者modified状态).假设CPU0执行foo()并且cpu1执行bar()
+
+加了invalidate queue之后该段代码还是会导致断言失败,因此需要继续修改
+
+```
+void foo(void)
+{
+	a = 1;
+	smp_mb();
+	b = 1;
+}
+
+void bar(void)
+{
+	while (b == 0) continue;
+	smb_mb();
+	assert (a == 1);
+}
+```
+此处的memory-barrier的作用是:在继续执行断言之前,必须先处理完毕invalidate queue中的信息.因此可以保证断言成功
+
+
+## Read and Write Memory Barriers
+
+read memory barriers专门处理invalidate queue相关,而write memory barriers处理store buffers相关
+
+因此上述代码修改为:
+```
+void foo(void)
+{
+	a = 1;
+	smp_wmb();
+	b = 1;
+}
+
+void bar(void)
+{
+	while (b == 0) continue;
+	smb_rmb();
+	assert (a == 1);
+}
+```
+
+## 小结
+
+论文中举了很多示例,图文并茂,很好理解.需要详细了解memory barriers的可以阅读论文.
+通过上文的讲解,可以看到,CPU的优化是一个按下葫芦起了瓢的过程,每个优化引入一个新的组件,新的组件又会导致一个新的问题.其实所有的架构设计都会面临这样一个取舍问题.
+
