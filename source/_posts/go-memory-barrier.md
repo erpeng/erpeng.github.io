@@ -3,11 +3,11 @@ title: 硬件角度看内存屏障
 date: 2019-06-02
 tags: architecture
 ---
->本文参考论文 <<Memory Barriers:a Hardware View for Software Hackers>>
+>本文参考论文 Memory Barriers:a Hardware View for Software Hackers
 
 ## cpu cache
 
-cpu能够在1纳秒直接数10条指令,但是从内存中获取一个数据需要几百纳秒,有两个数量级的差距,因此在现代的cpu上会有多达几MB的cache.数据在cache和内存之间以固定大小的blocks来流动,称之为'cache lines',一般大小为2的幂次,从16Bytes-256Bytes.cache lines可以理解为一个硬件的hash表,"two way"表示每个槽中可以放置两个entry,如果是256bytes对齐,那么低8bits都是0,可以取8-12bits为hash值.例如,cpu cache槽为0x0-0xF,则0x12345E00的8-12bits为E,会放置到0xE这个槽中.
+cpu能够在1纳秒执行数十条指令,但是从内存中获取一个数据需要几百纳秒,有两个数量级的差距,因此在现代的cpu上会有多达几MB的cache.数据在cache和内存之间以固定大小的blocks来流动,称之为'cache lines',一般大小为2的幂次,从16Bytes-256Bytes.cache lines可以理解为一个硬件的hash表,"two way"表示每个槽中可以放置两个entry,如果是256bytes对齐,那么低8bits都是0,可以取8-12bits为hash值.例如,cpu cache槽为0x0-0xF,则0x12345E00的8-12bits为E,会放置到0xE这个槽中.
 
 现代cpu一般会有多个core,每个core有自己的cache,因此必然涉及到缓存一致性的问题
 
@@ -21,7 +21,7 @@ MESI代表'modified','exclusive','shared'和'invalid',代表缓存的四种状�
 
 * modified:处于该状态的cpu持有唯一最新的数据.因此该cache负责将数据写回内存或者传递给其他cache,并且在该cache保存其他数据之前必须先执行此步骤.
 * exclusive:类似于modified,但是还没有被修改.因此内存中的该数据是最新的.
-* shared:处于该状态表明数据在至少两个个cpu cache中存在,因此该cpu必须在询问其他cpu之后才能够保存该数据
+* shared:处于该状态表明数据在至少两个cpu cache中存在,因此该cpu必须在询问其他cpu之后才能够保存该数据
 * invalid:invalid状态的数据可以被替换
 
 因为所有cache line中的数据必须保持一致性的视图,因此cache-coherency protocols提供了消息机制保持系统间的交流
@@ -104,6 +104,7 @@ void bar(void)
 	assert (a == 1);
 }
 ```
+
 memory-barrier会告诉CPU在应用后续cache line之前必须先把store buffer中的数据flush.或者是通过stall一段时间直到store buffer清空,或者使用store buffer把后续指令也缓存,直到之前的指令已执行完成.
 
 ## store result引发的新问题
@@ -130,7 +131,10 @@ void bar(void)
 	while (b == 0) continue;
 	assert (a == 1);
 }
-``` 
+
+```
+
+
 继续看这段代码,假设a是shared,b被cpu0拥有(处于exclusive或者modified状态).假设CPU0执行foo()并且cpu1执行bar()
 
 加了invalidate queue之后该段代码还是会导致断言失败,因此需要继续修改
@@ -150,6 +154,7 @@ void bar(void)
 	assert (a == 1);
 }
 ```
+
 此处的memory-barrier的作用是:在继续执行断言之前,必须先处理完毕invalidate queue中的信息.因此可以保证断言成功
 
 
