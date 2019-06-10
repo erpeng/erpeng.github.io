@@ -11,7 +11,24 @@ tags: architecture
 ## 各组件介绍
 
 ### kafka
-待补充
+* Topic/Partition:数据以topic来区分,每个topic可以划分为多个Partition,每个Partition中的数据赋予一个顺序的id number,称之为offset.kafka会持久化所有publish的消息,持久化时间根据配置的策略决定.但是大量的堆积并不会影响性能,性能是O(1)
+* 集群中以partition来分区.每个partition会复制多份到其他机器来做到高可用,有一个server会作为该partition的leader负责读写,其他server作为follower来提供高可用性.topic划分为多个partition来保证性能的线性扩展
+* Producers:负责生产消息,可以指定发送到哪个topic的哪个partition
+* Consumers:消费者隶属于某个consumer group.某个消息只会发送给consumer group中的一个consumer,这样能做到消息消费的负载均衡
+* Kafka保证如下几点:
+	* 同样的一个producer发送到同一个topic的同一个partition确定有序性
+	* 一个consumer以partition中保存的顺序获得消息
+	* 复制因子为N的话,能保证N-1个server的failure不会丢提交的消息
+* Kafka作为一个消息系统:
+	* 每个partition给一个consumer消费
+	* 每个partition可以给不同的consumer group中的consumer消费
+	* 按partition消费可以做到并发消费,但按consumer group可以做到多个订阅者同时消费同一个partition
+* Kafka作为一个存储系统:
+	* 可以和producer有确认机制,确保partition中数据高可用落盘之后才回复
+	* 不论数据多少,存取都是O(1)的复杂度
+* 底层存储设计:底层如何做到O(1)的存取参考该文:https://cloud.tencent.com/developer/article/1057763
+* kafka如何实现exactly once语义:通过类似tcp的seqno来保证不会重复append 数据.而且seqno会持久化,以免一个broker失败后其他broker能继续按当前的seqno来处理
+参考:https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/
 
 ### hbase
 
@@ -26,6 +43,7 @@ tags: architecture
 
 * 实现
 
+
 ![Hbase](/img/Hbase.png)
 
 * Master:启动一个安装,把区域分配给注册的regionserver,恢复regionserver的故障.
@@ -35,6 +53,7 @@ tags: architecture
 * 客户端首先通过zookeeper查找hbase:meta的位置,然后通过区域名获取用户空间区域所在节点及其位置,接着可以直接和regionserver交互.为了较少交互需要缓存hbase:meta信息直到碰到错误之前会一直直接使用缓存
 * 写操作:先写commit log,然后是内存中的memstore,然后会被刷入文件系统
 * 读操作:读memstore找到就返回,否则依次从新到旧查flush file.会对文件系统的flush file进行压缩合并,并且有一个进程会检测是否超出区域的大小,超出会进行分割.(**类似leveldb**)
+leveldb的实现参考https://juejin.im/post/5c36ad6051882525616db7fa
 
 #### 延伸阅读 zookeeper
 
@@ -50,7 +69,7 @@ Hbase集群使用了zookeeper,延伸了解一下zookeeper
 	* sync:**Zookeeper允许客户端读到的数据滞后于zookeeper服务的最新状态,因此客户端使用sync操作来获取数据的最新状态**
 	* exists,getChildren和getData这些读操作上可以设置观察,这些观察可以被写操作create、delete、setData触发.
 * 实现:
-	* zookeeper的目标是将znode树的每一个操作都会被复制到集合体重超过半数的机器上
+	* zookeeper的目标是将znode树的每一个操作都会被复制到集合体中超过半数的机器上
 	* 读取操作:任意一个机器可以为读请求提供服务.
 	* 写操作:所有的写请求都会被转发给领导者,再由领导者将更新广播给跟随者,半数以上持久化之后领导者才会提交这个更新.类似于两阶段提交
 	* 每一个对znode树的更新会赋予一个全局唯一的ID,称为zxid
@@ -72,7 +91,11 @@ Hbase集群使用了zookeeper,延伸了解一下zookeeper
 
 ### elasticsearch
 
-待补充
+* 存储术语:index->database,type->table,mapping->schema,每个index默认有五个shard,每个shard默认有一个replica,每个shard是一个lucene index
+* 集群术语:node,masternode:负责创建和删除index,确定哪些node属于集群以及给node分配shards.
+datanode:存储数据和倒排索引.
+* 存储:倒排索引有序存储.es中一条记录是一个document.
+* 写入时必须等待primary和replica的translog都fsyncd.删除时写入一个.del文件,最后返回时过滤.更新时先删除再写入一个新的版本.查询时会从所有shard取出之后在协调节点取top10然后通过docid获取到doc并返回.lucene segment合并时会将.del文件中的数据删除
 
 ### spark
 
