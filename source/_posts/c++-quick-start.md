@@ -68,6 +68,8 @@ c++标准库中提供了string类型
    string str1 = "Hello";
    string str2 = "World";
 ```
+### 函数
+函数参数可以赋默认值
 
 ### 引用
 
@@ -102,7 +104,10 @@ Line::Line( double len)
     cout << "Object is being created, length = " << len << endl;
 }
 ```
-其中length类中的一个成员变量
+其中length是类中的一个成员变量
+
+冒号后边也可以是一个父类的构造函数
+
 
 ### 析构函数
 
@@ -382,3 +387,6 @@ int main()
 }
 ```
 
+
+## 参考链接
+* https://www.runoob.com/cplusplus/cpp-tutorial.html
