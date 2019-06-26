@@ -1,5 +1,5 @@
 ---
-title: leveldb源码解析
+title: leveldb源码解析1之API
 date: 2019-06-26
 tags: leveldb
 ---
@@ -78,7 +78,7 @@ skiplist中的保存格式如下图:
 
 Get时会根据当前的sequence或者snapshot的sequence查找一个最新的key,即sequence最大的key.然后根据type判断是否删除,如果删除返回不存在该元素.否则返回相应的value
 
-当然,Get如果在memtable中未查找到,会继续去immutable memtable和sstable中查找.immutable的查抄同memtable.sstable的查找后文详述
+当然,Get如果在memtable中未查找到,会继续去immutable memtable和sstable中查找.immutable的查找同memtable.sstable的查找后文详述
 
 Delete操作也是一个Put操作,只不过type是删除类型.
 
@@ -182,6 +182,11 @@ int InternalKeyComparator::Compare(const Slice& akey, const Slice& bkey) const {
   return r;
 }
 ```
+注意首先初始化options将comparator赋值为BytewiseComparatorImpl
+```
+internal_comparator_(raw_options.comparator)
+```
+然后用InternalKeyComparator的构造函数将user_comparator_赋值为BytewiseComparatorImpl
 首先按key的字母序排,然后按sequence number,sequence大的排在前边.
 调用时按如下方法:
 ```
