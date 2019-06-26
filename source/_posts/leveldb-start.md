@@ -1,5 +1,5 @@
 ---
-title: leveldb源码解析
+title: leveldb源码解析0之Log及MANIFEST文件格式
 date: 2019-06-25
 tags: leveldb
 ---
