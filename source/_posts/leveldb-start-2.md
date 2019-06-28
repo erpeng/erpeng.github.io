@@ -97,7 +97,7 @@ FilterBlockBuilder中的AddKey->StartBlock->Finish,分别对应于data block中k
 
 生成的bloom filter放置于meta block,格式如下:
 
-![leveldb3-3](/img/leveldb3-3.png)
+![leveldb3-3](/img/leveldb3-4.png)
 
 其中每个filter的格式为 
 ```
