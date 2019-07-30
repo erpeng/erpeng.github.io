@@ -51,5 +51,89 @@ func WithInsecure() DialOption {
   })
 }
 ```
-### 
+### 关键结构体
+clientConn结构体
+```
+type ClientConn struct {
+  ctx    context.Context
+  cancel context.CancelFunc
+
+  target       string  //目标服务器
+  parsedTarget resolver.Target //将target解析为resolver.Target结构
+  authority    string
+  dopts        dialOptions //tcp连接相关参数设置
+  csMgr        *connectivityStateManager //连接状态管理
+
+  balancerBuildOpts balancer.BuildOptions
+  blockingpicker    *pickerWrapper
+
+  mu              sync.RWMutex
+  resolverWrapper *ccResolverWrapper
+  sc              *ServiceConfig 
+  conns           map[*addrConn]struct{}
+  // Keepalive parameter can be updated if a GoAway is received.
+  mkp             keepalive.ClientParameters //keepalive相关
+  curBalancerName string
+  balancerWrapper *ccBalancerWrapper
+  retryThrottler  atomic.Value
+
+  firstResolveEvent *grpcsync.Event
+
+  channelzID int64 // 统计相关
+  czData     *channelzData
+}
+```
+
+一个关键字段为dopts,代表dialOptions,其结构如下:
+```
+type dialOptions struct {
+  unaryInt  UnaryClientInterceptor //rpc拦截器
+  streamInt StreamClientInterceptor 
+
+  chainUnaryInts  []UnaryClientInterceptor
+  chainStreamInts []StreamClientInterceptor
+
+  cp          Compressor
+  dc          Decompressor
+  bs          backoff.Strategy //重试策略
+  block       bool //连接类型,阻塞和非阻塞
+  insecure    bool //是否需要验证证书
+  timeout     time.Duration //连接超时
+  scChan      <-chan ServiceConfig 
+  authority   string
+  copts       transport.ConnectOptions
+  callOptions []CallOption
+  
+  balancerBuilder balancer.Builder
+
+  resolverBuilder             resolver.Builder
+  channelzParentID            int64
+  disableServiceConfig        bool
+  disableRetry                bool //是否禁止重试
+  disableHealthCheck          bool
+  healthCheckFunc             internal.HealthChecker
+  minConnectTimeout           func() time.Duration
+  defaultServiceConfig        *ServiceConfig
+  defaultServiceConfigRawJSON *string
+}
+```
+### 调用流程
+实际调用函数为DialContext,该函数其实就是进行clientConn结构体和dialOptions(cc.dopts)的各字段初始化
+
+调用流程如下:
+* 应用配置参数
+```
+  for _, opt := range opts {
+    opt.apply(&cc.dopts)
+  }
+```
+* 设置interceptor相关
+```
+  chainUnaryClientInterceptors(cc)
+  chainStreamClientInterceptors(cc)
+```
+
+拦截器串行执行后最终需要调用客户端实际调用rpc的函数,chainUnaryClientInterceptors的作用就是将各个拦截器串联之后放置到cc.unaryInt.最终只需调用cc.unaryInt就会将所有拦截器依次执行
+
+
 
