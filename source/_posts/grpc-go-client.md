@@ -4,11 +4,9 @@ date: 2019-07-30
 tags: grpc-go
 ---
 
->grpc客户端源码分析
+>grpc客户端源码分析,重点分析grpc.Dial函数
 
-## grpc.Dial()
-
-### 函数原型分析
+## 函数原型分析
 func Dial(target string, opts ...DialOption) (*ClientConn, error) {
   return DialContext(context.Background(), target, opts...)
 }
@@ -51,7 +49,7 @@ func WithInsecure() DialOption {
   })
 }
 ```
-### 关键结构体
+## 关键结构体
 clientConn结构体
 ```
 type ClientConn struct {
@@ -116,9 +114,34 @@ type dialOptions struct {
   defaultServiceConfig        *ServiceConfig
   defaultServiceConfigRawJSON *string
 }
+其中关键字段copts为一个transport.ConnectOptions,该结构体各字段如下:
+type ConnectOptions struct {
+	
+	UserAgent string //UserAgent配置
+	Dialer func(context.Context, string) (net.Conn, error) //具体的连接服务端函数
+	FailOnNonTempDialError bool //如果不是临时性错误,是否直接连接失败
+	PerRPCCredentials []credentials.PerRPCCredentials //每个rpc请求的证书配置
+  //证书和证书链相关配置
+	TransportCredentials credentials.TransportCredentials
+	CredsBundle credentials.Bundle
+
+	KeepaliveParams keepalive.ClientParameters //keepalive相关配置
+	StatsHandler stats.Handler //状态handler
+	InitialWindowSize int32 //初始window size大小
+	InitialConnWindowSize int32
+	
+	WriteBufferSize int //写缓冲大小
+	
+	ReadBufferSize int //读缓冲大小
+	
+	ChannelzParentID int64
+	
+	MaxHeaderListSize *uint32
+}
+
 ```
-### 调用流程
-实际调用函数为DialContext,该函数其实就是进行clientConn结构体和dialOptions(cc.dopts)的各字段初始化
+## 调用流程
+实际调用函数为DialContext,该函数其实就是进行clientConn结构体和dialOptions(cc.dopts)以及transport.ConnectOptions(cc.dopts.copts)的各字段初始化
 
 调用流程如下:
 * 应用配置参数
@@ -135,5 +158,29 @@ type dialOptions struct {
 
 拦截器串行执行后最终需要调用客户端实际调用rpc的函数,chainUnaryClientInterceptors的作用就是将各个拦截器串联之后放置到cc.unaryInt.最终只需调用cc.unaryInt就会将所有拦截器依次执行
 
+* cc.dopts.copts.Dialer为实际连接服务端的代码,设置如下
+```
+cc.dopts.copts.Dialer = newProxyDialer(
+      func(ctx context.Context, addr string) (net.Conn, error) {
+        network, addr := parseDialTarget(addr)
+        return (&net.Dialer{}).DialContext(ctx, network, addr)
+      },
+    )
+```
+newProxyDialer会检测是否配置了代理(通过环境变量HTTP_PROXY或者HTTPS_PROXY),如果配置了代理则通过代理去连接.
 
+
+
+* cc.dopts.bs设置为backoff.Exponential,Exponetial实现了一个backoff.Strategy接口,该接口包含的函数原型如下:
+```
+Backoff(retries int) time.Duration
+```
+即通过retries次数返回一个需要等待重试的时间
+
+
+* cc.parsedTarget和cc.dopts.resolverBuilder设置grpc中的域名解析.根据target地址的设置返回不同的parsedTarget与resolverBuilder
+
+## 结语
+
+grpc.Dial()初始化各类参数,下一讲重点看clientConn的invoke函数,该函数负责实际执行rpc调用
 
