@@ -7,9 +7,11 @@ tags: grpc-go
 >grpc客户端源码分析,重点分析grpc.Dial函数
 
 ## 函数原型分析
+```
 func Dial(target string, opts ...DialOption) (*ClientConn, error) {
   return DialContext(context.Background(), target, opts...)
 }
+```
 
 首先看一下Dial函数的原型,两个参数,一个为target代表服务端的地址,一个为可变长度参数opts,为DialOption.
 DialOption定义如下:
@@ -114,7 +116,9 @@ type dialOptions struct {
   defaultServiceConfig        *ServiceConfig
   defaultServiceConfigRawJSON *string
 }
+```
 其中关键字段copts为一个transport.ConnectOptions,该结构体各字段如下:
+```
 type ConnectOptions struct {
 	
 	UserAgent string //UserAgent配置
