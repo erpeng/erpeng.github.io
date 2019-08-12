@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Mysql,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="引言理解Mysql的索引参考极客时间mysql45讲之第4讲,5讲,9讲,10讲,11讲,18讲 不同的索引    哈希索引 有序数组 树     增 最快 慢 快   查 最快 快 快   范围查 慢 快 快    B+树索引的类别B+树保存数据的层数磁盘随机读取需要10ms的时间 Mysql每页默认大小16KB,整型占据4字节+9字节(辅助字段）= 13字节,16Kb/13 = 1260,即整">
+<meta name="keywords" content="Mysql">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mysql 索引">
+<meta property="og:url" content="https://erpeng.github.io/2019/04/22/Mysql-index/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="引言理解Mysql的索引参考极客时间mysql45讲之第4讲,5讲,9讲,10讲,11讲,18讲 不同的索引    哈希索引 有序数组 树     增 最快 慢 快   查 最快 快 快   范围查 慢 快 快    B+树索引的类别B+树保存数据的层数磁盘随机读取需要10ms的时间 Mysql每页默认大小16KB,整型占据4字节+9字节(辅助字段）= 13字节,16Kb/13 = 1260,即整">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://erpeng.github.io/img/mysql.jpeg">
+<meta property="og:updated_time" content="2019-04-25T09:30:58.607Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Mysql 索引">
+<meta name="twitter:description" content="引言理解Mysql的索引参考极客时间mysql45讲之第4讲,5讲,9讲,10讲,11讲,18讲 不同的索引    哈希索引 有序数组 树     增 最快 慢 快   查 最快 快 快   范围查 慢 快 快    B+树索引的类别B+树保存数据的层数磁盘随机读取需要10ms的时间 Mysql每页默认大小16KB,整型占据4字节+9字节(辅助字段）= 13字节,16Kb/13 = 1260,即整">
+<meta name="twitter:image" content="https://erpeng.github.io/img/mysql.jpeg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/04/22/Mysql-index/">
+
+
+
+
+
+  <title>Mysql 索引 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/04/22/Mysql-index/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Mysql 索引</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-04-22T00:00:00+08:00">
+                2019-04-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/04/22/Mysql-index/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/04/22/Mysql-index/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>理解Mysql的索引<br>参考极客时间<strong>mysql45讲</strong>之第4讲,5讲,9讲,10讲,11讲,18讲</p>
+<h3 id="不同的索引"><a href="#不同的索引" class="headerlink" title="不同的索引"></a>不同的索引</h3><table>
+<thead>
+<tr>
+<th></th>
+<th>哈希索引</th>
+<th>有序数组</th>
+<th>树</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>增</td>
+<td>最快</td>
+<td>慢</td>
+<td>快</td>
+</tr>
+<tr>
+<td>查</td>
+<td>最快</td>
+<td>快</td>
+<td>快</td>
+</tr>
+<tr>
+<td>范围查</td>
+<td>慢</td>
+<td>快</td>
+<td>快</td>
+</tr>
+</tbody>
+</table>
+<h3 id="B-树索引的类别"><a href="#B-树索引的类别" class="headerlink" title="B+树索引的类别"></a>B+树索引的类别</h3><h4 id="B-树保存数据的层数"><a href="#B-树保存数据的层数" class="headerlink" title="B+树保存数据的层数"></a>B+树保存数据的层数</h4><p>磁盘随机读取需要10ms的时间</p>
+<p>Mysql每页默认大小16KB,整型占据4字节+9字节(辅助字段）= 13字节,16Kb/13 = 1260,即整型索引每个节点可以保存1260,即1260叉树.三层为1260^3 约等于20亿条数据<br>增大page可以增加节点个数,减少层数</p>
+<h4 id="B-树索引类型"><a href="#B-树索引类型" class="headerlink" title="B+树索引类型"></a>B+树索引类型</h4><ul>
+<li>叶子节点保存数据为聚簇索引</li>
+<li>叶子节点保存主键为二级索引</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; create table T(</span><br><span class="line">id int primary key, </span><br><span class="line">k int not null, </span><br><span class="line">name varchar(16),</span><br><span class="line">index (k))engine=InnoDB;</span><br></pre></td></tr></table></figure>
+<p>基于二级索引需要回表</p>
+<h4 id="B-树的页分裂与合并"><a href="#B-树的页分裂与合并" class="headerlink" title="B+树的页分裂与合并"></a>B+树的页分裂与合并</h4><p>分裂影响性能,也影响磁盘使用率（分裂完后每个page只使用50%）<br>自增主键有如下两点好处:</p>
+<ul>
+<li>顺序增加,不易造成分裂</li>
+<li>二级索引会保存主键,自增主键4或8个字节,比较小,省存储空间</li>
+</ul>
+<h4 id="覆盖索引"><a href="#覆盖索引" class="headerlink" title="覆盖索引"></a>覆盖索引</h4><ul>
+<li>优点:加速查询,不需要回表</li>
+<li>缺点:二级索引需要保存冗余信息,浪费磁盘空间 </li>
+</ul>
+<h4 id="最左前缀"><a href="#最左前缀" class="headerlink" title="最左前缀"></a>最左前缀</h4><p>建立联合索引的时候如何决定字段顺序</p>
+<ul>
+<li><p>如果通过调整顺序,可以少维护一个索引,这是优先考虑的（有(a,b)联合索引后,不需要单独维护（a）这个索引）</p>
+</li>
+<li><p>空间 如果要实现有单独a,单独b,和(a,b)联合的索引,那么看a,b哪个占用空间大,从而决定使用(a),(b,a)还是(b),(a,b).</p>
+</li>
+</ul>
+<h4 id="索引下推-ICP-index-condition-pushdown"><a href="#索引下推-ICP-index-condition-pushdown" class="headerlink" title="索引下推 (ICP index condition pushdown)"></a>索引下推 (ICP index condition pushdown)</h4><p>where的过滤条件如果在联合索引中存在,可以直接过滤,省去回表过滤的过程</p>
+<h4 id="普通索引和唯一索引"><a href="#普通索引和唯一索引" class="headerlink" title="普通索引和唯一索引"></a>普通索引和唯一索引</h4><p>结论:如果业务能够保证唯一,尽量用普通索引<br>原因:普通索引可以用到change buffer,change buffer可以减少磁盘的随机读.即假设一个page不在内存中,当更新或者插入时,不需要load page,只需要把更新放到change buffer中,有后台线程会定期merge change buffer 和 旧页.当下次需要读取旧page时,load到内存中后也会直接merge</p>
+<p>change buffer减少了磁盘io,更新和插入变为了直接操作内存.但不适用于写入之后就立马读取的业务场景,这样不仅未减少io,还增加了merge的过程</p>
+<p>唯一索引不会用到change buffer,需要每次读取page中的数据然后校验唯一性 </p>
+<h4 id="字符串字段加索引"><a href="#字符串字段加索引" class="headerlink" title="字符串字段加索引"></a>字符串字段加索引</h4><p>增加前缀索引,例如邮箱上边<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; alter table SUser add index index1(email);</span><br><span class="line">或</span><br><span class="line">mysql&gt; alter table SUser add index index2(email(6));</span><br></pre></td></tr></table></figure></p>
+<p>要点:</p>
+<ul>
+<li>定义好前缀长度,使其区分度足够高,这样既能节省空间,又不用增加太多的查询成本</li>
+<li>前缀长度短,省空间,但区分度不够,增加查询和回表的次数</li>
+<li>前缀长度长,查询成本低但是浪费空间</li>
+<li>另外,前缀索引必须回表查,用不上覆盖索引的优化</li>
+</ul>
+<p>计算区分度<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; select count(distinct email) as L from SUser;</span><br><span class="line">mysql&gt; select </span><br><span class="line">  count(distinct left(email,4)）as L4,</span><br><span class="line">  count(distinct left(email,5)）as L5,</span><br><span class="line">  count(distinct left(email,6)）as L6,</span><br><span class="line">  count(distinct left(email,7)）as L7,</span><br><span class="line">from SUser;</span><br></pre></td></tr></table></figure></p>
+<p>特例:如果不需要范围查询,只需要等值查询,可以使用如下方法:</p>
+<ul>
+<li>倒序存储.例如身份证号只取前六位区分度不高,则可以使用倒序之后的六位</li>
+<li>哈希存储.新增加哈希字段,文中为crc32,则查询时首先走crc32字段的索引查,然后精确匹配(防止冲突)</li>
+</ul>
+<h2 id="索引使用注意事项"><a href="#索引使用注意事项" class="headerlink" title="索引使用注意事项"></a>索引使用注意事项</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">表结构</span><br><span class="line">mysql&gt; CREATE TABLE `tradelog` (</span><br><span class="line">  `id` int(11) NOT NULL,</span><br><span class="line">  `tradeid` varchar(32) DEFAULT NULL,</span><br><span class="line">  `operator` int(11) DEFAULT NULL,</span><br><span class="line">  `t_modified` datetime DEFAULT NULL,</span><br><span class="line">  PRIMARY KEY (`id`),</span><br><span class="line">  KEY `tradeid` (`tradeid`),</span><br><span class="line">  KEY `t_modified` (`t_modified`)</span><br><span class="line">) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</span><br></pre></td></tr></table></figure>
+<p>索引字段做函数操作<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">不会用到id索引</span><br><span class="line">select * from tradelog where id + 1 = 10000</span><br><span class="line">不会用到t_modified索引</span><br><span class="line">select count(*) from tradelog where month(t_modified)=7;</span><br><span class="line">month替换为substr(t_modified,1,2)这样更易理解.即函数会破坏掉索引的有序性,MySQL认为扫描索引不再有效</span><br></pre></td></tr></table></figure></p>
+<p>隐式类型转换<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tradeid为varchar(32)</span><br><span class="line">mysql&gt; select * from tradelog where tradeid=110717;</span><br></pre></td></tr></table></figure></p>
+<p>mysql中的转换规则是字符串转数字,于是上述语句相当于<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; select * from tradelog where  CAST(tradid AS signed int) = 110717;</span><br></pre></td></tr></table></figure></p>
+<p>隐式编码类型转换</p>
+<p>一个表是utfmb4,一个是uft8,mysql会将utf8中的字段转换为uft8mb4,还是会触发上边的规则</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><p><img src="/img/mysql.jpeg" alt="mysql"></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Mysql/" rel="tag"># Mysql</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/04/22/Mysql-redo-binlog-master-slave/" rel="next" title="Mysql redo binlog 主从及其延迟">
+                <i class="fa fa-chevron-left"></i> Mysql redo binlog 主从及其延迟
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/04/25/Mysql-others/" rel="prev" title="Mysql 其他">
+                Mysql 其他 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">45</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#引言"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#不同的索引"><span class="nav-number">1.1.</span> <span class="nav-text">不同的索引</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#B-树索引的类别"><span class="nav-number">1.2.</span> <span class="nav-text">B+树索引的类别</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#B-树保存数据的层数"><span class="nav-number">1.2.1.</span> <span class="nav-text">B+树保存数据的层数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#B-树索引类型"><span class="nav-number">1.2.2.</span> <span class="nav-text">B+树索引类型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#B-树的页分裂与合并"><span class="nav-number">1.2.3.</span> <span class="nav-text">B+树的页分裂与合并</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#覆盖索引"><span class="nav-number">1.2.4.</span> <span class="nav-text">覆盖索引</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#最左前缀"><span class="nav-number">1.2.5.</span> <span class="nav-text">最左前缀</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#索引下推-ICP-index-condition-pushdown"><span class="nav-number">1.2.6.</span> <span class="nav-text">索引下推 (ICP index condition pushdown)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#普通索引和唯一索引"><span class="nav-number">1.2.7.</span> <span class="nav-text">普通索引和唯一索引</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#字符串字段加索引"><span class="nav-number">1.2.8.</span> <span class="nav-text">字符串字段加索引</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#索引使用注意事项"><span class="nav-number">2.</span> <span class="nav-text">索引使用注意事项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考链接"><span class="nav-number">3.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

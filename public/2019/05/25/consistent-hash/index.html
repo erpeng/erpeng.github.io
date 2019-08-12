@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="go,architecture,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="解决什么问题先看一个示例,假设hash table初始的slots为4,hash函数为uid%4,并且uid分布均匀,我们看下uid分别为0-11时的分布    slots 0 1 2 3      0 1 2 3    4 5 6 7    8 9 10 11    假设现在扩容,slots变为5,我们看下分布    slots 0 1 2 3 4      0 1 2 3 4    5 6 7">
+<meta name="keywords" content="go,architecture">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一致性hash原理及实现">
+<meta property="og:url" content="https://erpeng.github.io/2019/05/25/consistent-hash/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="解决什么问题先看一个示例,假设hash table初始的slots为4,hash函数为uid%4,并且uid分布均匀,我们看下uid分别为0-11时的分布    slots 0 1 2 3      0 1 2 3    4 5 6 7    8 9 10 11    假设现在扩容,slots变为5,我们看下分布    slots 0 1 2 3 4      0 1 2 3 4    5 6 7">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://erpeng.github.io/img/ch1.png">
+<meta property="og:image" content="https://erpeng.github.io/img/ch2.png">
+<meta property="og:updated_time" content="2019-05-25T06:30:52.647Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="一致性hash原理及实现">
+<meta name="twitter:description" content="解决什么问题先看一个示例,假设hash table初始的slots为4,hash函数为uid%4,并且uid分布均匀,我们看下uid分别为0-11时的分布    slots 0 1 2 3      0 1 2 3    4 5 6 7    8 9 10 11    假设现在扩容,slots变为5,我们看下分布    slots 0 1 2 3 4      0 1 2 3 4    5 6 7">
+<meta name="twitter:image" content="https://erpeng.github.io/img/ch1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/05/25/consistent-hash/">
+
+
+
+
+
+  <title>一致性hash原理及实现 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/05/25/consistent-hash/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">一致性hash原理及实现</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-05-25T00:00:00+08:00">
+                2019-05-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/05/25/consistent-hash/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/05/25/consistent-hash/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="解决什么问题"><a href="#解决什么问题" class="headerlink" title="解决什么问题"></a>解决什么问题</h2><p>先看一个示例,假设hash table初始的slots为4,hash函数为uid%4,并且uid分布均匀,我们看下uid分别为0-11时的分布</p>
+<table>
+<thead>
+<tr>
+<th>slots</th>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>0</td>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+</tr>
+<tr>
+<td></td>
+<td>4</td>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+</tr>
+<tr>
+<td></td>
+<td>8</td>
+<td>9</td>
+<td>10</td>
+<td>11</td>
+</tr>
+</tbody>
+</table>
+<p>假设现在扩容,slots变为5,我们看下分布</p>
+<table>
+<thead>
+<tr>
+<th>slots</th>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>0</td>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+<td>4</td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+<td>8</td>
+<td>9</td>
+</tr>
+<tr>
+<td></td>
+<td>10</td>
+<td>11</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>需要调整4-11共8个key</p>
+<p>那直接按2倍扩容呢,slots变为8</p>
+<table>
+<thead>
+<tr>
+<th>slots</th>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+<th>7</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>0</td>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+<td>4</td>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+</tr>
+<tr>
+<td></td>
+<td>8</td>
+<td>9</td>
+<td>10</td>
+<td>11</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>可以看到需要调整4-7共4个key,基本上按2倍扩容,需要调整一半的key</p>
+<p>将以上情形扩展一下,想象一个分布式缓存的情形,slots的个数就是分布式缓存node的个数,那么分布式缓存会根据容量时常动态调整node的个数.此时用传统的hash后取模的方法,需要调整大量的key.同样在CDN的场景下,动态增缩CDN的节点个数也存在同样的问题.</p>
+<p>一致性哈希就是解决这个问题,当动态缩扩容时,平均来说只会有k/N个key被重新remap,k为所有key的个数,N为slots或者说node的个数.</p>
+<h2 id="如何实现"><a href="#如何实现" class="headerlink" title="如何实现"></a>如何实现</h2><p>hash表的rehash问题经常会遇到,我们知道redis中通过两个hash表h0和h1解决rehash的问题.当需要扩容或者缩容时,存量和增量key分别按如下方式处理:</p>
+<ul>
+<li>存量:渐进式逐步将h0中的key重新map到h1</li>
+<li>增量:直接挂载到h1,因此读取时会判断如果正在进行rehash,则读取完h0之后还需要继续读取h1</li>
+</ul>
+<p>由于是渐进式逐步remap,并且hash table的读取是O(1)复杂度,因此rehash对redis性能几乎无影响.那么这种方法能不能用到第一节中提到的问题呢？答案是不行</p>
+<p>Redis的rehash是一个单机版本,进程内部的rehash,存量增量都可以由redis自己处理,对应用无感知.而第一节提到的问题是多台机器,应用依赖于hash的结果去相应的机器获取数据.一般来说,增减node必须等待数据重新remap完成后才能正式生效.</p>
+<p>继续考虑一致性hash的实现,先考虑一种极端情况,即假设key是单调递增的<br>则hash分布可以考虑如下方案:<br>1-10000分布到node1,10001-20000分布到node2….<br>扩容时只需要增加机器节点,存量数据并不受影响.缩容时也只需要remap待缩容的机器</p>
+<p>这种情况比较极端,我们看下一般情况下如何实现一致性hash<br>一致性hash原理示意图:</p>
+<p><img src="/img/ch1.png" alt="ch1.png"></p>
+<p>图中有三个节点Node1,Node2,Node3以及五个key k1,k2,k3,k4,k5,首先将节点hash为一个最大0-2^32-1的值,然后将五个key也用同样的hash函数hash为0-2^32-1的值.假设node哈希之后的值为500,1600000,8000000,并且k1哈希之后的值为400,则取第一个大于400的node即Node1;假设k2哈希之后的值为150000,则大于150000的第一个node为Node2,以此类推</p>
+<p>为什么这样hash之后如果扩缩容会减少需要remap的节点呢,大家简单画一下即可理解,例如增加一个node4,如图:<br><img src="/img/ch2.png" alt="ch1.png"></p>
+<p>可以看到只有k4需要迁移.<br>实际中,为了hash之后的均匀性,会将每个node虚拟出多个虚节点.具体参见下边一个具体的go代码实例</p>
+<h2 id="go代码实现"><a href="#go代码实现" class="headerlink" title="go代码实现"></a>go代码实现</h2><p>我们看一个具体的go代码实现<br>执行如下命令获取该实现:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go get stathat.com/c/consistent</span><br></pre></td></tr></table></figure></p>
+<p>通过go doc简单看下大概结构<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">go doc consistent</span><br><span class="line">	var ErrEmptyCircle = errors.New(&quot;empty circle&quot;)</span><br><span class="line">	type Consistent struct&#123; ... &#125;</span><br><span class="line">    	func New() *Consistent</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">go doc -u consistent.Consistent</span><br><span class="line">package consistent // import &quot;stathat.com/c/consistent&quot;</span><br><span class="line"></span><br><span class="line">type Consistent struct &#123;</span><br><span class="line">	circle           map[uint32]string</span><br><span class="line">	members          map[string]bool</span><br><span class="line">	sortedHashes     uints</span><br><span class="line">	NumberOfReplicas int</span><br><span class="line">	count            int64</span><br><span class="line">	scratch          [64]byte</span><br><span class="line">	sync.RWMutex</span><br><span class="line">&#125;</span><br><span class="line">    Consistent holds the information about the members of the consistent hash</span><br><span class="line">    circle.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">func New() *Consistent</span><br><span class="line">func (c *Consistent) Add(elt string)</span><br><span class="line">func (c *Consistent) Get(name string) (string, error)</span><br><span class="line">func (c *Consistent) GetN(name string, n int) ([]string, error)</span><br><span class="line">func (c *Consistent) GetTwo(name string) (string, string, error)</span><br><span class="line">func (c *Consistent) Members() []string</span><br><span class="line">func (c *Consistent) Remove(elt string)</span><br><span class="line">func (c *Consistent) Set(elts []string)</span><br><span class="line">func (c *Consistent) add(elt string)</span><br><span class="line">func (c *Consistent) eltKey(elt string, idx int) string</span><br><span class="line">func (c *Consistent) hashKey(key string) uint32</span><br><span class="line">func (c *Consistent) remove(elt string)</span><br><span class="line">func (c *Consistent) search(key uint32) (i int)</span><br><span class="line">func (c *Consistent) updateSortedHashes()</span><br></pre></td></tr></table></figure>
+<p>看一个示例:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">ch := consistent.New()</span><br><span class="line">ch.Add(&quot;Node1&quot;)</span><br><span class="line">ch.Add(&quot;Node2&quot;)</span><br><span class="line">ch.Add(&quot;Node3&quot;)</span><br><span class="line">for i := 0; i &lt; 12; i++ &#123;</span><br><span class="line">	n, _ := ch.Get(string(i))</span><br><span class="line">	fmt.Printf(&quot;%s &quot;, n)</span><br><span class="line">&#125;</span><br><span class="line">fmt.Println(&quot;&quot;)</span><br><span class="line"></span><br><span class="line">ch.Add(&quot;Node4&quot;)</span><br><span class="line">for i := 0; i &lt; 20; i++ &#123;</span><br><span class="line">	n, _ := ch.Get(string(i))</span><br><span class="line">	fmt.Printf(&quot;%s &quot;, n)</span><br><span class="line">&#125;</span><br><span class="line">fmt.Println(&quot;&quot;)</span><br></pre></td></tr></table></figure></p>
+<p>结果如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Node3 Node2 Node3 Node1 Node3 Node2 Node3 Node1 Node1 Node1 Node2 Node2 </span><br><span class="line">Node3 Node2 Node3 Node1 Node3 Node2 Node3 Node1 Node1 Node1 Node2 Node2 Node1 Node4 Node3 Node2 Node3 Node4 Node2 Node1</span><br></pre></td></tr></table></figure></p>
+<p>0-11增加Node4之后没有迁移,11-20中可以看到增加了Node4.修改一下虚拟节点的个数为1,如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ch := consistent.New()</span><br><span class="line">ch.NumberOfReplicas = 1</span><br><span class="line">...</span><br></pre></td></tr></table></figure></p>
+<p>再次运行,结果如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Node3 Node2 Node2 Node2 Node3 Node2 Node2 Node2 Node1 Node2 Node1 Node2 </span><br><span class="line">Node3 Node2 Node4 Node2 Node3 Node2 Node4 Node2 Node1 Node2 Node1 Node4 Node1 Node2 Node1 Node4 Node3 Node3 Node1 Node2</span><br></pre></td></tr></table></figure></p>
+<p>虚拟节点个数设置为1之后,可以看到两点改变:</p>
+<ul>
+<li>0-11的分布不再均匀,8个数在Node2,2个在Node3,2个在Node1</li>
+<li>增加节点4之后,2,6,11三个数做了remap.可以看到remap了三个key,效果不如默认20个虚拟节点的情况</li>
+</ul>
+<p>Consistent结构体分析:</p>
+<ul>
+<li>circle  key为每个node hash之后的index值,注意默认会增加20个虚拟节点,值为具体的节点名称</li>
+<li>members    key为节点名称,值为bool类型,表明该节点是否存在</li>
+<li>sortedHashes  uint32切片,每个值为circle中的key,并且按递增序排好</li>
+<li>NumberOfReplicas int 虚拟节点个数</li>
+<li>count            int64 真实节点个数</li>
+<li>scratch          [64]byte</li>
+<li>sync.RWMutex 节点修改时需要加锁</li>
+</ul>
+<p>简单看一下增加节点以及获取key的代码:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">func (c *Consistent) Add(elt string) &#123;</span><br><span class="line">	c.Lock()</span><br><span class="line">	defer c.Unlock()</span><br><span class="line">	c.add(elt)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">func (c *Consistent) add(elt string) &#123;</span><br><span class="line">	for i := 0; i &lt; c.NumberOfReplicas; i++ &#123; </span><br><span class="line">		c.circle[c.hashKey(c.eltKey(elt, i))] = elt</span><br><span class="line">	&#125;</span><br><span class="line">	c.members[elt] = true</span><br><span class="line">	c.updateSortedHashes()</span><br><span class="line">	c.count++</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>关键步骤如下:</p>
+<ul>
+<li>加锁然后调用Consistent的add方法</li>
+<li>根据设置的虚拟节点个数,拼接key(c.eltKey方法,例如elt为Node1时会拼接20个key,分别为0Node1,1Node1,2Node1一直到19Node1),对20个key求hash值(c.hashKey方法),然后以hash值为index放置到c.circle中.可以看到c.circle这个map的index为hash之后的一个uint32(最大为2^32-1),值为Node1</li>
+<li>c.members中增加Node1节点</li>
+<li>更新c.sortedHashes值</li>
+<li>更新c.count即节点个数</li>
+</ul>
+<p>看一下c.sortedHashes的构造:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">func (c *Consistent) updateSortedHashes() &#123;</span><br><span class="line">	...</span><br><span class="line">	for k := range c.circle &#123;</span><br><span class="line">		hashes = append(hashes, k)</span><br><span class="line">	&#125;</span><br><span class="line">	sort.Sort(hashes)</span><br><span class="line">	c.sortedHashes = hashes</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>获取c.circle中的index,排序之后赋值给c.csortedHashes</li>
+</ul>
+<p>get函数如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">func (c *Consistent) Get(name string) (string, error) &#123;</span><br><span class="line">	c.RLock()</span><br><span class="line">	defer c.RUnlock()</span><br><span class="line">	if len(c.circle) == 0 &#123;</span><br><span class="line">		return &quot;&quot;, ErrEmptyCircle</span><br><span class="line">	&#125;</span><br><span class="line">	key := c.hashKey(name)</span><br><span class="line">	i := c.search(key)</span><br><span class="line">	return c.circle[c.sortedHashes[i]], nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>加锁,如果c.circle中无值则直接返回错误</li>
+<li>对name做同样的hash,调用c.search方法获取该hash值在c.sortedHashes中的索引</li>
+<li>c.sortedHashes中保存的是c.circle的索引,c.circle的值即为相应的节点</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">func (c *Consistent) search(key uint32) (i int) &#123;</span><br><span class="line">	f := func(x int) bool &#123;</span><br><span class="line">		return c.sortedHashes[x] &gt; key</span><br><span class="line">	&#125;</span><br><span class="line">	i = sort.Search(len(c.sortedHashes), f)</span><br><span class="line">	if i &gt;= len(c.sortedHashes) &#123;</span><br><span class="line">		i = 0</span><br><span class="line">	&#125;</span><br><span class="line">	return</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>c.search的关键步骤为sort.Search,该函数会二分查找到一个满足条件的最小index并返回</li>
+</ul>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a href="https://en.wikipedia.org/wiki/Consistent_hashing" target="_blank" rel="noopener">https://en.wikipedia.org/wiki/Consistent_hashing</a></li>
+<li><a href="https://github.com/stathat/consistent" target="_blank" rel="noopener">https://github.com/stathat/consistent</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/go/" rel="tag"># go</a>
+          
+            <a href="/tags/architecture/" rel="tag"># architecture</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/05/23/go-bytes-strings/" rel="next" title="go bytes包/strings包源码分析">
+                <i class="fa fa-chevron-left"></i> go bytes包/strings包源码分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/05/27/go-os/" rel="prev" title="go os包分析">
+                go os包分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">45</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#解决什么问题"><span class="nav-number">1.</span> <span class="nav-text">解决什么问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如何实现"><span class="nav-number">2.</span> <span class="nav-text">如何实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#go代码实现"><span class="nav-number">3.</span> <span class="nav-text">go代码实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考链接"><span class="nav-number">4.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Redis,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="redis-cli提供的方法注意以下所有试验基于redis 5.0.3版本 redis-cli 提供一个bigkeys参数，可以扫描redis中的大key 1--bigkeys          Sample Redis keys looking for big keys. 执行之后输出如下所示:12345678910111213141516171819202122bogon:sqlite did">
+<meta name="keywords" content="Redis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis中查找大key">
+<meta property="og:url" content="https://erpeng.github.io/2019/02/13/Redis中查找大key/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="redis-cli提供的方法注意以下所有试验基于redis 5.0.3版本 redis-cli 提供一个bigkeys参数，可以扫描redis中的大key 1--bigkeys          Sample Redis keys looking for big keys. 执行之后输出如下所示:12345678910111213141516171819202122bogon:sqlite did">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://erpeng.github.io/img/rdb1.png">
+<meta property="og:image" content="https://erpeng.github.io/img/rdb2.png">
+<meta property="og:updated_time" content="2019-02-19T06:33:28.117Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Redis中查找大key">
+<meta name="twitter:description" content="redis-cli提供的方法注意以下所有试验基于redis 5.0.3版本 redis-cli 提供一个bigkeys参数，可以扫描redis中的大key 1--bigkeys          Sample Redis keys looking for big keys. 执行之后输出如下所示:12345678910111213141516171819202122bogon:sqlite did">
+<meta name="twitter:image" content="https://erpeng.github.io/img/rdb1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/02/13/Redis中查找大key/">
+
+
+
+
+
+  <title>Redis中查找大key | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/02/13/Redis中查找大key/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Redis中查找大key</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-02-13T14:11:09+08:00">
+                2019-02-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/02/13/Redis中查找大key/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/02/13/Redis中查找大key/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="redis-cli提供的方法"><a href="#redis-cli提供的方法" class="headerlink" title="redis-cli提供的方法"></a>redis-cli提供的方法</h2><p>注意以下所有试验基于redis 5.0.3版本</p>
+<p>redis-cli 提供一个bigkeys参数，可以扫描redis中的大key</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">--bigkeys          Sample Redis keys looking for big keys.</span><br></pre></td></tr></table></figure>
+<p>执行之后输出如下所示:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">bogon:sqlite didi$ redis-cli --bigkeys</span><br><span class="line"># Scanning the entire keyspace to find biggest keys as well as</span><br><span class="line"># average sizes per key type.  You can use -i 0.1 to sleep 0.1 sec</span><br><span class="line"># per 100 SCAN commands (not usually needed).</span><br><span class="line">[00.00%] Biggest zset   found so far &apos;testzset&apos; with 129 members</span><br><span class="line">[00.00%] Biggest hash   found so far &apos;h2&apos; with 513 fields</span><br><span class="line">[00.00%] Biggest set    found so far &apos;si1&apos; with 5 members</span><br><span class="line">[00.00%] Biggest hash   found so far &apos;h4&apos; with 514 fields</span><br><span class="line">[00.00%] Biggest string found so far &apos;key&apos; with 9 bytes</span><br><span class="line">-------- summary -------</span><br><span class="line">Sampled 9 keys in the keyspace!</span><br><span class="line">Total key length in bytes is 27 (avg len 3.00)</span><br><span class="line">Biggest string found &apos;key&apos; has 9 bytes</span><br><span class="line">Biggest    set found &apos;si1&apos; has 5 members</span><br><span class="line">Biggest   hash found &apos;h4&apos; has 514 fields</span><br><span class="line">Biggest   zset found &apos;testzset&apos; has 129 members</span><br><span class="line">1 strings with 9 bytes (11.11% of keys, avg size 9.00)</span><br><span class="line">0 lists with 0 items (00.00% of keys, avg size 0.00)</span><br><span class="line">2 sets with 8 members (22.22% of keys, avg size 4.00)</span><br><span class="line">4 hashs with 1541 fields (44.44% of keys, avg size 385.25)</span><br><span class="line">2 zsets with 132 members (22.22% of keys, avg size 66.00)</span><br><span class="line">0 streams with 0 entries (00.00% of keys, avg size 0.00)</span><br></pre></td></tr></table></figure></p>
+<p>原理比较简单,使用scan命令去遍历所有的键，对每个键根据其类型执行”STRLEN”,”LLEN”,”SCARD”,”HLEN”,”ZCARD”这些命令获取其长度或者元素个数。</p>
+<p>该方法有两个缺点:</p>
+<p>1.线上使用:虽然scan命令通过游标遍历建空间并且在生产上可以通过对从服务执行该命令,但毕竟是一个线上操作</p>
+<p>2.set,zset,list以及hash类型只能获取有多少个元素。但其实元素多的不一定占用空间大</p>
+<p>所以有没有一种方法对线上没有影响，并且能直接以topn的形式输出每个键占用的空间大小呢？</p>
+<p>我们可以通过读取rdb文件的方式来试验一下，首先看看rdb文件的格式</p>
+<h2 id="rdb文件格式"><a href="#rdb文件格式" class="headerlink" title="rdb文件格式"></a>rdb文件格式</h2><p>rdb是一种二进制文件格式,我们首先看看rdb文件的整体结构</p>
+<p><img src="/img/rdb1.png" alt="rdb"></p>
+<p>首先是一个魔数,REDIS0009(redis5.0.3版本)。然后是一些附加属性字段,接着是db_num(0-15),然后是db和expire的字典大小(db和过期时间在Redis中是两个独立的hash table),接着是一个个key-value pairs，然后是一个EOF结束标志(0xFF),最后是8字节的checksum</p>
+<p>Redis中定义了一些opcode(1字节)，去标记opcode之后保存的是什么类型的数据。如下图所示</p>
+<p><img src="/img/rdb2.png" alt="rdb"></p>
+<p>opcode 252标记一个过期时间,248和249分别表示lru或者lfu,接着是value_type,标记值的类型,接着就是一个个key和vlaue.我们看下value_type和redis中数据类型的对应关系</p>
+<table>
+<thead>
+<tr>
+<th>数据类型</th>
+<th>编码结构</th>
+<th>值类型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OBJ_STRING(0)</td>
+<td>OBJ_ENCODING_RAW(0)</td>
+<td>RDB_TYPE_STRING(0)</td>
+</tr>
+<tr>
+<td>OBJ_LIST(1)</td>
+<td>OBJ_ENCODING_QUICKLIST(9)</td>
+<td>RDB_TYPE_LIST_QUICKLIST(14)</td>
+</tr>
+<tr>
+<td>OBJ_SET(2)</td>
+<td>OBJ_ENCODING_INTSET(6)</td>
+<td>RDB_TYPE_SET_INTSET(11)</td>
+</tr>
+<tr>
+<td>OBJ_SET(2)</td>
+<td>OBJ_ENCODING_HT(2)</td>
+<td>RDB_TYPE_SET(2)          </td>
+</tr>
+<tr>
+<td>OBJ_ZSET(3)</td>
+<td>OBJ_ENCODING_ZIPLIST(5)</td>
+<td>RDB_TYPE_ZSET_ZIPLIST(12)</td>
+</tr>
+<tr>
+<td>OBJ_ZSET(3)</td>
+<td>OBJ_ENCODING_SKIPLIST(7)</td>
+<td>RDB_TYPE_ZSET_2(5)</td>
+</tr>
+<tr>
+<td>OBJ_HASH(4)</td>
+<td>OBJ_ENCODING_ZIPLIST(5)</td>
+<td>RDB_TYPE_HASH_ZIPLIST(13)</td>
+</tr>
+<tr>
+<td>OBJ_HASH(4)</td>
+<td>OBJ_ENCODING_HT(2)</td>
+<td>RDB_TYPE_HASH(4)</td>
+</tr>
+</tbody>
+</table>
+<p>value_type就是值类型这一列，括号中的数字就是保存到rdb文件中时的实际使用数字</p>
+<p>知道了rdb的保存格式，我们可以写代码解析rdb文件,通过value_type去获取每个value的大小</p>
+<h2 id="godis-cli-bigkey使用方法"><a href="#godis-cli-bigkey使用方法" class="headerlink" title="godis-cli-bigkey使用方法"></a>godis-cli-bigkey使用方法</h2><p>代码地址如下:</p>
+<p><a href="https://github.com/erpeng/godis-cli-bigkey" target="_blank" rel="noopener">https://github.com/erpeng/godis-cli-bigkey</a></p>
+<p>下载之后在将rdb文件拷贝到项目根目录,按如下方式执行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">bogon:godis-cli-bigkey didi$ go run godis-cli-bigkey.go -h</span><br><span class="line">  -debug</span><br><span class="line">    	open debug mode  //debug模式，输出详细key/value信息</span><br><span class="line">  -topn int</span><br><span class="line">    	output topn keys (default 100)//默认输出top100的大key</span><br><span class="line">  -totallen</span><br><span class="line">    	get total len (key and meta) or only value len (default true)//如果该选项设置为false,只输出rdb文件中value实际占用的大小</span><br><span class="line">																	 //默认为true,输出key、value和所有该key,value保存时使用的元数据总和</span><br><span class="line">exit status 2</span><br></pre></td></tr></table></figure>
+<p>我们具体执行一下，输出如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">bogon:godis-cli-bigkey didi$ go run godis-cli-bigkey.go</span><br><span class="line">Rdb Version:0009</span><br><span class="line">key:k1,valueSize:9,valueType:0,expireTime:1549533396795,lfu:0,lru:0</span><br><span class="line">key:key,valueSize:9,valueType:0,expireTime:0,lfu:0,lru:0</span><br><span class="line">key:ss1,valueSize:14,valueType:2,expireTime:0,lfu:0,lru:0</span><br><span class="line">key:si1,valueSize:23,valueType:11,expireTime:0,lfu:0,lru:0</span><br><span class="line">key:l1,valueSize:28,valueType:14,expireTime:1549537004535,lfu:0,lru:0</span><br><span class="line">key:h1,valueSize:33,valueType:13,expireTime:0,lfu:0,lru:0</span><br><span class="line">key:z1,valueSize:67,valueType:12,expireTime:0,lfu:0,lru:0</span><br><span class="line">key:testzset,valueSize:1303,valueType:5,expireTime:0,lfu:0,lru:0</span><br><span class="line">key:h3,valueSize:8845,valueType:13,expireTime:0,lfu:0,lru:0</span><br><span class="line">key:h2,valueSize:11680,valueType:4,expireTime:0,lfu:0,lru:0</span><br><span class="line">key:h4,valueSize:11703,valueType:4,expireTime:0,lfu:0,lru:0</span><br></pre></td></tr></table></figure>
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Redis/" rel="tag"># Redis</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/01/31/Redis的resp协议/" rel="next" title="Redis的resp协议">
+                <i class="fa fa-chevron-left"></i> Redis的resp协议
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/04/13/Sqlite如何实现ACID中的原子性/" rel="prev" title="Sqlite如何实现ACID中的原子性">
+                Sqlite如何实现ACID中的原子性 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">45</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#redis-cli提供的方法"><span class="nav-number">1.</span> <span class="nav-text">redis-cli提供的方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rdb文件格式"><span class="nav-number">2.</span> <span class="nav-text">rdb文件格式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#godis-cli-bigkey使用方法"><span class="nav-number">3.</span> <span class="nav-text">godis-cli-bigkey使用方法</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="go,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="go runtime中有不少汇编.因此有必要学习一下go的汇编语法  说明go汇编器基于plan9汇编.注意该汇编不是底层机器的直接表示,而是一种半抽象的指令集.如果想看特定平台上边的汇编输出,可以看runtime或者math/big包,里边有许多示例.或者使用如下命令: 123456789101112131415161718192021$ cat x.gopackage mainfunc ma">
+<meta name="keywords" content="go">
+<meta property="og:type" content="article">
+<meta property="og:title" content="go汇编">
+<meta property="og:url" content="https://erpeng.github.io/2019/06/13/go-plan9-assemble/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="go runtime中有不少汇编.因此有必要学习一下go的汇编语法  说明go汇编器基于plan9汇编.注意该汇编不是底层机器的直接表示,而是一种半抽象的指令集.如果想看特定平台上边的汇编输出,可以看runtime或者math/big包,里边有许多示例.或者使用如下命令: 123456789101112131415161718192021$ cat x.gopackage mainfunc ma">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-06-17T15:22:03.599Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="go汇编">
+<meta name="twitter:description" content="go runtime中有不少汇编.因此有必要学习一下go的汇编语法  说明go汇编器基于plan9汇编.注意该汇编不是底层机器的直接表示,而是一种半抽象的指令集.如果想看特定平台上边的汇编输出,可以看runtime或者math/big包,里边有许多示例.或者使用如下命令: 123456789101112131415161718192021$ cat x.gopackage mainfunc ma">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/06/13/go-plan9-assemble/">
+
+
+
+
+
+  <title>go汇编 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/06/13/go-plan9-assemble/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">go汇编</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-06-13T00:00:00+08:00">
+                2019-06-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/06/13/go-plan9-assemble/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/06/13/go-plan9-assemble/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>go runtime中有不少汇编.因此有必要学习一下go的汇编语法</p>
+</blockquote>
+<h2 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h2><p>go汇编器基于plan9汇编.注意该汇编不是底层机器的直接表示,而是一种半抽象的指令集.如果想看特定平台上边的汇编输出,可以看runtime或者math/big包,里边有许多示例.或者使用如下命令:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">$ cat x.go</span><br><span class="line">package main</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">	println(3)</span><br><span class="line">&#125;</span><br><span class="line">$ GOOS=linux GOARCH=amd64 go tool compile -S x.go        # or: go build -gcflags -S x.go</span><br><span class="line"></span><br><span class="line">--- prog list &quot;main&quot; ---</span><br><span class="line">0000 (x.go:3) TEXT    main+0(SB),$8-0</span><br><span class="line">0001 (x.go:3) FUNCDATA $0,gcargs·0+0(SB)</span><br><span class="line">0002 (x.go:3) FUNCDATA $1,gclocals·0+0(SB)</span><br><span class="line">0003 (x.go:4) MOVQ    $3,(SP)</span><br><span class="line">0004 (x.go:4) PCDATA  $0,$8</span><br><span class="line">0005 (x.go:4) CALL    ,runtime.printint+0(SB)</span><br><span class="line">0006 (x.go:4) PCDATA  $0,$-1</span><br><span class="line">0007 (x.go:4) PCDATA  $0,$0</span><br><span class="line">0008 (x.go:4) CALL    ,runtime.printnl+0(SB)</span><br><span class="line">0009 (x.go:4) PCDATA  $0,$-1</span><br><span class="line">0010 (x.go:5) RET     ,</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>其中可以看到第3条指令将3放入栈,第5条指令调用runtime.printint输出3,然后调用runtime.printnl输出一个换行符<br>FUNCDATA和PCDATA指令生成垃圾回收器需要的一些信息.后文叙述</p>
+<h2 id="常量"><a href="#常量" class="headerlink" title="常量"></a>常量</h2><p>常量使用go的操作符优先级生成,例如3&amp;1&lt;&lt;2为(3&amp;1)&lt;&lt;2为4.整型被处理为64bit无符号类型.</p>
+<h2 id="符号"><a href="#符号" class="headerlink" title="符号"></a>符号</h2><p>伪寄存器:注意上文说过go汇编是一种半抽象的存在,伪寄存器的存在也能说明该问题.</p>
+<p>FP:frame pointer:栈指针,用来获取参数和局部符号<br>PC:program counter:跳转和分支指令使用<br>SB:static base pointer:全局符号使用<br>SP:stack pointer:栈顶部</p>
+<p>所有用户定义的符号都会按FP和SB的偏移获取,区别在于FP获取参数和局部符号,SB获取全局符号</p>
+<p>SB可以理解为内存的内存的其实地址,foo(SB)代表foo在内存中的位置;&lt;&gt;表示符号的可见性只在当前文件中可见,foo&lt;&gt;(SB),foo+4(SB)表示foo的位置偏移4bytes</p>
+<p>FP用来获取函数参数的位置.例如first_arg+0(FP)表示第一个参数,注意first_arg没有实际意义,但是汇编器强制要求这么写.second_arg+0(FP)表示第二个参数 </p>
+<p>SP用来获取函数局部变量的地址,由于是栈顶,因此以负的偏移来表示.例如x-8(SP),y-4(SP).注意硬件结构中本身有一个SP寄存器,他和伪SP寄存器可以这样区分,前边带symbol的是伪寄存器,不带的为真实SP.例如x-8(SP)和-8(SP)分别表示伪寄存器和真实寄存器</p>
+<p>注意代码中的fmt.Printf 和 math/rand.Int在汇编中为fmt·Printf 和 math∕rand·Int</p>
+<h2 id="指令"><a href="#指令" class="headerlink" title="指令"></a>指令</h2><p>DATA/GLOBAL/TEXT指令<br>TEXT定义一个函数<br>DATA指令初始化一段内存,即给变量赋值<br>GLOBAL定义一个全局符号<br>格式如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">TEXT symbol,flags,framesize-argumentsize //frame大小和参数大小(参数包括入参和返回值)</span><br><span class="line">DATA	symbol+offset(SB)/width, value //width表示占用内存大小,value表示初始化的值</span><br><span class="line">GLOBAL symbol,flags,datasize</span><br></pre></td></tr></table></figure>
+<p>示例如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">DATA divtab&lt;&gt;+0x00(SB)/4, $0xf4f8fcff</span><br><span class="line">DATA divtab&lt;&gt;+0x04(SB)/4, $0xe6eaedf0</span><br><span class="line">...</span><br><span class="line">DATA divtab&lt;&gt;+0x3c(SB)/4, $0x81828384</span><br><span class="line">GLOBL divtab&lt;&gt;(SB), RODATA, $64</span><br><span class="line"></span><br><span class="line">GLOBL runtime·tlsoffset(SB), NOPTR, $4</span><br></pre></td></tr></table></figure>
+<p>定义了一个全局变量divtab,可以理解为一个数组,共64个字节,元素个数为16,每个元素4字节,从上到下依次赋值.然后定义了一个4bytes的tlsoffset变量</p>
+<p>flag:定义在textflag.h中<br>NOPROF:废弃<br>DUPOK = 2 一个二进制文件中有多个该符号的实例是合法的.linker可以选择一个去使用<br>NOSPLIT = 4 TEXT指令使用,不分裂stack.不会往函数前插入检查是否需要split栈的代码.<br>RODATA = 8 DATA和GLOBAL指令使用,将数据放入只读区<br>NOPTR = 16 DATA和GLOBAL指令使用,该数据中不包括指针,因此不需要垃圾回收器扫描<br>WRAPPER = 32  TEXT使用,wrapper function？<br>NEEDCTXT = 64 TEXT使用,闭包函数,因此使用输入上下文寄存器</p>
+<h2 id="runtime协同"><a href="#runtime协同" class="headerlink" title="runtime协同"></a>runtime协同</h2><p>为了使垃圾回收器正确运行,runtime必须知道所有全局数据中和栈帧中的指针位置.</p>
+<p>一般一个标记为NOPTR或者RODATA或者大小小于指针的可以认为不包括运行时分配的指针.<br>如果一个函数的返回值包括指针,函数应该首先初始化返回值并且执行伪指令GO_RESULTS_INITIALIZED.该指令表明结果已经被初始化并且应该在stack movement或者垃圾回收时被扫描</p>
+<p>汇编函数需要给出go原型,既是为了提供参数和返回值的指针信息也是go vet检查获取他们时的offset是正确的</p>
+<h2 id="CPU体系相关的细节"><a href="#CPU体系相关的细节" class="headerlink" title="CPU体系相关的细节"></a>CPU体系相关的细节</h2><p>amd64:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">get_tls(CX)</span><br><span class="line">MOVQ	g(CX), AX     // Move g into AX.</span><br><span class="line">MOVQ	g_m(AX), BX   // Move g.m into BX.</span><br></pre></td></tr></table></figure>
+<p>get_tls和g的宏定义如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">#ifdef GOARCH_amd64</span><br><span class="line">#define	get_tls(r)	MOVQ TLS, r</span><br><span class="line">#define	g(r)	0(r)(TLS*1)</span><br><span class="line">#endif</span><br></pre></td></tr></table></figure>
+<h2 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h2><ul>
+<li><a href="https://golang.org/doc/asm" target="_blank" rel="noopener">https://golang.org/doc/asm</a></li>
+<li><a href="https://chai2010.cn/advanced-go-programming-book/ch3-asm/ch3-06-func-again.html" target="_blank" rel="noopener">https://chai2010.cn/advanced-go-programming-book/ch3-asm/ch3-06-func-again.html</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/go/" rel="tag"># go</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/06/11/c++-quick-start/" rel="next" title="c++快速入门">
+                <i class="fa fa-chevron-left"></i> c++快速入门
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/06/25/leveldb-start/" rel="prev" title="leveldb源码解析0之Log及MANIFEST文件格式">
+                leveldb源码解析0之Log及MANIFEST文件格式 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">45</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#说明"><span class="nav-number">1.</span> <span class="nav-text">说明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#常量"><span class="nav-number">2.</span> <span class="nav-text">常量</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#符号"><span class="nav-number">3.</span> <span class="nav-text">符号</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#指令"><span class="nav-number">4.</span> <span class="nav-text">指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#runtime协同"><span class="nav-number">5.</span> <span class="nav-text">runtime协同</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CPU体系相关的细节"><span class="nav-number">6.</span> <span class="nav-text">CPU体系相关的细节</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文档"><span class="nav-number">7.</span> <span class="nav-text">参考文档</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="NGINX,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="本文通过一个小例子串一遍nginx处理http2的流程。主要涉及到http2的协议以及nginx的处理流程。 http2简介http2比较http1.1主要有如下五个方面的不同：  二进制协议 http1.1请求行和请求头部都是纯文本编码,即可以直接按ascii字符解释，而http2是有自己的编码格式。并且nginx中http2必须建立在ssl协议之上。 头部压缩 举个例子,HTTP1.1传一个h">
+<meta name="keywords" content="NGINX">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NGINX HTTP2 处理流程">
+<meta property="og:url" content="https://erpeng.github.io/2018/12/11/NGINX-HTTP2-处理流程/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="本文通过一个小例子串一遍nginx处理http2的流程。主要涉及到http2的协议以及nginx的处理流程。 http2简介http2比较http1.1主要有如下五个方面的不同：  二进制协议 http1.1请求行和请求头部都是纯文本编码,即可以直接按ascii字符解释，而http2是有自己的编码格式。并且nginx中http2必须建立在ssl协议之上。 头部压缩 举个例子,HTTP1.1传一个h">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://erpeng.github.io/img/n21.png">
+<meta property="og:image" content="https://erpeng.github.io/img/n22.png">
+<meta property="og:image" content="https://erpeng.github.io/img/n23.png">
+<meta property="og:image" content="https://erpeng.github.io/img/n24.png">
+<meta property="og:image" content="https://erpeng.github.io/img/n25.png">
+<meta property="og:image" content="https://erpeng.github.io/img/n26.png">
+<meta property="og:image" content="https://erpeng.github.io/img/n27.png">
+<meta property="og:image" content="https://erpeng.github.io/img/n28.png">
+<meta property="og:image" content="https://erpeng.github.io/img/n29.png">
+<meta property="og:image" content="https://erpeng.github.io/img/n210.png">
+<meta property="og:updated_time" content="2019-02-19T07:11:21.579Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="NGINX HTTP2 处理流程">
+<meta name="twitter:description" content="本文通过一个小例子串一遍nginx处理http2的流程。主要涉及到http2的协议以及nginx的处理流程。 http2简介http2比较http1.1主要有如下五个方面的不同：  二进制协议 http1.1请求行和请求头部都是纯文本编码,即可以直接按ascii字符解释，而http2是有自己的编码格式。并且nginx中http2必须建立在ssl协议之上。 头部压缩 举个例子,HTTP1.1传一个h">
+<meta name="twitter:image" content="https://erpeng.github.io/img/n21.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2018/12/11/NGINX-HTTP2-处理流程/">
+
+
+
+
+
+  <title>NGINX HTTP2 处理流程 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2018/12/11/NGINX-HTTP2-处理流程/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">NGINX HTTP2 处理流程</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-12-11T14:55:36+08:00">
+                2018-12-11
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/11/NGINX-HTTP2-处理流程/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2018/12/11/NGINX-HTTP2-处理流程/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>本文通过一个小例子串一遍nginx处理http2的流程。主要涉及到http2的协议以及nginx的处理流程。</p>
+<h2 id="http2简介"><a href="#http2简介" class="headerlink" title="http2简介"></a>http2简介</h2><p>http2比较http1.1主要有如下五个方面的不同：</p>
+<ul>
+<li>二进制协议 http1.1请求行和请求头部都是纯文本编码,即可以直接按ascii字符解释，而http2是有自己的编码格式。并且nginx中http2必须建立在ssl协议之上。</li>
+<li>头部压缩 举个例子,HTTP1.1传一个header  &lt;method: GET&gt;,需要11个字符.http2中有一个静态索引表，客户端传索引键，例如1，nginx通过查表能知道1代表method: GET.nginx中除了该静态表，还会有一个动态表，保存例如host这种变化的头部</li>
+<li>多路复用 http1.1一个连接上只能传输一个请求，当一个请求结束之后才能传输下一个请求。所以对http1.1协议的服务发起请求时，一般浏览器会建立6条连接，并行的去请求不同的资源。而http2的二进制协议中有一个frame的概念，每个frame有自己的id,所以一个连接上可以同时多路复用传输多个不同id的frame</li>
+<li>主动push http1.1是请求-响应模型，而http2可以主动给客户端推送资源</li>
+<li>优先级 既然多路复用，所有数据跑在了一条通道上，必然会有优先级的需求</li>
+</ul>
+<p>本文的例子主要通过解析报文说明头三个特性</p>
+<h2 id="配置环境"><a href="#配置环境" class="headerlink" title="配置环境"></a>配置环境</h2><p>NGINX配置如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">server &#123;</span><br><span class="line">    listen 8443 ssl http2;</span><br><span class="line">    access_log  logs/host_server2.access.log  main;</span><br><span class="line">    ssl_certificate /home/xiaoju/nginx-2/nginx-selfsigned.crt;</span><br><span class="line">    ssl_certificate_key /home/xiaoju/nginx-2/nginx-selfsigned.key;</span><br><span class="line">    ssl_ciphers EECDH+CHACHA20:EECDH+AES128:RSA+AES128:EECDH+AES256:RSA+AES256:EECDH+3DES:RSA+3DES:!MD5;</span><br><span class="line"></span><br><span class="line">    location / &#123;</span><br><span class="line">        root   html;</span><br><span class="line">        index  index.html index.htm /abc.html;</span><br><span class="line">        access_log  logs/host_location3.access.log  main;</span><br><span class="line">        http2_push /favicon.ico;</span><br><span class="line">        http2_push /nginx.png;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>客户端按如下方式发起请求:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">curl  -k  -I   -L https://IP:8443</span><br><span class="line">HTTP/2 200  //可以看到，返回是http/2</span><br><span class="line">server: nginx/1.14.0</span><br><span class="line">date: Tue, 11 Dec 2018 09:20:33 GMT</span><br><span class="line">content-type: text/html</span><br><span class="line">content-length: 664</span><br><span class="line">last-modified: Tue, 11 Dec 2018 04:19:32 GMT</span><br><span class="line">etag: &quot;5c0f3ad4-298&quot;</span><br><span class="line">accept-ranges: bytes</span><br></pre></td></tr></table></figure></p>
+<h2 id="请求解析"><a href="#请求解析" class="headerlink" title="请求解析"></a>请求解析</h2><h3 id="客户端请求问题"><a href="#客户端请求问题" class="headerlink" title="客户端请求问题"></a>客户端请求问题</h3><p>先思考一个问题，上文配置中使用curl发送请求时,为何直接返回的是http/2,而不是http/1.1(虽然服务端配置了使用http2,但万一客户端未支持http2协议，直接返回http2客户端会解析不了)</p>
+<p>因为nginx中http2必须在ssl之上，所以我们首先通过在nginx代码中的ssl握手部分打断点gdb跟一下.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">(gdb) b ngx_ssl_handshake_handler  //ssl握手函数</span><br><span class="line">Breakpoint 1 at 0x47ddb5: file src/event/ngx_event_openssl.c, line 1373.</span><br><span class="line">(gdb) c</span><br><span class="line">Continuing.</span><br><span class="line">Breakpoint 1, ngx_ssl_handshake_handler (ev=0x16141f0) at src/event/ngx_event_openssl.c:1373</span><br><span class="line">1373	&#123;</span><br><span class="line"></span><br><span class="line">1390	    c-&gt;ssl-&gt;handler(c); //实际处理逻辑位于ngx_http_ssl_handshake_handler</span><br><span class="line">(gdb) s</span><br><span class="line">ngx_http_ssl_handshake_handler (c=0x15da400) at src/http/ngx_http_request.c:782</span><br><span class="line">782	&#123;</span><br><span class="line"></span><br><span class="line">(gdb) n</span><br><span class="line">805	        if (hc-&gt;addr_conf-&gt;http2) &#123; //配置http2后hc-&gt;addr_conf-&gt;http2标志位为1</span><br><span class="line"></span><br><span class="line">(gdb) n</span><br><span class="line">808	            SSL_get0_alpn_selected(c-&gt;ssl-&gt;connection, &amp;data, &amp;len);//从ssl协议中取出alpn</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">(gdb) n</span><br><span class="line">820	            if (len == 2 &amp;&amp; data[0] == &apos;h&apos; &amp;&amp; data[1] == &apos;2&apos;) &#123; //如果为h2,说明客户端支持升级到http2协议</span><br><span class="line"></span><br><span class="line">(gdb) n</span><br><span class="line">821	                ngx_http_v2_init(c-&gt;read);//开始进入http2的初始化阶段</span><br></pre></td></tr></table></figure>
+<p>简单说就是通过ssl协议握手阶段获取一个alpn相关的配置，如果是h2，就进入http2的处理流程。我们通过wireshark抓包可以更直观的看出这个流程</p>
+<p><img src="/img/n21.png" alt="nginx"></p>
+<p>如上图，在ssl握手中的Client Hello 阶段有一个协议扩展alpn</p>
+<h3 id="http2报文格式"><a href="#http2报文格式" class="headerlink" title="http2报文格式"></a>http2报文格式</h3><p>http2 以一个preface开头，接着是一个个的frame,其中每个frame都有一个header,如下：</p>
+<p><img src="/img/n22.png" alt="frame header"></p>
+<p>其中length代表frame内容的长度,type表明frame的类型,flag给frame做一些特殊的标记,sid代表的就是frame的id.</p>
+<p>其中 frame有如下10种类型</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">#define NGX_HTTP_V2_DATA_FRAME           0x0 //body数据</span><br><span class="line">#define NGX_HTTP_V2_HEADERS_FRAME        0x1 //header数据</span><br><span class="line">#define NGX_HTTP_V2_PRIORITY_FRAME       0x2 //优先级设置</span><br><span class="line">#define NGX_HTTP_V2_RST_STREAM_FRAME     0x3 //重置一个stream</span><br><span class="line">#define NGX_HTTP_V2_SETTINGS_FRAME       0x4 //其他设置项，例如是否开启push,同时能够处理的stream数量等</span><br><span class="line">#define NGX_HTTP_V2_PUSH_PROMISE_FRAME   0x5 //push</span><br><span class="line">#define NGX_HTTP_V2_PING_FRAME           0x6 //ping</span><br><span class="line">#define NGX_HTTP_V2_GOAWAY_FRAME         0x7 //goaway.发送此frame后会重新建立连接</span><br><span class="line">#define NGX_HTTP_V2_WINDOW_UPDATE_FRAME  0x8 //窗口更新 流控使用</span><br><span class="line">#define NGX_HTTP_V2_CONTINUATION_FRAME   0x9 //当一个frame发送不完数据时，可以按continuation格式继续发送</span><br></pre></td></tr></table></figure>
+<p>frame ID在客户端按奇数递增，例如1，3，5，偶数型id留给服务端推送push时使用，设置连接属性相关的frame id都为0</p>
+<p>flags有如下定义：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#define NGX_HTTP_V2_NO_FLAG              0x00 //未设置</span><br><span class="line">#define NGX_HTTP_V2_ACK_FLAG             0x01 //ack flag</span><br><span class="line">#define NGX_HTTP_V2_END_STREAM_FLAG      0x01 //结束stream</span><br><span class="line">#define NGX_HTTP_V2_END_HEADERS_FLAG     0x04 //结束headers</span><br><span class="line">#define NGX_HTTP_V2_PADDED_FLAG          0x08 //填充flag</span><br><span class="line">#define NGX_HTTP_V2_PRIORITY_FLAG        0x20 //优先级设置flag</span><br></pre></td></tr></table></figure>
+<p>如下是一个http头类型frame具体的内容格式：</p>
+<p><img src="/img/n23.png" alt="header"></p>
+<p>padded和priority由上文头部的flag决定是否有这两字段。接下来占8bit的flag决定header是否需要索引，如果需要，索引号是多少。</p>
+<p>huff(1)表明该字段是否使用了huffman编码。header_value_len(7)和header_value是具体头字段的value值</p>
+<p>如下是一个设置相关的frame</p>
+<p><img src="/img/n24.png" alt="setting"></p>
+<p>如下是一个窗口更新的frame</p>
+<p><img src="/img/n25.png" alt="update"></p>
+<p>下边我们看一个具体的例子</p>
+<h3 id="http2报文解析"><a href="#http2报文解析" class="headerlink" title="http2报文解析"></a>http2报文解析</h3><p>新版本的curl有一个–http2参数，可以直接指明使用http2进行通讯。我们将客户端命令修改如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl --http2 -k  -I   -L https://10.96.79.14:8443</span><br></pre></td></tr></table></figure></p>
+<p>通过上边的gdb跟踪，我们看到http2初始化入口函数为ngx_http_v2_init，直接在此处打断点，继续跟踪代码.跟踪过程不再详细描述，当把报文读取进缓存之后，我们直接在gdb中bt查看调用路径，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">#0  ngx_http_v2_state_preface (h2c=0x15a9310, pos=0x164b0b0 &quot;PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n&quot;, end=0x164b11e &quot;&quot;)</span><br><span class="line">    at src/http/v2/ngx_http_v2.c:713</span><br><span class="line">#1  0x00000000004bca20 in ngx_http_v2_read_handler (rev=0x16141f0) at src/http/v2/ngx_http_v2.c:415</span><br><span class="line">#2  0x00000000004bcf8a in ngx_http_v2_init (rev=0x16141f0) at src/http/v2/ngx_http_v2.c:328</span><br><span class="line">#3  0x0000000000490a13 in ngx_http_ssl_handshake_handler (c=0x15da400) at src/http/ngx_http_request.c:821</span><br><span class="line">#4  0x000000000047de24 in ngx_ssl_handshake_handler (ev=0x16141f0) at src/event/ngx_event_openssl.c:1390</span><br><span class="line">#5  0x0000000000479637 in ngx_epoll_process_events (cycle=0x1597e30, timer=&lt;optimized out&gt;, flags=&lt;optimized out&gt;)</span><br><span class="line">    at src/event/modules/ngx_epoll_module.c:902</span><br><span class="line">#6  0x000000000046f9db in ngx_process_events_and_timers (cycle=0x1597e30) at src/event/ngx_event.c:242</span><br><span class="line">#7  0x000000000047761c in ngx_worker_process_cycle (cycle=0x1597e30, data=&lt;optimized out&gt;) at src/os/unix/ngx_process_cycle.c:750</span><br><span class="line">#8  0x0000000000475c50 in ngx_spawn_process (cycle=0x1597e30, proc=0x477589 &lt;ngx_worker_process_cycle&gt;, data=0x0,</span><br><span class="line">    name=0x684922 &quot;worker process&quot;, respawn=-3) at src/os/unix/ngx_process.c:199</span><br><span class="line">#9  0x00000000004769aa in ngx_start_worker_processes (cycle=0x1597e30, n=1, type=-3) at src/os/unix/ngx_process_cycle.c:359</span><br><span class="line">#10 0x0000000000477cb0 in ngx_master_process_cycle (cycle=0x1597e30) at src/os/unix/ngx_process_cycle.c:131</span><br><span class="line">#11 0x0000000000450ea4 in main (argc=&lt;optimized out&gt;, argv=&lt;optimized out&gt;) at src/core/nginx.c:382</span><br></pre></td></tr></table></figure></p>
+<p>调用到ngx_http_v2_state_preface这个函数之后，开始处理http2请求，我们将请求内容打印出来看一下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">(gdb) p end-pos</span><br><span class="line">$1 = 110</span><br><span class="line">(gdb) p *pos@110</span><br><span class="line">$2 = &quot;PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n\000\000\022\004\000\000\000\000\000\000\003\000\000\000d\000\004@\000\000\000\000\002\000\000\000\000\000\000\004\b\000\000\000\000\000?\377\000\001\000\000%\001\005\000\000\000\001B\004HEAD\204\207A\214\b\027&#125;\305\335&#125;p\265q\346\232gz\210%\266Pë\266\322\340S\003*/*&quot;</span><br></pre></td></tr></table></figure>
+<p>nginx接下来开始处理http2请求，处理方法可以按上述方法继续跟踪，我们直接按http2协议将上述报文解析一下，如下所示：</p>
+<p>注意gdb打印出来的是八进制格式</p>
+<p><img src="/img/n26.png" alt="detail"></p>
+<p><img src="/img/n27.png" alt="detail"></p>
+<h3 id="http-push抓包"><a href="#http-push抓包" class="headerlink" title="http push抓包"></a>http push抓包</h3><p>注意上文nginx配置中配置了两条http2_push指令，即服务端会在请求index.html时主动将favicon.ico和nginx.png两个图片push下去。</p>
+<p>wireshark中抓包如下：</p>
+<p><img src="/img/n28.png" alt="detail"></p>
+<p>服务端首先发送一个push_promise报文，报文中会包括push的文件路径和frame id.第二个和第三个红框即开始push具体的信息,frame id分别为2和4</p>
+<p>我们从浏览器端看一下push的请求：</p>
+<p><img src="/img/n29.png" alt="push"></p>
+<p>不主动push请求如下：<br><img src="/img/n210.png" alt="push"></p>
+<p>浏览器必须首先将index.html加载之后才会知道接着去请求哪些资源，于是favicon.ico和nginx.png就会延迟加载。</p>
+<h3 id="Q-amp-A"><a href="#Q-amp-A" class="headerlink" title="Q&amp;A"></a>Q&amp;A</h3><ul>
+<li>HTTP2如果在服务端动态索引header，会使http变成有状态的服务，集群之间如何解决header头缓存的问题？</li>
+<li>静态资源文件首次请求后会在浏览器端缓存，push如何保证只推送一次(即只有首次请求时才push)?</li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p>1.<a href="https://www.nginx.com/blog/http2-theory-and-practice-in-nginx-stable-13/" target="_blank" rel="noopener">https://www.nginx.com/blog/http2-theory-and-practice-in-nginx-stable-13/</a></p>
+<p>2.<a href="https://httpwg.org/specs/rfc7540" target="_blank" rel="noopener">https://httpwg.org/specs/rfc7540</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/NGINX/" rel="tag"># NGINX</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/09/18/NGINX-4xx-5xx-状态码构造/" rel="next" title="NGINX 4xx 5xx 状态码构造">
+                <i class="fa fa-chevron-left"></i> NGINX 4xx 5xx 状态码构造
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/12/15/Redis-懒删除-lazy-free-简史/" rel="prev" title="Redis 懒删除(lazy free)简史">
+                Redis 懒删除(lazy free)简史 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">45</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#http2简介"><span class="nav-number">1.</span> <span class="nav-text">http2简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置环境"><span class="nav-number">2.</span> <span class="nav-text">配置环境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#请求解析"><span class="nav-number">3.</span> <span class="nav-text">请求解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#客户端请求问题"><span class="nav-number">3.1.</span> <span class="nav-text">客户端请求问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#http2报文格式"><span class="nav-number">3.2.</span> <span class="nav-text">http2报文格式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#http2报文解析"><span class="nav-number">3.3.</span> <span class="nav-text">http2报文解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#http-push抓包"><span class="nav-number">3.4.</span> <span class="nav-text">http push抓包</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Q-amp-A"><span class="nav-number">3.5.</span> <span class="nav-text">Q&amp;A</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考资料"><span class="nav-number">4.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
