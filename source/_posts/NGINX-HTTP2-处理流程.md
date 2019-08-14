@@ -1,8 +1,9 @@
 ---
 title: NGINX HTTP2 处理流程
 date: 2018-12-11 14:55:36
-tags: NGINX
-tags: HTTP2
+tags: 
+- NGINX
+- HTTP2
 ---
 
 本文通过一个小例子串一遍nginx处理http2的流程。主要涉及到http2的协议以及nginx的处理流程。

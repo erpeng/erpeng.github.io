@@ -1,8 +1,9 @@
 ---
 title: grpc-go源码解析5-method
 date: 2019-08-14
-tags: grpc-go
-tags: HTTP2
+tags: 
+- grpc-go
+- HTTP2
 ---
 
 >简略分析服务端代码,关键是如何获取调用的服务及方法
