@@ -9,7 +9,7 @@ tags: grpc-go
 ## 概览
 
 ```
-roundrobinConn, err := grpc.Dial(
+	roundrobinConn, err := grpc.Dial(
 		fmt.Sprintf("%s:///%s", exampleScheme, exampleServiceName),
 		grpc.WithBalancerName("round_robin"), // This sets the initial balancing policy.
 		grpc.WithInsecure(),
@@ -52,7 +52,7 @@ roundrobinConn, err := grpc.Dial(
 
 	cc.balancerWrapper.updateClientConnState(&balancer.ClientConnState{ResolverState: s, BalancerConfig: balCfg})
 ```
-当在grpc.Dial中指定WithBalancerName("round_robin")之后会走else语句,否则走if语句,if语句之中选取newBalancerName的逻辑见resolver章节中概述第二条描述.两段逻辑中不论是if的switchBalancer还是else语句都是需要生成一个balancerWrapper然后复制到cc.balancerWrapper.
+当在grpc.Dial中指定WithBalancerName("round_robin")之后会走else语句,否则走if语句,if语句之中选取newBalancerName的逻辑见resolver章节中概述第二条描述.两段逻辑中不论是if的switchBalancer还是else语句都是需要生成一个balancerWrapper然后赋值到cc.balancerWrapper.
 
 重点看newCCBalancerWrapper函数,关键是如下两句:
 ```
@@ -71,7 +71,7 @@ ccb.watcher中会检测管道是否可读,可读时执行balancer的HandleResolv
 ```
 向ccb.ccUpdateCh中输入内容
 
-继续分析管道可读之后执行的HandleResolvedAddrs函数,该函数中会连接后端服务器并且返回一个可用链接.
+继续分析管道可读之后执行的HandleResolvedAddrs函数,该函数中会连接后端服务器并且返回一个可用链接(注意roundrobin模式使用的balancerV2模式,调用函数不同于pickfirst,此处不详细描述).
 
 ## 小结
 
