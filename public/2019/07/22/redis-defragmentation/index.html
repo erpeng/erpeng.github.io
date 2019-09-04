@@ -91,7 +91,7 @@
 <meta property="og:site_name" content="erpeng&#39;s code area">
 <meta property="og:description" content="内存碎片举个例子,假设一个Redis实例中共有5GB的数据,然后删除了2GB数据,RSS仍旧可能是5G.也就是说并不是在Redis中将key删除后就会将占用的内存返回给OS.这个特性并不是Redis独有的,因为该特性是由服务端代码使用的内存分配器决定的(libc的malloc,jemalloc,tcmalloc等等,在Linux下,Redis默认使用jemalloc).为什么分配器这么做呢？这是一">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-07-22T08:39:37.898Z">
+<meta property="og:updated_time" content="2019-09-03T08:52:01.232Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Redis 内存碎片">
 <meta name="twitter:description" content="内存碎片举个例子,假设一个Redis实例中共有5GB的数据,然后删除了2GB数据,RSS仍旧可能是5G.也就是说并不是在Redis中将key删除后就会将占用的内存返回给OS.这个特性并不是Redis独有的,因为该特性是由服务端代码使用的内存分配器决定的(libc的malloc,jemalloc,tcmalloc等等,在Linux下,Redis默认使用jemalloc).为什么分配器这么做呢？这是一">
@@ -416,8 +416,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2019/07/30/grpc-go-client/" rel="prev" title="grpc-go源码解析2-client">
-                grpc-go源码解析2-client <i class="fa fa-chevron-right"></i>
+              <a href="/2019/07/30/grpc-go-example/" rel="prev" title="grpc-go源码解析1-example">
+                grpc-go源码解析1-example <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -498,7 +498,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">48</span>
+                  <span class="site-state-item-count">50</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -511,7 +511,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">12</span>
+                  <span class="site-state-item-count">13</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
