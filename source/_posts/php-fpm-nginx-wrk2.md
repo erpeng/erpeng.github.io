@@ -20,7 +20,7 @@ tags:
 request_time:nginx从接收到客户端第一个字节到发送到客户端最后一个字节的时间
 upstream_connect_time:nginx建立到上游连接的时间
 upstream_header_time:nginx从建立到上游连接到收到上游响应头的时间
-upstream_response_time:nginx从建立到上游连接到接受完响应的时间
+upstream_response_time:nginx从建立到上游连接到接收完响应的时间
 
 看一下nginx中对这三个值的计算逻辑:
 
@@ -41,10 +41,10 @@ upstream_response_time:nginx从建立到上游连接到接受完响应的时间
       u->state->header_time = ngx_current_msec - u->start_time;
 
 ```
-流程为从开始建立连接记录一个start_time,然后可以发送请求的时候用当前时间减去start_time计算upstream_connect_time,收到响应头后通过当前时间减去start_time计算upstream_header_time,结束上游请求的时候用当前时间减去start_time计算upstream_response_time(**注意如上响应头有相应的nginx版本要求**)
+流程为从开始建立连接记录一个start_time,然后可以发送请求的时候用当前时间减去start_time计算upstream_connect_time,收到响应头后通过当前时间减去start_time计算upstream_header_time,结束上游请求的时候用当前时间减去start_time计算upstream_response_time(**注意如上变量有相应的nginx版本要求**)
 
 upstream_header_time-upstream_connect_time可以理解为从发送请求开始到响应的时间
-upstream_response_time-upstream_header_time如果很大,可以理解数据量响应耗时比较多
+upstream_response_time-upstream_header_time如果很大,可以理解为响应数据量很大,耗时比较多
 
 继续实验,将php脚本sleep 1s,然后用wrk压测
 
@@ -183,7 +183,7 @@ nginx version: nginx/1.17.3
         r->write_event_handler = ngx_http_upstream_wr_check_broken_connection;
 ```
 
-及将客户端和nginx的读写回调函数分别设置为ngx_http_upstream_rd_check_broken_connection和ngx_http_upstream_wr_check_broken_connection,而这两个函数都是调用ngx_http_upstream_check_broken_connection.顾名思义,该函数检测客户端断开的连接,检测到之后会记录499.
+即将客户端和nginx的读写回调函数分别设置为ngx_http_upstream_rd_check_broken_connection和ngx_http_upstream_wr_check_broken_connection,而这两个函数都是调用ngx_http_upstream_check_broken_connection.顾名思义,该函数检测客户端断开的连接,检测到之后会记录499.
 
 首先看看事件处理模块在ngx_epoll_process_events中会有如下代码:
 ```
@@ -267,4 +267,4 @@ ngx_http_upstream_finalize_request中会做资源回收清理以及关闭上游�
 
 ## 小结
 
-本文关注nginx如何检测客户端连接从而生成499的access log以及upstream的一些状态指标的计算逻辑.
+本文关注nginx如何检测客户端连接从而生成499的access log以及upstream的一些状态指标的计算逻辑.产生499时首先可以通过request time查看处理时间,如果小于客户端设置的超时时间,说明可能是网络等原因导致客户端主动断开.如果request time等于客户端设置的超时时间,那么就得从服务端查找原因.
