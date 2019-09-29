@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="architecture,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="有赞日志平台架构(详见后文参考链接)中用到的一些组件,通过查阅文档,进行初步的了解.  各组件作用在有赞日志平台中,kafka是日志中心,所有收集到的日志都会通过不同的topic发送到kafka,利用kafka的高吞吐量和消息中间件的异步解耦特性做一个中间桥梁.spark消费日志并且做一些处理逻辑然后或者写入elasticsearch做查询,或者匹配告警逻辑后做一些监控告警.其中elastics">
+<meta name="keywords" content="architecture">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kafka&#x2F;spark&#x2F;elasticsearch&#x2F;hbase笔记">
+<meta property="og:url" content="https://erpeng.github.io/2019/06/09/kafka-hbase-elasticsearch-spark/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="有赞日志平台架构(详见后文参考链接)中用到的一些组件,通过查阅文档,进行初步的了解.  各组件作用在有赞日志平台中,kafka是日志中心,所有收集到的日志都会通过不同的topic发送到kafka,利用kafka的高吞吐量和消息中间件的异步解耦特性做一个中间桥梁.spark消费日志并且做一些处理逻辑然后或者写入elasticsearch做查询,或者匹配告警逻辑后做一些监控告警.其中elastics">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://erpeng.github.io/img/Hbase.png">
+<meta property="og:updated_time" content="2019-09-29T09:46:30.773Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="kafka&#x2F;spark&#x2F;elasticsearch&#x2F;hbase笔记">
+<meta name="twitter:description" content="有赞日志平台架构(详见后文参考链接)中用到的一些组件,通过查阅文档,进行初步的了解.  各组件作用在有赞日志平台中,kafka是日志中心,所有收集到的日志都会通过不同的topic发送到kafka,利用kafka的高吞吐量和消息中间件的异步解耦特性做一个中间桥梁.spark消费日志并且做一些处理逻辑然后或者写入elasticsearch做查询,或者匹配告警逻辑后做一些监控告警.其中elastics">
+<meta name="twitter:image" content="https://erpeng.github.io/img/Hbase.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/06/09/kafka-hbase-elasticsearch-spark/">
+
+
+
+
+
+  <title>kafka/spark/elasticsearch/hbase笔记 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/06/09/kafka-hbase-elasticsearch-spark/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">kafka/spark/elasticsearch/hbase笔记</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-06-09T00:00:00+08:00">
+                2019-06-09
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/06/09/kafka-hbase-elasticsearch-spark/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/06/09/kafka-hbase-elasticsearch-spark/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>有赞日志平台架构(详见后文参考链接)中用到的一些组件,通过查阅文档,进行初步的了解.</p>
+</blockquote>
+<h2 id="各组件作用"><a href="#各组件作用" class="headerlink" title="各组件作用"></a>各组件作用</h2><p>在有赞日志平台中,kafka是日志中心,所有收集到的日志都会通过不同的topic发送到kafka,利用kafka的高吞吐量和消息中间件的异步解耦特性做一个中间桥梁.spark消费日志并且做一些处理逻辑然后或者写入elasticsearch做查询,或者匹配告警逻辑后做一些监控告警.其中elasticsearch保存索引,hbase保存原始数据,具体做法可参考链接3,这样可以使elasticsearch保存的数据量减小从而匹配filesystem cache,做到高效的查询(查询过程为通过es查询到对应的docid,然后以docid为键去hbase中查询,查到完整的数据).</p>
+<h2 id="各组件介绍"><a href="#各组件介绍" class="headerlink" title="各组件介绍"></a>各组件介绍</h2><h3 id="kafka"><a href="#kafka" class="headerlink" title="kafka"></a>kafka</h3><ul>
+<li>Topic/Partition:数据以topic来区分,每个topic可以划分为多个Partition,每个Partition中的数据赋予一个顺序的id number,称之为offset.kafka会持久化所有publish的消息,持久化时间根据配置的策略决定.但是大量的堆积并不会影响性能,性能是O(1)</li>
+<li>集群中以partition来分区.每个partition会复制多份到其他机器来做到高可用,有一个server会作为该partition的leader负责读写,其他server作为follower来提供高可用性.topic划分为多个partition来保证性能的线性扩展</li>
+<li>Producers:负责生产消息,可以指定发送到哪个topic的哪个partition</li>
+<li>Consumers:消费者隶属于某个consumer group.某个消息只会发送给consumer group中的一个consumer,这样能做到消息消费的负载均衡</li>
+<li>Kafka保证如下几点:<ul>
+<li>同样的一个producer发送到同一个topic的同一个partition确定有序性</li>
+<li>一个consumer以partition中保存的顺序获得消息</li>
+<li>复制因子为N的话,能保证N-1个server的failure不会丢提交的消息</li>
+</ul>
+</li>
+<li>Kafka作为一个消息系统:<ul>
+<li>每个partition给一个consumer消费</li>
+<li>每个partition可以给不同的consumer group中的consumer消费</li>
+<li>按partition消费可以做到并发消费,但按consumer group可以做到多个订阅者同时消费同一个partition</li>
+</ul>
+</li>
+<li>Kafka作为一个存储系统:<ul>
+<li>可以和producer有确认机制,确保partition中数据高可用落盘之后才回复</li>
+<li>不论数据多少,存取都是O(1)的复杂度</li>
+</ul>
+</li>
+<li>底层存储设计:底层如何做到O(1)的存取参考该文:<a href="https://cloud.tencent.com/developer/article/1057763" target="_blank" rel="noopener">https://cloud.tencent.com/developer/article/1057763</a></li>
+<li>kafka如何实现exactly once语义:通过类似tcp的seqno来保证不会重复append 数据.而且seqno会持久化,以免一个broker失败后其他broker能继续按当前的seqno来处理<br>参考:<a href="https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/" target="_blank" rel="noopener">https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/</a></li>
+</ul>
+<h3 id="hbase"><a href="#hbase" class="headerlink" title="hbase"></a>hbase</h3><ul>
+<li>源于Google的”Bigtable: A Distributed Storage System for Structured Data”.关键特性是可实时的随机读写超大规模的数据集.可通过增加节点来实现线性扩展</li>
+<li><p>数据模型</p>
+<ul>
+<li><strong>列族</strong>:同一个列族的所有成员具有相同的前缀.并且列族作为表模式定义的一部分必须预先给出.但是列族成员可以动态添加.以一个图片表作为示例,例如有两个列族,contents以及info,contents:image为图片内容,info:format为图片格式,info:geo为图片拍摄的坐标值</li>
+<li>所有的调优和存储都是在列族的格式上进行的,所以最好使所有列族成员具有相同的访问模式和大小特征.</li>
+<li><strong>单元格</strong>:cell.行列交叉处为一个cell,cell是有版本的,默认为插入时的时间戳.(<strong>默认保存多少个版本?并且查询时返回多少个版本?</strong>)</li>
+<li>行是升序排列的,按字节序.行的键值和cell的内容都是二进制字节流,但是列族的前缀必须是可打印字符</li>
+<li><strong>区域</strong>:region.每个区域由它所属于的表,它所包含的第一行及其最后一行(左闭右开区间)来表示.<br>区域是在集群上分布数据的最小单位.</li>
+</ul>
+</li>
+<li><p>实现</p>
+</li>
+</ul>
+<p><img src="/img/Hbase.png" alt="Hbase"></p>
+<ul>
+<li>Master:启动一个安装,把区域分配给注册的regionserver,恢复regionserver的故障.</li>
+<li>RegionServer:负责零个或者多个区域的管理以及响应客户端的读写请求.</li>
+<li>Hbase通过HDFS来持久化存储数据</li>
+<li>hbase:meta保存在zookeeper,维护着当前集群上所有区域的列表、状态和位置.区域名作为键,区域名由所属的表名、区域起始行、区域的创建时间及其整体的MD5组成.</li>
+<li>客户端首先通过zookeeper查找hbase:meta的位置,然后通过区域名获取用户空间区域所在节点及其位置,接着可以直接和regionserver交互.为了较少交互需要缓存hbase:meta信息直到碰到错误之前会一直直接使用缓存</li>
+<li>写操作:先写commit log,然后是内存中的memstore,然后会被刷入文件系统</li>
+<li>读操作:读memstore找到就返回,否则依次从新到旧查flush file.会对文件系统的flush file进行压缩合并,并且有一个进程会检测是否超出区域的大小,超出会进行分割.(<strong>类似leveldb</strong>)<br>leveldb的实现参考<a href="https://juejin.im/post/5c36ad6051882525616db7fa" target="_blank" rel="noopener">https://juejin.im/post/5c36ad6051882525616db7fa</a></li>
+</ul>
+<h4 id="延伸阅读-zookeeper"><a href="#延伸阅读-zookeeper" class="headerlink" title="延伸阅读 zookeeper"></a>延伸阅读 zookeeper</h4><p>Hbase集群使用了zookeeper,延伸了解一下zookeeper</p>
+<ul>
+<li><p>数据模型:</p>
+<ul>
+<li>两种znode,一种是暂时的(ephemeral),一种是持久的(persistent).创建znode的客户端断开连接时,短暂znode都会被ZooKeeper服务删除.持久的则不会.一个znode被存储的数据限制在1MB以内</li>
+<li>顺序znode.sequential znode,该znode名称之后会附加一个值,为一个单调递增的计数器所添加</li>
+<li>可以watch一个znode,则znode被修改时可以通知观察者</li>
+</ul>
+</li>
+<li><p>操作:</p>
+<ul>
+<li>集合更新 multi操作可以原子性的执行一批基本操作</li>
+<li>sync:<strong>Zookeeper允许客户端读到的数据滞后于zookeeper服务的最新状态,因此客户端使用sync操作来获取数据的最新状态</strong></li>
+<li>exists,getChildren和getData这些读操作上可以设置观察,这些观察可以被写操作create、delete、setData触发.</li>
+</ul>
+</li>
+<li><p>实现:</p>
+<ul>
+<li>zookeeper的目标是将znode树的每一个操作都会被复制到集合体中超过半数的机器上</li>
+<li>读取操作:任意一个机器可以为读请求提供服务.</li>
+<li>写操作:所有的写请求都会被转发给领导者,再由领导者将更新广播给跟随者,半数以上持久化之后领导者才会提交这个更新.类似于两阶段提交</li>
+<li>每一个对znode树的更新会赋予一个全局唯一的ID,称为zxid</li>
+</ul>
+</li>
+<li><p>zookeeper可以看做一个具有高可用特性的文件系统.但没有文件和目录,而是统一使用节点的概念,称为znode.</p>
+</li>
+<li><p>删除一个znode时需要提供节点路径和版本号.乐观锁,如果版本号不同则不会被删除,但是将版本号设置为-1可以绕过该版本检测机制,不管znode的版本号是什么而直接将其删除.</p>
+</li>
+<li><p>分布式锁的实现:</p>
+<ul>
+<li>分布式锁首先需要获得大多数节点的同意才能获得锁</li>
+<li>必须有过期时间,以免持有锁之后不能释放导致其他进程无法获取锁</li>
+<li>释放锁时必须比较是否是自己申请的锁,即不能将其他进程的锁释放</li>
+<li>常用的有redis分布式锁,分别通过对多台redis实例申请锁,并且设置key的过期时间以及value值设置为一个随机值来解决上述问题</li>
+</ul>
+</li>
+<li>zookeeper分布式锁:<ul>
+<li>在锁/dl/lock-下create一个sequential ephemeral node, 返回值为/lock-1、/lock-2等等</li>
+<li>查询/dl下的所有子节点并且设置一个观察</li>
+<li>如果第一步中获取到的znode在/dl中具有最小值则获取到锁,观察中同样如此处理</li>
+<li>过期通过zk的ephemeral node实现,zk本身是提供分布式特性</li>
+</ul>
+</li>
+</ul>
+<h3 id="elasticsearch"><a href="#elasticsearch" class="headerlink" title="elasticsearch"></a>elasticsearch</h3><ul>
+<li>存储术语:index-&gt;database,type-&gt;table,mapping-&gt;schema,每个index默认有五个shard,每个shard默认有一个replica,每个shard是一个lucene index</li>
+<li>集群术语:node,masternode:负责创建和删除index,确定哪些node属于集群以及给node分配shards.<br>datanode:存储数据和倒排索引.</li>
+<li>存储:倒排索引有序存储.es中一条记录是一个document.</li>
+<li>写入时必须等待primary和replica的translog都fsyncd.删除时写入一个.del文件,最后返回时过滤.更新时先删除再写入一个新的版本.查询时会从所有shard取出之后在协调节点取top10然后通过docid获取到doc并返回.lucene segment合并时会将.del文件中的数据删除</li>
+</ul>
+<h3 id="spark"><a href="#spark" class="headerlink" title="spark"></a>spark</h3><ul>
+<li>Apache Spark是用于大数据处理的集群计算框架.最突出的表现在于它能将作业与作业之间产生的大规模的工作数据集存储在内存中</li>
+<li>RDD(Resilient Distributed Dataset)弹性分布式数据集是所有Spark程序的核心,RDD的创建有三种方法<ul>
+<li>来自一个内存中的对象集合</li>
+<li>使用外部存储器（例如HDFS)中的数据集</li>
+<li>对现有RDD进行转换</li>
+</ul>
+</li>
+<li>转换和动作:转换时从现有RDD生成新的RDD,而动作则触发对RDD的计算并对计算结果执行某种操作,要么立即返回给用户,要么保存到外部存储器中</li>
+<li>适合于迭代算法,上次的结果可以保存到内存中供下次使用,并且提供了不同的持久化方法,可以直接保存,可以序列化后保存,也可以保存到磁盘上</li>
+</ul>
+<p>spark统计词频<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">val conf = new SparkConf().setAppName(&quot;wiki_test&quot;) // create a spark config object</span><br><span class="line">val sc = new SparkContext(conf) // Create a spark context</span><br><span class="line">val data = sc.textFile(&quot;/path/to/somedir&quot;) // Read files from &quot;somedir&quot; into an RDD of (filename, content) pairs.</span><br><span class="line">val tokens = data.flatMap(_.split(&quot; &quot;)) // Split each file into a list of tokens (words).</span><br><span class="line">val wordFreq = tokens.map((_, 1)).reduceByKey(_ + _) // Add a count of one to each token, then sum the counts per word type.</span><br><span class="line">wordFreq.sortBy(s =&gt; -s._2).map(x =&gt; (x._2, x._1)).top(10) // Get the top 10 words. Swap word and count to sort by count.</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li><strong>DAG和Spark?</strong> Spark的运行机制</li>
+</ul>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a href="https://mp.weixin.qq.com/s?src=3&amp;timestamp=1560006478&amp;ver=1&amp;signature=HHMaY77rbjCfJN64XhOjQA3CUIcxQGO*S6TehE6i1pYL0PZaLATH*b42bk-cJxS7A12UaAJMim8t0F-pPi4uhZLKVEo7Nn47HPEi0YIzk9RglXtTpsx9Xulq78BdX6C*CwXGPWruB4i5JPnOZAIwQeGviW2163HrP5ezsM6XwnM=" target="_blank" rel="noopener">https://mp.weixin.qq.com/s?src=3&amp;timestamp=1560006478&amp;ver=1&amp;signature=HHMaY77rbjCfJN64XhOjQA3CUIcxQGO*S6TehE6i1pYL0PZaLATH*b42bk-cJxS7A12UaAJMim8t0F-pPi4uhZLKVEo7Nn47HPEi0YIzk9RglXtTpsx9Xulq78BdX6C*CwXGPWruB4i5JPnOZAIwQeGviW2163HrP5ezsM6XwnM=</a></li>
+<li><a href="https://tech.youzan.com/you-zan-bai-yi-ji-ri-zhi-xi-tong-jia-gou-she-ji/" target="_blank" rel="noopener">https://tech.youzan.com/you-zan-bai-yi-ji-ri-zhi-xi-tong-jia-gou-she-ji/</a></li>
+<li><a href="https://mp.weixin.qq.com/s?timestamp=1560004232&amp;src=3&amp;ver=1&amp;signature=0YiMg6yPTGXZErJPIXfzTLKMKA3Znx9cRPhRWILHNrKb-bmE28E4O9SsFvLK7QMDf7VBAhPYeEisfdoPMaaM4PNej8fMuVqwfEvbeMfvTR*k9Phh7FBWK9I3KN3dS2SZGJNnam6ozsxuwNoFoGzryTUGUqe8a13eTecH5lQA*3I=" target="_blank" rel="noopener">https://mp.weixin.qq.com/s?timestamp=1560004232&amp;src=3&amp;ver=1&amp;signature=0YiMg6yPTGXZErJPIXfzTLKMKA3Znx9cRPhRWILHNrKb-bmE28E4O9SsFvLK7QMDf7VBAhPYeEisfdoPMaaM4PNej8fMuVqwfEvbeMfvTR*k9Phh7FBWK9I3KN3dS2SZGJNnam6ozsxuwNoFoGzryTUGUqe8a13eTecH5lQA*3I=</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/architecture/" rel="tag"># architecture</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/06/02/go-memory-barrier/" rel="next" title="硬件角度看内存屏障">
+                <i class="fa fa-chevron-left"></i> 硬件角度看内存屏障
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/06/11/c++-quick-start/" rel="prev" title="c++快速入门">
+                c++快速入门 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">56</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#各组件作用"><span class="nav-number">1.</span> <span class="nav-text">各组件作用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#各组件介绍"><span class="nav-number">2.</span> <span class="nav-text">各组件介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#kafka"><span class="nav-number">2.1.</span> <span class="nav-text">kafka</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#hbase"><span class="nav-number">2.2.</span> <span class="nav-text">hbase</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#延伸阅读-zookeeper"><span class="nav-number">2.2.1.</span> <span class="nav-text">延伸阅读 zookeeper</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#elasticsearch"><span class="nav-number">2.3.</span> <span class="nav-text">elasticsearch</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#spark"><span class="nav-number">2.4.</span> <span class="nav-text">spark</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考链接"><span class="nav-number">3.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

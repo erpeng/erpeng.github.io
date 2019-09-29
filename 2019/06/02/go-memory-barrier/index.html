@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="architecture,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="本文参考论文 Memory Barriers:a Hardware View for Software Hackers  cpu cachecpu能够在1纳秒执行数十条指令,但是从内存中获取一个数据需要几百纳秒,有两个数量级的差距,因此在现代的cpu上会有多达几MB的cache.数据在cache和内存之间以固定大小的blocks来流动,称之为’cache lines’,一般大小为2的幂次,从16">
+<meta name="keywords" content="architecture">
+<meta property="og:type" content="article">
+<meta property="og:title" content="硬件角度看内存屏障">
+<meta property="og:url" content="https://erpeng.github.io/2019/06/02/go-memory-barrier/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="本文参考论文 Memory Barriers:a Hardware View for Software Hackers  cpu cachecpu能够在1纳秒执行数十条指令,但是从内存中获取一个数据需要几百纳秒,有两个数量级的差距,因此在现代的cpu上会有多达几MB的cache.数据在cache和内存之间以固定大小的blocks来流动,称之为’cache lines’,一般大小为2的幂次,从16">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-09-29T09:46:30.771Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="硬件角度看内存屏障">
+<meta name="twitter:description" content="本文参考论文 Memory Barriers:a Hardware View for Software Hackers  cpu cachecpu能够在1纳秒执行数十条指令,但是从内存中获取一个数据需要几百纳秒,有两个数量级的差距,因此在现代的cpu上会有多达几MB的cache.数据在cache和内存之间以固定大小的blocks来流动,称之为’cache lines’,一般大小为2的幂次,从16">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/06/02/go-memory-barrier/">
+
+
+
+
+
+  <title>硬件角度看内存屏障 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/06/02/go-memory-barrier/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">硬件角度看内存屏障</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-06-02T00:00:00+08:00">
+                2019-06-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/06/02/go-memory-barrier/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/06/02/go-memory-barrier/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>本文参考论文 Memory Barriers:a Hardware View for Software Hackers</p>
+</blockquote>
+<h2 id="cpu-cache"><a href="#cpu-cache" class="headerlink" title="cpu cache"></a>cpu cache</h2><p>cpu能够在1纳秒执行数十条指令,但是从内存中获取一个数据需要几百纳秒,有两个数量级的差距,因此在现代的cpu上会有多达几MB的cache.数据在cache和内存之间以固定大小的blocks来流动,称之为’cache lines’,一般大小为2的幂次,从16Bytes-256Bytes.cache lines可以理解为一个硬件的hash表,”two way”表示每个槽中可以放置两个entry,如果是256bytes对齐,那么低8bits都是0,可以取8-12bits为hash值.例如,cpu cache槽为0x0-0xF,则0x12345E00的8-12bits为E,会放置到0xE这个槽中.</p>
+<p>现代cpu一般会有多个core,每个core有自己的cache,因此必然涉及到缓存一致性的问题</p>
+<h2 id="缓存一致性协议"><a href="#缓存一致性协议" class="headerlink" title="缓存一致性协议"></a>缓存一致性协议</h2><p>Cache-coherency protocols管理cache line的状态,防止不一致或者丢失数据</p>
+<h3 id="MESI"><a href="#MESI" class="headerlink" title="MESI"></a>MESI</h3><p>MESI代表’modified’,’exclusive’,’shared’和’invalid’,代表缓存的四种状态.因此一个cache line除了物理地址和数据之外,会单独使用2bits(tag)去保存这个状态</p>
+<ul>
+<li>modified:处于该状态的cpu持有唯一最新的数据.因此该cache负责将数据写回内存或者传递给其他cache,并且在该cache保存其他数据之前必须先执行此步骤.</li>
+<li>exclusive:类似于modified,但是还没有被修改.因此内存中的该数据是最新的.</li>
+<li>shared:处于该状态表明数据在至少两个cpu cache中存在,因此该cpu必须在询问其他cpu之后才能够保存该数据</li>
+<li>invalid:invalid状态的数据可以被替换</li>
+</ul>
+<p>因为所有cache line中的数据必须保持一致性的视图,因此cache-coherency protocols提供了消息机制保持系统间的交流</p>
+<h3 id="MESI消息"><a href="#MESI消息" class="headerlink" title="MESI消息"></a>MESI消息</h3><ul>
+<li>Read:消息中包括要读取的物理地址</li>
+<li>Read Response:Read的响应,可以是内存或者其他cache来响应.例如如果一个cache处于modified状态,那么他的数据是最新的,必须响应一个Read Response消息</li>
+<li>Invalidate:Invalidate消息包括一个cache保存的物理地址,所有其他cache必须将相应的数据清除并响应</li>
+<li>Invalidate Acknowledge:收到Invalidate消息的CPU清除相应数据后需要回复Invalidate Acknowledge消息</li>
+<li>Read Invalidate:Read和Invalidate的结合体</li>
+<li>Writeback:处于modified的cache通过该消息eject lines从而腾出空间.writeback消息包括地址和数据,可以写回内存,也可以snooped到其他CPU的cache.</li>
+</ul>
+<h3 id="MESI-state转换"><a href="#MESI-state转换" class="headerlink" title="MESI state转换"></a>MESI state转换</h3><p>M-&gt;E:writeback message,但仍保留修改的权利<br>E-&gt;M:写入cache line.不需要消息<br>M-&gt;I:read invalidate message,将数据发给需要的CPU并且将本地缓存失效<br>I-&gt;M:对不在自己cache中的数据原子性的执行read-modify-write操作.首先发送一个read invalidate消息,通过read response收到数据,并且收到全部的invalidate acknowledge响应之后执行该动作.<br>S-&gt;M:对在自己cache中并且只读的数据原子性的执行read-modify-write操作,首先发送invalidate消息,等待接收到invalidate acknowledge之后执行该动作<br>M-&gt;S:收到read消息,将数据同步到需要的CPU甚至writeback回memory,本地保存一份只读的数据<br>S-&gt;E:该CPU需要修改本地的只读数据,因此首先发送invalidate消息,并且需要收到所有的invalidate response.其他CPU需要将数据writeback回内存<br>E-&gt;I:其他CPU需要对该CPU中的数据原子性的执行read-modify-write操作.该操作在收到read invalidate信息之后恢复一个read response和invalidate acknowledge<br>I-&gt;E:该CPU发送read invalidate并且收到有效回复后可以从I状态切换到E状态,并且很可能会继续从E-&gt;M<br>I-&gt;S:发送一个read消息后并且收到数据后可以切换到S状态<br>S-&gt;I:收到invalidate消息并且回复之后会从S切换到I状态</p>
+<h2 id="CPU的Stores-Result"><a href="#CPU的Stores-Result" class="headerlink" title="CPU的Stores Result"></a>CPU的Stores Result</h2><p>假设CPU0需要写一个在CPU1中持有的cacheline,那么CPU0需要等待CPU1传递该cacheline的值,这时候CPU0必须stall一段时间<br>但是CPU0其实没必要等待,因为不论CPU1发什么数据给CPU0,CPU0最终都会无条件的覆盖它</p>
+<h3 id="Store-Buffers"><a href="#Store-Buffers" class="headerlink" title="Store Buffers"></a>Store Buffers</h3><p>为了防止该stall,CPU和cache之间加了一层store buffers,CPU0只需要简单的将其写入放到store buffer并且继续执行.当CPU1的cacheline数据到达之后,再从store buffer中将数据移动到cacheline中.<br>这种假设中store buffer的数据得先放到cache中,然后load的时候会从cache中load</p>
+<h3 id="Store-Frowarding"><a href="#Store-Frowarding" class="headerlink" title="Store Frowarding"></a>Store Frowarding</h3><p>考虑如下代码:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a = 1;</span><br><span class="line">b = a+1;</span><br><span class="line">assert(b == 2);</span><br></pre></td></tr></table></figure></p>
+<p>如果按上边的假设会导致断言失效,b计算出来为1.因此修改上文的假设为:<br>load的时候不需要将store buffer中的数据先放入cache,而是直接从cache和store buffer中一起读取.<br>如果store buffer中有值直接使用</p>
+<p><strong>可以具体参考论文,论文中有举例说明</strong></p>
+<h3 id="Store-Buffers-和-Memory-Barriers"><a href="#Store-Buffers-和-Memory-Barriers" class="headerlink" title="Store Buffers 和 Memory Barriers"></a>Store Buffers 和 Memory Barriers</h3><p>如下代码:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">void foo(void)</span><br><span class="line">&#123;</span><br><span class="line">	a = 1;</span><br><span class="line">	b = 1;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void bar(void)</span><br><span class="line">&#123;</span><br><span class="line">	while (b == 0) continue;</span><br><span class="line">	assert (a == 1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>此种情形下也会导致断言失败,CPU0首先将a = 1放入store buffer,然后执行b = 1(假设CPU0执行foo,并且持有b,CPU1执行bar,并且持有a.).CPU1读到了b = 1但是a仍然在store buffer中还没有被处理</p>
+<p>由于CPU无法知道变量之间的关联关系,因此提供了memory-barrier这个指令允许软件开发者能够告诉CPU这种关联关系.代码改为如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">void foo(void)</span><br><span class="line">&#123;</span><br><span class="line">	a = 1;</span><br><span class="line">	smp_mb();</span><br><span class="line">	b = 1;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void bar(void)</span><br><span class="line">&#123;</span><br><span class="line">	while (b == 0) continue;</span><br><span class="line">	assert (a == 1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>memory-barrier会告诉CPU在应用后续cache line之前必须先把store buffer中的数据flush.或者是通过stall一段时间直到store buffer清空,或者使用store buffer把后续指令也缓存,直到之前的指令已执行完成.</p>
+<h2 id="store-result引发的新问题"><a href="#store-result引发的新问题" class="headerlink" title="store result引发的新问题"></a>store result引发的新问题</h2><p>由于加memory-barrier之后,会将后续指令都放入store buffer,但是store buffer空间有限,此时需要等待invalidate完成之后才能够将store buffer腾出空间继续使用.因此解决方案为使invalidate acknowledge更快到达,因此每个cpu引入了一个 invalidate queues.</p>
+<h3 id="Invalidate-Queues"><a href="#Invalidate-Queues" class="headerlink" title="Invalidate Queues"></a>Invalidate Queues</h3><p>CPU可以在没有真正invalidate一个cache之前先发送invalidate消息然后将要invalidate的cache放到一个queue中</p>
+<p>放入invalidate queue之后就可以发送invalidate acknowledge,但是继续对invalidate queue中涉及到的cacheline操作之前,必须先将invalidate queue中的数据先处理完毕</p>
+<p>类似store buffer的引入是为了解决cpu stall,但会导致一些问题,因此需要memory-barrier,同理,invalidate queue的引入也会导致一些问题.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">void foo(void)</span><br><span class="line">&#123;</span><br><span class="line">	a = 1;</span><br><span class="line">	smp_mb();</span><br><span class="line">	b = 1;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void bar(void)</span><br><span class="line">&#123;</span><br><span class="line">	while (b == 0) continue;</span><br><span class="line">	assert (a == 1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>继续看这段代码,假设a是shared,b被cpu0拥有(处于exclusive或者modified状态).假设CPU0执行foo()并且cpu1执行bar()</p>
+<p>加了invalidate queue之后该段代码还是会导致断言失败,因此需要继续修改</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">void foo(void)</span><br><span class="line">&#123;</span><br><span class="line">	a = 1;</span><br><span class="line">	smp_mb();</span><br><span class="line">	b = 1;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void bar(void)</span><br><span class="line">&#123;</span><br><span class="line">	while (b == 0) continue;</span><br><span class="line">	smb_mb();</span><br><span class="line">	assert (a == 1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>此处的memory-barrier的作用是:在继续执行断言之前,必须先处理完毕invalidate queue中的信息.因此可以保证断言成功</p>
+<h2 id="Read-and-Write-Memory-Barriers"><a href="#Read-and-Write-Memory-Barriers" class="headerlink" title="Read and Write Memory Barriers"></a>Read and Write Memory Barriers</h2><p>read memory barriers专门处理invalidate queue相关,而write memory barriers处理store buffers相关</p>
+<p>因此上述代码修改为:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">void foo(void)</span><br><span class="line">&#123;</span><br><span class="line">	a = 1;</span><br><span class="line">	smp_wmb();</span><br><span class="line">	b = 1;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void bar(void)</span><br><span class="line">&#123;</span><br><span class="line">	while (b == 0) continue;</span><br><span class="line">	smb_rmb();</span><br><span class="line">	assert (a == 1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>论文中举了很多示例,图文并茂,很好理解.需要详细了解memory barriers的可以阅读论文.<br>通过上文的讲解,可以看到,CPU的优化是一个按下葫芦起了瓢的过程,每个优化引入一个新的组件,新的组件又会导致一个新的问题.其实所有的架构设计都会面临这样一个取舍问题.</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/architecture/" rel="tag"># architecture</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/06/01/go-concurrency/" rel="next" title="go并发编程">
+                <i class="fa fa-chevron-left"></i> go并发编程
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/06/09/kafka-hbase-elasticsearch-spark/" rel="prev" title="kafka/spark/elasticsearch/hbase笔记">
+                kafka/spark/elasticsearch/hbase笔记 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">56</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#cpu-cache"><span class="nav-number">1.</span> <span class="nav-text">cpu cache</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#缓存一致性协议"><span class="nav-number">2.</span> <span class="nav-text">缓存一致性协议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#MESI"><span class="nav-number">2.1.</span> <span class="nav-text">MESI</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MESI消息"><span class="nav-number">2.2.</span> <span class="nav-text">MESI消息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MESI-state转换"><span class="nav-number">2.3.</span> <span class="nav-text">MESI state转换</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CPU的Stores-Result"><span class="nav-number">3.</span> <span class="nav-text">CPU的Stores Result</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Store-Buffers"><span class="nav-number">3.1.</span> <span class="nav-text">Store Buffers</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Store-Frowarding"><span class="nav-number">3.2.</span> <span class="nav-text">Store Frowarding</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Store-Buffers-和-Memory-Barriers"><span class="nav-number">3.3.</span> <span class="nav-text">Store Buffers 和 Memory Barriers</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#store-result引发的新问题"><span class="nav-number">4.</span> <span class="nav-text">store result引发的新问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Invalidate-Queues"><span class="nav-number">4.1.</span> <span class="nav-text">Invalidate Queues</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Read-and-Write-Memory-Barriers"><span class="nav-number">5.</span> <span class="nav-text">Read and Write Memory Barriers</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

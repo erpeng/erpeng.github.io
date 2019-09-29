@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="go,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="bytes包包函数123func Equal(a, b []byte) boolfunc Compare(a, b []byte) intfunc IndexByte(b []byte, c byte) int 如上三个基础函数及其他一些函数分体系结构使用汇编分别编写 go doc bytes可以看到如下一些函数签名:1234567891011121314151617181920212223242">
+<meta name="keywords" content="go">
+<meta property="og:type" content="article">
+<meta property="og:title" content="go bytes包&#x2F;strings包源码分析">
+<meta property="og:url" content="https://erpeng.github.io/2019/05/23/go-bytes-strings/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="bytes包包函数123func Equal(a, b []byte) boolfunc Compare(a, b []byte) intfunc IndexByte(b []byte, c byte) int 如上三个基础函数及其他一些函数分体系结构使用汇编分别编写 go doc bytes可以看到如下一些函数签名:1234567891011121314151617181920212223242">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-09-29T09:46:30.770Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="go bytes包&#x2F;strings包源码分析">
+<meta name="twitter:description" content="bytes包包函数123func Equal(a, b []byte) boolfunc Compare(a, b []byte) intfunc IndexByte(b []byte, c byte) int 如上三个基础函数及其他一些函数分体系结构使用汇编分别编写 go doc bytes可以看到如下一些函数签名:1234567891011121314151617181920212223242">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/05/23/go-bytes-strings/">
+
+
+
+
+
+  <title>go bytes包/strings包源码分析 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/05/23/go-bytes-strings/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">go bytes包/strings包源码分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-05-23T00:00:00+08:00">
+                2019-05-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/05/23/go-bytes-strings/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/05/23/go-bytes-strings/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="bytes包"><a href="#bytes包" class="headerlink" title="bytes包"></a>bytes包</h2><h3 id="包函数"><a href="#包函数" class="headerlink" title="包函数"></a>包函数</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">func Equal(a, b []byte) bool</span><br><span class="line">func Compare(a, b []byte) int</span><br><span class="line">func IndexByte(b []byte, c byte) int</span><br></pre></td></tr></table></figure>
+<p>如上三个基础函数及其他一些函数分体系结构使用汇编分别编写</p>
+<p>go doc bytes可以看到如下一些函数签名:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">func Compare(a, b []byte) int</span><br><span class="line">func Contains(b, subslice []byte) bool</span><br><span class="line">func ContainsAny(b []byte, chars string) bool</span><br><span class="line">func ContainsRune(b []byte, r rune) bool</span><br><span class="line">func Count(s, sep []byte) int</span><br><span class="line">func Equal(a, b []byte) bool</span><br><span class="line">func EqualFold(s, t []byte) bool</span><br><span class="line">func Fields(s []byte) [][]byte</span><br><span class="line">func FieldsFunc(s []byte, f func(rune) bool) [][]byte</span><br><span class="line">func HasPrefix(s, prefix []byte) bool</span><br><span class="line">func HasSuffix(s, suffix []byte) bool</span><br><span class="line">func Index(s, sep []byte) int</span><br><span class="line">func IndexAny(s []byte, chars string) int</span><br><span class="line">func IndexByte(b []byte, c byte) int</span><br><span class="line">func IndexFunc(s []byte, f func(r rune) bool) int</span><br><span class="line">func IndexRune(s []byte, r rune) int</span><br><span class="line">func Join(s [][]byte, sep []byte) []byte</span><br><span class="line">func LastIndex(s, sep []byte) int</span><br><span class="line">func LastIndexAny(s []byte, chars string) int</span><br><span class="line">func LastIndexByte(s []byte, c byte) int</span><br><span class="line">func LastIndexFunc(s []byte, f func(r rune) bool) int</span><br><span class="line">func Map(mapping func(r rune) rune, s []byte) []byte</span><br><span class="line">func Repeat(b []byte, count int) []byte</span><br><span class="line">func Replace(s, old, new []byte, n int) []byte</span><br><span class="line">func Runes(s []byte) []rune</span><br><span class="line">func Split(s, sep []byte) [][]byte</span><br><span class="line">func SplitAfter(s, sep []byte) [][]byte</span><br><span class="line">func SplitAfterN(s, sep []byte, n int) [][]byte</span><br><span class="line">func SplitN(s, sep []byte, n int) [][]byte</span><br><span class="line">func Title(s []byte) []byte</span><br><span class="line">func ToLower(s []byte) []byte</span><br><span class="line">func ToLowerSpecial(c unicode.SpecialCase, s []byte) []byte</span><br><span class="line">func ToTitle(s []byte) []byte</span><br><span class="line">func ToTitleSpecial(c unicode.SpecialCase, s []byte) []byte</span><br><span class="line">func ToUpper(s []byte) []byte</span><br><span class="line">func ToUpperSpecial(c unicode.SpecialCase, s []byte) []byte</span><br><span class="line">func Trim(s []byte, cutset string) []byte</span><br><span class="line">func TrimFunc(s []byte, f func(r rune) bool) []byte</span><br><span class="line">func TrimLeft(s []byte, cutset string) []byte</span><br><span class="line">func TrimLeftFunc(s []byte, f func(r rune) bool) []byte</span><br><span class="line">func TrimPrefix(s, prefix []byte) []byte</span><br><span class="line">func TrimRight(s []byte, cutset string) []byte</span><br><span class="line">func TrimRightFunc(s []byte, f func(r rune) bool) []byte</span><br><span class="line">func TrimSpace(s []byte) []byte</span><br><span class="line">func TrimSuffix(s, suffix []byte) []byte</span><br></pre></td></tr></table></figure></p>
+<h3 id="Buffer"><a href="#Buffer" class="headerlink" title="Buffer"></a>Buffer</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">go doc -u bytes.Buffer</span><br><span class="line">type Buffer struct &#123;</span><br><span class="line">	buf       []byte   // contents are the bytes buf[off : len(buf)]</span><br><span class="line">	off       int      // read at &amp;buf[off], write at &amp;buf[len(buf)]</span><br><span class="line">	bootstrap [64]byte // memory to hold first slice; helps small buffers avoid allocation.</span><br><span class="line">	lastRead  readOp   // last read operation, so that Unread* can work correctly.</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func NewBuffer(buf []byte) *Buffer</span><br><span class="line">func NewBufferString(s string) *Buffer</span><br><span class="line">func (b *Buffer) Bytes() []byte</span><br><span class="line">func (b *Buffer) Cap() int</span><br><span class="line">func (b *Buffer) Grow(n int)</span><br><span class="line">func (b *Buffer) Len() int</span><br><span class="line">func (b *Buffer) Next(n int) []byte</span><br><span class="line">func (b *Buffer) Read(p []byte) (n int, err error)</span><br><span class="line">func (b *Buffer) ReadByte() (byte, error)</span><br><span class="line">func (b *Buffer) ReadBytes(delim byte) (line []byte, err error)</span><br><span class="line">func (b *Buffer) ReadFrom(r io.Reader) (n int64, err error)</span><br><span class="line">func (b *Buffer) ReadRune() (r rune, size int, err error)</span><br><span class="line">func (b *Buffer) ReadString(delim byte) (line string, err error)</span><br><span class="line">func (b *Buffer) Reset()</span><br><span class="line">func (b *Buffer) String() string</span><br><span class="line">func (b *Buffer) Truncate(n int)</span><br><span class="line">func (b *Buffer) UnreadByte() error</span><br><span class="line">func (b *Buffer) UnreadRune() error</span><br><span class="line">func (b *Buffer) Write(p []byte) (n int, err error)</span><br><span class="line">func (b *Buffer) WriteByte(c byte) error</span><br><span class="line">func (b *Buffer) WriteRune(r rune) (n int, err error)</span><br><span class="line">func (b *Buffer) WriteString(s string) (n int, err error)</span><br><span class="line">func (b *Buffer) WriteTo(w io.Writer) (n int64, err error)</span><br><span class="line">func (b *Buffer) empty() bool</span><br><span class="line">func (b *Buffer) grow(n int) int</span><br><span class="line">func (b *Buffer) readSlice(delim byte) (line []byte, err error)</span><br><span class="line">func (b *Buffer) tryGrowByReslice(n int) (int, bool)</span><br></pre></td></tr></table></figure>
+<p>该结构可以用来高效的拼接生成一个字符串.可以读取写入并且按需增长buffer,还可以UnreadByte.</p>
+<h3 id="Reader"><a href="#Reader" class="headerlink" title="Reader"></a>Reader</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">go doc -u bytes.Reader</span><br><span class="line">type Reader struct &#123;</span><br><span class="line">	s        []byte</span><br><span class="line">	i        int64 // current reading index</span><br><span class="line">	prevRune int   // index of previous rune; or &lt; 0</span><br><span class="line">&#125;</span><br><span class="line">    A Reader implements the io.Reader, io.ReaderAt, io.WriterTo, io.Seeker,</span><br><span class="line">    io.ByteScanner, and io.RuneScanner interfaces by reading from a byte slice.</span><br><span class="line">    Unlike a Buffer, a Reader is read-only and supports seeking.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">func NewReader(b []byte) *Reader</span><br><span class="line">func (r *Reader) Len() int</span><br><span class="line">func (r *Reader) Read(b []byte) (n int, err error)</span><br><span class="line">func (r *Reader) ReadAt(b []byte, off int64) (n int, err error)</span><br><span class="line">func (r *Reader) ReadByte() (byte, error)</span><br><span class="line">func (r *Reader) ReadRune() (ch rune, size int, err error)</span><br><span class="line">func (r *Reader) Reset(b []byte)</span><br><span class="line">func (r *Reader) Seek(offset int64, whence int) (int64, error)</span><br><span class="line">func (r *Reader) Size() int64</span><br><span class="line">func (r *Reader) UnreadByte() error</span><br><span class="line">func (r *Reader) UnreadRune() error</span><br><span class="line">func (r *Reader) WriteTo(w io.Writer) (n int64, err error)</span><br></pre></td></tr></table></figure>
+<p>使用NewReader输入一个byte slice后,可以指定位置读取,逐字节读取,甚至UnreadByte</p>
+<h2 id="strings包"><a href="#strings包" class="headerlink" title="strings包"></a>strings包</h2><p>如下命令可以查看各API及功能,不赘述</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">go doc strings</span><br><span class="line">go doc -u strings.Builder</span><br><span class="line">go doc -u strings.Reader</span><br><span class="line">go doc -u strings.Replacer</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/go/" rel="tag"># go</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/05/22/go-net/" rel="next" title="go net包源码分析">
+                <i class="fa fa-chevron-left"></i> go net包源码分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/05/25/consistent-hash/" rel="prev" title="一致性hash原理及实现">
+                一致性hash原理及实现 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">56</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#bytes包"><span class="nav-number">1.</span> <span class="nav-text">bytes包</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#包函数"><span class="nav-number">1.1.</span> <span class="nav-text">包函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Buffer"><span class="nav-number">1.2.</span> <span class="nav-text">Buffer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reader"><span class="nav-number">1.3.</span> <span class="nav-text">Reader</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#strings包"><span class="nav-number">2.</span> <span class="nav-text">strings包</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

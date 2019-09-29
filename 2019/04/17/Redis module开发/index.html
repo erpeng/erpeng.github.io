@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Redis,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="module的作用redis通过对外提供一套API和一些数据类型, 可以供开发者开发自己的模块并且加载到redis中.通过API可以直接操作redis中的数据,也可以通过调用redis命令来操作数据(类似lua script).通过编写模块可以注册自己的命令到redis中. 编写一个module我们通过编写一个简单的module来体验一下该功能.该module对外提供两个命令,一个是启动一个定时任">
+<meta name="keywords" content="Redis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis module开发">
+<meta property="og:url" content="https://erpeng.github.io/2019/04/17/Redis module开发/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="module的作用redis通过对外提供一套API和一些数据类型, 可以供开发者开发自己的模块并且加载到redis中.通过API可以直接操作redis中的数据,也可以通过调用redis命令来操作数据(类似lua script).通过编写模块可以注册自己的命令到redis中. 编写一个module我们通过编写一个简单的module来体验一下该功能.该module对外提供两个命令,一个是启动一个定时任">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-09-29T09:46:30.767Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Redis module开发">
+<meta name="twitter:description" content="module的作用redis通过对外提供一套API和一些数据类型, 可以供开发者开发自己的模块并且加载到redis中.通过API可以直接操作redis中的数据,也可以通过调用redis命令来操作数据(类似lua script).通过编写模块可以注册自己的命令到redis中. 编写一个module我们通过编写一个简单的module来体验一下该功能.该module对外提供两个命令,一个是启动一个定时任">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/04/17/Redis module开发/">
+
+
+
+
+
+  <title>Redis module开发 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/04/17/Redis module开发/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Redis module开发</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-04-17T00:00:00+08:00">
+                2019-04-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/04/17/Redis module开发/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/04/17/Redis module开发/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="module的作用"><a href="#module的作用" class="headerlink" title="module的作用"></a>module的作用</h2><p>redis通过对外提供一套API和一些数据类型, 可以供开发者开发自己的模块并且加载到redis中.通过API可以直接操作redis中的数据,也可以通过调用redis命令来操作数据(类似lua script).<br>通过编写模块可以注册自己的命令到redis中.</p>
+<h2 id="编写一个module"><a href="#编写一个module" class="headerlink" title="编写一个module"></a>编写一个module</h2><p>我们通过编写一个简单的module来体验一下该功能.该module对外提供两个命令,一个是启动一个定时任务,每隔5s将redis持久化相关的信息发送到pinfo这个channel中,另一个是关闭该定时任务.</p>
+<p>注册该模块后,我们可以通过”subscribe pinfo”来订阅该渠道,然后就可以定时收到redis持久化相关的信息,以便做一些监控或相应的应对措施 </p>
+<h3 id="注册命令到redis中"><a href="#注册命令到redis中" class="headerlink" title="注册命令到redis中"></a>注册命令到redis中</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">//每个模块都必须有该函数.该函数是redis加载模块的入口,我们通过该函数可以注册相关的命令进去</span><br><span class="line">int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) &#123;</span><br><span class="line">    REDISMODULE_NOT_USED(argv);</span><br><span class="line">    REDISMODULE_NOT_USED(argc);</span><br><span class="line">    //注册模块,模块名称为&apos;pushpersistenceinfo&apos;</span><br><span class="line">    if (RedisModule_Init(ctx,&quot;pushpersistenceinfo&quot;,1,REDISMODULE_APIVER_1)</span><br><span class="line">        == REDISMODULE_ERR) return REDISMODULE_ERR;</span><br><span class="line">    //在redis中创建命令.第二部分为命令名称,第三部分为执行该命令时的回调函数</span><br><span class="line">    if (RedisModule_CreateCommand(ctx,&quot;pushpersistenceinfo.timer&quot;,</span><br><span class="line">        TimerCommand_RedisCommand,&quot;readonly&quot;,0,0,0) == REDISMODULE_ERR)</span><br><span class="line">        return REDISMODULE_ERR;</span><br><span class="line"></span><br><span class="line">    if (RedisModule_CreateCommand(ctx,&quot;pushpersistenceinfo.stop&quot;,</span><br><span class="line">        TimerStopCommand_RedisCommand,&quot;readonly&quot;,0,0,0) == REDISMODULE_ERR)</span><br><span class="line">        return REDISMODULE_ERR;</span><br><span class="line"></span><br><span class="line">    return REDISMODULE_OK;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如上函数类似一个模板,只需要填充自己的模块名称和相应的命令即可.重点是调用RedisModule_CreateCommand时的第三个参数-即回调函数.</p>
+<h3 id="定义回调函数"><a href="#定义回调函数" class="headerlink" title="定义回调函数"></a>定义回调函数</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line">#define REDISMODULE_EXPERIMENTAL_API</span><br><span class="line">#include &quot;../redismodule.h&quot;</span><br><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &lt;stdlib.h&gt;</span><br><span class="line">#include &lt;ctype.h&gt;</span><br><span class="line">#include &lt;string.h&gt;</span><br><span class="line">#include &lt;errno.h&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">RedisModuleString *infoStr;</span><br><span class="line">int off=0 ;//定时器开关</span><br><span class="line">void  getPersistenceStatus(RedisModuleCtx *ctx,RedisModuleString **infoStr);</span><br><span class="line">void  publishPersistenceStatus(RedisModuleCtx *ctx,RedisModuleString **infoStr);</span><br><span class="line"></span><br><span class="line">/* Timer callback. */</span><br><span class="line">//时间任务的回调函数</span><br><span class="line">void timerHandler(RedisModuleCtx *ctx,void *data) &#123;</span><br><span class="line">    if(off == 1) return;//如果关闭了定时器,则返回退出</span><br><span class="line">    REDISMODULE_NOT_USED(ctx);</span><br><span class="line">    getPersistenceStatus(ctx,&amp;infoStr);//获取redis持久化相关的信息并放入infoStr中</span><br><span class="line">    publishPersistenceStatus(ctx,&amp;infoStr);//publish redis持久化相关的信息到pinfo渠道</span><br><span class="line">    RedisModule_CreateTimer(ctx,5000,timerHandler,NULL);//创建定时任务,5s后执行</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int TimerCommand_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) &#123;</span><br><span class="line">    off = 0;</span><br><span class="line">    REDISMODULE_NOT_USED(argv);</span><br><span class="line">    REDISMODULE_NOT_USED(argc);</span><br><span class="line">    RedisModule_AutoMemory(ctx);//开启内存的自动管理</span><br><span class="line">    getPersistenceStatus(ctx,&amp;infoStr);//获取redis持久化相关的信息并放入infoStr中</span><br><span class="line">    publishPersistenceStatus(ctx,&amp;infoStr);//publish redis持久化相关的信息到pinfo渠道</span><br><span class="line"></span><br><span class="line">    RedisModule_CreateTimer(ctx,5000,timerHandler,NULL);//创建定时任务,5s后执行.回调函数为timerHandler</span><br><span class="line">    return RedisModule_ReplyWithSimpleString(ctx, &quot;OK&quot;);//给客户端返回字符串&quot;OK&quot;</span><br><span class="line">&#125;</span><br><span class="line">int TimerStopCommand_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) &#123;</span><br><span class="line">    off = 1;//关闭定时任务</span><br><span class="line">    return RedisModule_ReplyWithSimpleString(ctx, &quot;OK&quot;);//给客户端返回字符串&quot;OK&quot;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void  getPersistenceStatus(RedisModuleCtx *ctx,RedisModuleString **infoStr)&#123;</span><br><span class="line">    RedisModuleCallReply *reply;</span><br><span class="line">//调用info Persistence获取redis持久化相关的信息</span><br><span class="line">    reply = RedisModule_Call(ctx,&quot;info&quot;,&quot;c&quot;,&quot;Persistence&quot;);</span><br><span class="line"></span><br><span class="line">    *infoStr = RedisModule_CreateStringFromCallReply(reply);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void  publishPersistenceStatus(RedisModuleCtx *ctx,RedisModuleString **infoStr)&#123;</span><br><span class="line">      //调用publish pinfo xxxxx将持久化信息推送到pinfo渠道</span><br><span class="line"></span><br><span class="line">    RedisModule_Call(ctx,&quot;publish&quot;,&quot;cs&quot;,&quot;pinfo&quot;,*infoStr);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>执行pushpersistenceinfo.timer和pushpersistenceinfo.stop命令后会分别回调TimerCommand_RedisCommand和TimerStopCommand_RedisCommand这两个回调函数.前者会创建一个定时任务,定时任务回调函数为timerHandler,如果off不为1,则回调函数中会再次创建定时任务;后者会将off置为1,不再执行定时任务.</p>
+<h3 id="演示"><a href="#演示" class="headerlink" title="演示"></a>演示</h3><p>将模块置于redis源码目录的src/modules/目录中,然后执行如下命令编译模块</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -fPIC -std=gnu99 -c -o pushpersistenceinfo.o pushpersistenceinfo.c</span><br><span class="line">ld -o pushpersistenceinfo.so pushpersistenceinfo.o -shared -Bsymbolic -lc</span><br></pre></td></tr></table></figure>
+<p>加载模块</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1&gt; module load $RedisSourcePath/src/modules/pushpersistenceinfo.so</span><br><span class="line">OK</span><br><span class="line">127.0.0.1&gt; module list</span><br><span class="line">1) 1) &quot;name&quot;</span><br><span class="line">   2) &quot;pushpersistenceinfo&quot;</span><br><span class="line">   3) &quot;ver&quot;</span><br><span class="line">   4) (integer)</span><br></pre></td></tr></table></figure>
+<p>执行命令(首先订阅pinfo渠道)<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">redis-cli  subscribe pinfo</span><br><span class="line">Reading messages... (press Ctrl-C to quit)</span><br><span class="line">1) &quot;subscribe&quot;</span><br><span class="line">2) &quot;pinfo&quot;</span><br><span class="line">3) (integer) 1</span><br></pre></td></tr></table></figure></p>
+<p>执行模块中的命令</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1&gt; PUSHPERSISTENCEINFO.timer</span><br><span class="line">OK</span><br></pre></td></tr></table></figure>
+<p>查看输出(可以看到,每隔5s会输出一次)<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">1) &quot;message&quot;</span><br><span class="line">2) &quot;pinfo&quot;</span><br><span class="line">3) &quot;# Persistence\r\nloading:0\r\nrdb_changes_since_last_save:15\r\nrdb_bgsave_in_progress:0\r\nrdb_last_save_time:1555494610\r\nrdb_last_bgsave_status:ok\r\nrdb_last_bgsave_time_sec:-1\r\nrdb_current_bgsave_time_sec:-1\r\nrdb_last_cow_size:0\r\naof_enabled:1\r\naof_rewrite_in_progress:0\r\naof_rewrite_scheduled:0\r\naof_last_rewrite_time_sec:-1\r\naof_current_rewrite_time_sec:-1\r\naof_last_bgrewrite_status:ok\r\naof_last_write_status:ok\r\naof_last_cow_size:0\r\naof_current_size:631\r\naof_base_size:631\r\naof_pending_rewrite:0\r\naof_buffer_length:0\r\naof_rewrite_buffer_length:0\r\naof_pending_bio_fsync:0\r\naof_delayed_fsync:0\r\n&quot;</span><br><span class="line">1) &quot;message&quot;</span><br><span class="line">2) &quot;pinfo&quot;</span><br><span class="line">3) &quot;# Persistence\r\nloading:0\r\nrdb_changes_since_last_save:15\r\nrdb_bgsave_in_progress:0\r\nrdb_last_save_time:1555494610\r\nrdb_last_bgsave_status:ok\r\nrdb_last_bgsave_time_sec:-1\r\nrdb_current_bgsave_time_sec:-1\r\nrdb_last_cow_size:0\r\naof_enabled:1\r\naof_rewrite_in_progress:0\r\naof_rewrite_scheduled:0\r\naof_last_rewrite_time_sec:-1\r\naof_current_rewrite_time_sec:-1\r\naof_last_bgrewrite_status:ok\r\naof_last_write_status:ok\r\naof_last_cow_size:0\r\naof_current_size:631\r\naof_base_size:631\r\naof_pending_rewrite:0\r\naof_buffer_length:0\r\naof_rewrite_buffer_length:0\r\naof_pending_bio_fsync:0\r\naof_delayed_fsync:0\r\n&quot;</span><br></pre></td></tr></table></figure></p>
+<p>停止定时器</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1&gt; PUSHPERSISTENCEINFO.stop</span><br><span class="line">OK</span><br></pre></td></tr></table></figure>
+<p>卸载模块</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1&gt; module unload pushpersistenceinfo</span><br><span class="line">OK</span><br></pre></td></tr></table></figure>
+<p>该模块代码地址:<a href="https://github.com/erpeng/redis-modules" target="_blank" rel="noopener">https://github.com/erpeng/redis-modules</a></p>
+<h2 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h2><ul>
+<li><a href="https://redislabs.com/blog/writing-redis-modules/" target="_blank" rel="noopener">https://redislabs.com/blog/writing-redis-modules/</a> </li>
+<li><a href="https://redis.io/topics/modules-intro" target="_blank" rel="noopener">https://redis.io/topics/modules-intro</a></li>
+<li><a href="https://redis.io/topics/modules-api-ref" target="_blank" rel="noopener">https://redis.io/topics/modules-api-ref</a></li>
+<li><a href="https://redis.io/topics/modules-native-types" target="_blank" rel="noopener">https://redis.io/topics/modules-native-types</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Redis/" rel="tag"># Redis</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/04/16/Sqlite Write-Ahead Logging /" rel="next" title="Sqlite Write-Ahead Logging">
+                <i class="fa fa-chevron-left"></i> Sqlite Write-Ahead Logging
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/04/20/Mysql-isolation-level/" rel="prev" title="Mysql 隔离级别、锁、MVCC示例">
+                Mysql 隔离级别、锁、MVCC示例 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">56</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#module的作用"><span class="nav-number">1.</span> <span class="nav-text">module的作用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#编写一个module"><span class="nav-number">2.</span> <span class="nav-text">编写一个module</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#注册命令到redis中"><span class="nav-number">2.1.</span> <span class="nav-text">注册命令到redis中</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#定义回调函数"><span class="nav-number">2.2.</span> <span class="nav-text">定义回调函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#演示"><span class="nav-number">2.3.</span> <span class="nav-text">演示</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文档"><span class="nav-number">3.</span> <span class="nav-text">参考文档</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Redis,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Redis是单进程单线程模式吗下图为Redis5.0启动之后的效果。LWP为线程ID，NLWP为线程数量。可以看到，5.0的redis server共有四个线程，一个主线程48684，三个bio(background IO,后台io任务)线程，三个后台线程分别执行不同的io任务，我们重点考察删除一个key时的io线程执行。  Redis增加了异步删除命令unlink,防止删除大key时阻塞主线程。">
+<meta name="keywords" content="Redis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis 懒删除(lazy free)简史">
+<meta property="og:url" content="https://erpeng.github.io/2018/12/15/Redis-懒删除-lazy-free-简史/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="Redis是单进程单线程模式吗下图为Redis5.0启动之后的效果。LWP为线程ID，NLWP为线程数量。可以看到，5.0的redis server共有四个线程，一个主线程48684，三个bio(background IO,后台io任务)线程，三个后台线程分别执行不同的io任务，我们重点考察删除一个key时的io线程执行。  Redis增加了异步删除命令unlink,防止删除大key时阻塞主线程。">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://erpeng.github.io/img/rl1.png">
+<meta property="og:updated_time" content="2019-09-29T09:46:30.768Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Redis 懒删除(lazy free)简史">
+<meta name="twitter:description" content="Redis是单进程单线程模式吗下图为Redis5.0启动之后的效果。LWP为线程ID，NLWP为线程数量。可以看到，5.0的redis server共有四个线程，一个主线程48684，三个bio(background IO,后台io任务)线程，三个后台线程分别执行不同的io任务，我们重点考察删除一个key时的io线程执行。  Redis增加了异步删除命令unlink,防止删除大key时阻塞主线程。">
+<meta name="twitter:image" content="https://erpeng.github.io/img/rl1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2018/12/15/Redis-懒删除-lazy-free-简史/">
+
+
+
+
+
+  <title>Redis 懒删除(lazy free)简史 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2018/12/15/Redis-懒删除-lazy-free-简史/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Redis 懒删除(lazy free)简史</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-12-15T13:29:12+08:00">
+                2018-12-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/15/Redis-懒删除-lazy-free-简史/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2018/12/15/Redis-懒删除-lazy-free-简史/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="Redis是单进程单线程模式吗"><a href="#Redis是单进程单线程模式吗" class="headerlink" title="Redis是单进程单线程模式吗"></a>Redis是单进程单线程模式吗</h2><p>下图为Redis5.0启动之后的效果。LWP为线程ID，NLWP为线程数量。可以看到，5.0的redis server共有四个线程，一个主线程48684，三个bio(background IO,后台io任务)线程，三个后台线程分别执行不同的io任务，我们重点考察删除一个key时的io线程执行。</p>
+<p><img src="/img/rl1.png" alt="process"></p>
+<p>Redis增加了异步删除命令unlink,防止删除大key时阻塞主线程。其原理为执行unlink时会将需要删除的数据挂到一个链表中，由专门的线程负责将其删除。而原来的del命令还是阻塞的。我们通过对一个有1000万条数据的集合分别执行del和unlink来观察其效果。</p>
+<h2 id="看一个大集合的删除"><a href="#看一个大集合的删除" class="headerlink" title="看一个大集合的删除"></a>看一个大集合的删除</h2><p>首先通过脚本生成一个有1000万个元素的集合testset，然后通过del命令删除，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:8888&gt;info//首先调用info命令查看内存消耗：</span><br><span class="line"> </span><br><span class="line"># Memory</span><br><span class="line">used_memory:857536</span><br><span class="line">used_memory_human:837.44K</span><br><span class="line"> </span><br><span class="line">127.0.0.1:8888&gt; eval &quot;local i = tonumber(ARGV[1]);local res;math.randomseed(tonumber(ARGV[2]));while (i &gt; 0) do res = redis.call(&apos;sadd&apos;,KEYS[1],math.random());i = i-1;end&quot; 1  testset 10000000 2</span><br><span class="line">(nil)</span><br><span class="line">(18.51s)//创建耗时18.51s </span><br><span class="line"> </span><br><span class="line">127.0.0.1:8888&gt;info//再次查看内存消耗</span><br><span class="line"># Memory</span><br><span class="line">used_memory:681063080</span><br><span class="line">used_memory_human:649.51M</span><br><span class="line"></span><br><span class="line">127.0.0.1:8888&gt; scard testset//查看集合中元素数量</span><br><span class="line">(integer) 9976638 //通过math.random()生成，由于集合中不能有重复数据，可以看到，最终只有9976638条数据不重复。</span><br><span class="line">127.0.0.1:8888&gt; sscan testset 0 //查看集合中的元素内容</span><br><span class="line">1) &quot;3670016&quot;</span><br><span class="line">2)  1) &quot;0.94438312106969913&quot;</span><br><span class="line">    2) &quot;0.55726669754705704&quot;</span><br><span class="line">    3) &quot;0.3246220281927949&quot;</span><br><span class="line">    4) &quot;0.51470726752407259&quot;</span><br><span class="line">    5) &quot;0.33469647464095453&quot;</span><br><span class="line">    6) &quot;0.48387842554779648&quot;</span><br><span class="line">    7) &quot;0.3680923377946449&quot;</span><br><span class="line">    8) &quot;0.34466382877187052&quot;</span><br><span class="line">    9) &quot;0.019202849370987551&quot;</span><br><span class="line">   10) &quot;0.71412580307299545&quot;</span><br><span class="line">   11) &quot;0.12846412375963484&quot;</span><br><span class="line">   12) &quot;0.10548432828182557&quot;</span><br><span class="line"></span><br><span class="line">127.0.0.1:8888&gt; del testset //调用del命令删除，耗时2.76s </span><br><span class="line">(integer) 1</span><br><span class="line">(2.76s) </span><br><span class="line"> </span><br><span class="line">127.0.0.1:8888&gt;info//再次查看内存消耗</span><br><span class="line"># Memory</span><br><span class="line">used_memory:858568</span><br><span class="line">used_memory_human:838.45K</span><br></pre></td></tr></table></figure>
+<p>重新做上边的实验,这次试用unlink来删除。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">127.0.0.1:8888&gt; unlink testset//unlink瞬间返回</span><br><span class="line">(integer) 1</span><br><span class="line">127.0.0.1:8888&gt;info//再次查看内存消耗。可以看到，返回之后testset并没有清理干净。内存仍然占用了大约一半，再经过1-2s,会清理干净</span><br><span class="line"># Memory</span><br><span class="line">used_memory:326898224</span><br><span class="line">used_memory_human:311.75M</span><br></pre></td></tr></table></figure>
+<h2 id="尝试渐进式删除"><a href="#尝试渐进式删除" class="headerlink" title="尝试渐进式删除"></a>尝试渐进式删除</h2><p>参见:<a href="http://antirez.com/news/93" target="_blank" rel="noopener">http://antirez.com/news/93</a></p>
+<p>为了解决这个问题，Redis作者Antirez首先考虑的是通过渐进式删除来解决。Redis也在很多地方用到了渐进式的策略，例如 lru eviction,key 过期以及渐进式rehash.原文如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">So this was the first thing I tried: create a new timer function, and perform the eviction there. Objects were just queued into a linked list, to be reclaimed slowly and incrementally each time the timer function was called. This requires some trick to work well. For example objects implemented with hash tables were also reclaimed incrementally using the same mechanism used inside Redis SCAN command: taking a cursor inside the dictionary and iterating it to free element after element. This way, in each timer call, we don’t have to free a whole hash table. The cursor will tell us where we left when we re-enter the timer function.</span><br></pre></td></tr></table></figure>
+<p>大意就是把要删除的对象放到一个链表中，起一个定期任务，每次只删除其中一部分。</p>
+<p>这会有什么问题呢，仍然看原文中说的一种案例:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">WHILE 1</span><br><span class="line">    SADD myset element1 element2 … many many many elements</span><br><span class="line">    DEL myset</span><br><span class="line">END</span><br></pre></td></tr></table></figure>
+<p>如果删除没有增加快，上边这种案例会导致内存暴涨.(虽然不知道什么情况下会有这种案例发生)。于是作者开始设计一种自适应性的删除,即通过判断内存是增加还是减少，来动态调整删除任务执行的频率，代码示例如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">/* Compute the memory trend, biased towards thinking memory is raising</span><br><span class="line">    * for a few calls every time previous and current memory raise. */</span><br><span class="line"></span><br><span class="line">//只要内存有一次显示是增加的趋势，则接下来即使内存不再增加，还是会有连续六次mem_is_raising都是1，即判断为增加。</span><br><span class="line">//注意mem_is_raising的值是根据mem_trend和0.1来比较。 即第一次0.9,第二次为0.9*0.9,第三次为0.81*0.81.第六次之后才会小于0.1  (勘误:应该为0.9^22 之后小于0.1)</span><br><span class="line">//这也就是上边注释描述的会偏向于认为只要有一次内存是增加的，就会连续几次加快执行调用删除任务的频率</span><br><span class="line">   if (prev_mem &lt; mem) mem_trend = 1; </span><br><span class="line">   mem_trend *= 0.9; /* Make it slowly forget. */</span><br><span class="line">   int mem_is_raising = mem_trend &gt; .1;</span><br><span class="line"></span><br><span class="line">//删除一些数据</span><br><span class="line">   /* Free a few items. */</span><br><span class="line">   size_t workdone = lazyfreeStep(LAZYFREE_STEP_SLOW);</span><br><span class="line"></span><br><span class="line">//动态调整执行频率</span><br><span class="line">   /* Adjust this timer call frequency according to the current state. */</span><br><span class="line">   if (workdone) &#123;</span><br><span class="line">       if (timer_period == 1000) timer_period = 20;</span><br><span class="line">       if (mem_is_raising &amp;&amp; timer_period &gt; 3)//如果内存在增加，就加大执行频率</span><br><span class="line">           timer_period--; /* Raise call frequency. */</span><br><span class="line">       else if (!mem_is_raising &amp;&amp; timer_period &lt; 20)</span><br><span class="line">           timer_period++; /* Lower call frequency. *///否则减小频率</span><br><span class="line">   &#125; else &#123;</span><br><span class="line">       timer_period = 1000;    /* 1 HZ */</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>这种方法有个缺陷，因为毕竟是在一个线程中，当回收的特别频繁时，会降低redis的qps,qps只能达到正常情况下的65%.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">when the lazy free cycle was very busy, operations per second were reduced to around 65% of the norm</span><br></pre></td></tr></table></figure>
+<p>于是redis作者antirez开始考虑异步线程回收。</p>
+<h2 id="异步线程"><a href="#异步线程" class="headerlink" title="异步线程"></a>异步线程</h2><h3 id="共享对象"><a href="#共享对象" class="headerlink" title="共享对象"></a>共享对象</h3><h4 id="异步线程为何不能有共享数据"><a href="#异步线程为何不能有共享数据" class="headerlink" title="异步线程为何不能有共享数据"></a>异步线程为何不能有共享数据</h4><p>共享数据越多，多线程之间发生争用的可能性越大。所以为了性能，必须首先将共享数据消灭掉。</p>
+<p>那么redis在什么地方会用到共享数据呢</p>
+<h4 id="如何共享"><a href="#如何共享" class="headerlink" title="如何共享"></a>如何共享</h4><p>如下代码示例为Redis2.8.24.</p>
+<p>先看执行sadd时底层数据是如何保存的</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sadd testset val1</span><br></pre></td></tr></table></figure>
+<p>底层保存如下(gdb过程如下，比较晦涩,参考下文解释)：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">254	    set = lookupKeyWrite(c-&gt;db,c-&gt;argv[1]);</span><br><span class="line">(gdb) n</span><br><span class="line">255	    if (set == NULL) &#123;</span><br><span class="line">(gdb) p c-&gt;argv[1]</span><br><span class="line">$1 = (robj *) 0x7f58e3ccfcc0</span><br><span class="line">(gdb) p *c-&gt;argv[1]</span><br><span class="line">$2 = &#123;type = 0, encoding = 0, lru = 1367521, refcount = 1, ptr = 0x7f58e3ccfcd8&#125;</span><br><span class="line"></span><br><span class="line">(gdb) p (char *)c-&gt;argv[1].ptr //client中的argv是一个个robj,argv[1]的ptr中存储着key值&apos;testset&apos;</span><br><span class="line">$4 = 0x7f58e3ccfcd8 &quot;testset&quot;</span><br><span class="line">(gdb) n</span><br><span class="line">254	    set = lookupKeyWrite(c-&gt;db,c-&gt;argv[1]);</span><br><span class="line">(gdb) n</span><br><span class="line">255	    if (set == NULL) &#123;</span><br><span class="line">...</span><br><span class="line">(gdb) p (char *)((robj *)((dict *)set.ptr).ht[0].table[3].key).ptr</span><br><span class="line">$37 = 0x7f58e3ccfcb8 &quot;val1&quot; //值val1保存在一个dict中，dict保存着一个个dictEntry,dictEntry的key是一个指针，指向一个robj,robj中是具体的值</span><br></pre></td></tr></table></figure>
+<p>通过下文结构体讲解，可以看下sadd testset val1,testset和val1保存在什么地方</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">typedef struct dict &#123;</span><br><span class="line">    dictType *type;</span><br><span class="line">    void *privdata;</span><br><span class="line">    dictht ht[2];</span><br><span class="line">    long rehashidx; /* rehashing not in progress if rehashidx == -1 */</span><br><span class="line">    int iterators; /* number of iterators currently running */</span><br><span class="line">&#125; dict;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"> </span><br><span class="line">typedef struct dictht &#123;</span><br><span class="line">    dictEntry **table;</span><br><span class="line">    unsigned long size;</span><br><span class="line">    unsigned long sizemask;</span><br><span class="line">    unsigned long used;</span><br><span class="line">&#125; dictht;</span><br><span class="line"></span><br><span class="line">typedef struct dictEntry &#123;</span><br><span class="line">    void *key;</span><br><span class="line">    union &#123;</span><br><span class="line">        void *val;</span><br><span class="line">        uint64_t u64;</span><br><span class="line">        int64_t s64;</span><br><span class="line">        double d;</span><br><span class="line">    &#125; v;</span><br><span class="line">    struct dictEntry *next;</span><br><span class="line">&#125; dictEntry;</span><br><span class="line"> </span><br><span class="line">typedef struct redisObject &#123;</span><br><span class="line">    unsigned type:4;</span><br><span class="line">    unsigned encoding:4;</span><br><span class="line">    unsigned lru:REDIS_LRU_BITS; /* lru time (relative to server.lruclock) */</span><br><span class="line">    int refcount;</span><br><span class="line">    void *ptr;</span><br><span class="line">&#125; robj;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>首先所有的key保存在一个dict.ht[0]的dictht结构体中。通过上边的结构体看到，dictht中的table是一个dictEntry二级指针。</p>
+</li>
+<li><p>执行sadd testset val1时，testset是其中一个dictEntry中的key,key是一个void<em>指针，实际存储情况为testset保存为一个char </em>类型</p>
+</li>
+<li><p>假设testset经过哈希之后index为3，则dict.ht[0].table[3].key为testset,dict.ht[0].table[3].v.val为一个void<em>指针，实际存储一个robj </em>类型</p>
+</li>
+<li><p>第三步中的robj中有个ptr指针，指向一个dict类型。dict中的其中一个entry的key指向另一个robj指针，该指针的ptr指向val</p>
+</li>
+</ul>
+<p>即获取一个值的流程为：</p>
+<pre><code>key -&gt; value_obj -&gt; hash table -&gt; robj -&gt; sds_string
+</code></pre><p>然后看两个共享对象的典型场景：</p>
+<p>1.sunionstore命令</p>
+<p>看下代码实现：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">int setTypeAdd(robj *subject, robj *value) &#123;</span><br><span class="line">	...</span><br><span class="line">    if (subject-&gt;encoding == REDIS_ENCODING_HT) &#123;</span><br><span class="line">        if (dictAdd(subject-&gt;ptr,value,NULL) == DICT_OK) &#123;</span><br><span class="line">            incrRefCount(value);//此处的value值由于是从已存在的集合中直接取出，refcount已经是1，此处并没有新建robj,而是直接将引用计数加1</span><br><span class="line">            return 1;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; </span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>执行以下命令：</p>
+<p>sadd testset1 value2</p>
+<p>sunionstore set testset1 testset2 //即将testset1和testset2的元素取并集并保存到set中</p>
+<p>然后我们可以通过查看testset的元素，看看其引用计数是否变为了2</p>
+<p>smembers testset</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">(gdb) p *(robj *)(((dict *)setobj.ptr).ht[0].table[3].key)</span><br><span class="line">$88 = &#123;type = 0, encoding = 0, lru = 1457112, refcount = 2, ptr = 0x7f58e3ccfb68&#125; //refcount为2</span><br><span class="line"> </span><br><span class="line">(gdb) p (char *)(((robj *)(((dict *)setobj.ptr).ht[0].table[3].key)).ptr)</span><br><span class="line">$89 = 0x7f58e3ccfb68 &quot;val&quot;                                  //值为val</span><br></pre></td></tr></table></figure>
+<p>2.smembers命令</p>
+<p>返回元素的时候，重点看返回时的代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">/* Add a Redis Object as a bulk reply */</span><br><span class="line">void addReplyBulk(redisClient *c, robj *obj) &#123;</span><br><span class="line">    addReplyBulkLen(c,obj);</span><br><span class="line">    addReply(c,obj);</span><br><span class="line">    addReply(c,shared.crlf);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>会直接将robj对象作为返回参数</p>
+<p>并且客户端传入参数也是一个个robj对象，会直接作为值保存到对象中</p>
+<h4 id="共享时如何删除"><a href="#共享时如何删除" class="headerlink" title="共享时如何删除"></a>共享时如何删除</h4><p>那么，共享对象在单线程情况下是如何删除的呢？</p>
+<p>看看del命令的实现</p>
+<p>del调用dictDelete，最终调用每个数据类型自己的析构函数</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dictFreeKey(d, he);</span><br><span class="line">dictFreeVal(d, he);</span><br></pre></td></tr></table></figure>
+<p>集合类型调用如下函数</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">void dictRedisObjectDestructor(void *privdata, void *val)</span><br><span class="line">&#123;</span><br><span class="line">    DICT_NOTUSED(privdata);</span><br><span class="line"></span><br><span class="line">    if (val == NULL) return; /* Values of swapped out keys as set to NULL */</span><br><span class="line">    decrRefCount(val);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到，只是将值的refcount减1<br>如何解决共享数据<br>新版本如何解决了共享数据</p>
+<p>还是通过sunionstore和smembers命令看下这两处如何解决共享：</p>
+<p>以下代码使用redis 5.0.3版本介绍：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">void saddCommand(client *c) &#123;</span><br><span class="line">    ...</span><br><span class="line">    for (j = 2; j &lt; c-&gt;argc; j++) &#123;</span><br><span class="line">        if (setTypeAdd(set,c-&gt;argv[j]-&gt;ptr)) added++; //sadd的时候元素也变为了c-&gt;argv[j]-&gt;ptr,一个字符串</span><br><span class="line">    &#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line">int setTypeAdd(robj *subject, sds value) &#123;//value是一个sds</span><br><span class="line">    long long llval;</span><br><span class="line">    if (subject-&gt;encoding == OBJ_ENCODING_HT) &#123;</span><br><span class="line">        dict *ht = subject-&gt;ptr;</span><br><span class="line">        dictEntry *de = dictAddRaw(ht,value,NULL);</span><br><span class="line">        if (de) &#123;</span><br><span class="line">            dictSetKey(ht,de,sdsdup(value));</span><br><span class="line">            dictSetVal(ht,de,NULL);</span><br><span class="line">            return 1;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>增加值的时候已经变为了一个sds.</p>
+<p>现在的保存结构为：</p>
+<pre><code>key -&gt; value_obj -&gt; hash table -&gt; sds_string
+</code></pre><p>而返回到客户端的时候也变为了一个sds,如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">addReplyBulkCBuffer(c,elesds,sdslen(elesds));</span><br><span class="line"></span><br><span class="line">void addReplyBulkCBuffer(client *c, const void *p, size_t len) &#123;</span><br><span class="line">    addReplyLongLongWithPrefix(c,len,&apos;$&apos;);</span><br><span class="line">    addReplyString(c,p,len);</span><br><span class="line">    addReply(c,shared.crlf);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="效果如何"><a href="#效果如何" class="headerlink" title="效果如何"></a>效果如何</h4><p>效果如何呢？</p>
+<p>首先取值的时候从robj的间接引用变为了一个sds的直接引用。</p>
+<p>其次减少了共享会增加内存的消耗，而使用了sds之后，每个sds的内存占用会比一个robj要小。我们看下antirez如何评价这个修改：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">The result is that Redis is now more memory efficient since there are no robj structures around in the implementation of the data structures (but they are used in the code paths where there is a lot of sharing going on, for example during the command dispatch and replication). </span><br><span class="line">...</span><br><span class="line">But, the most interesting thing is, Redis is now faster in all the operations I tested so far. Less indirection was a real winner here. It is faster even in unrelated benchmarks just because the client output buffers are now simpler and faster.</span><br></pre></td></tr></table></figure>
+<p>说了两层意思，一是内存使用更加高效了</p>
+<p>二是更少的间接引用导致redis比以前更加快，而且客户端输出更加简洁和快速。</p>
+<h3 id="异步线程-1"><a href="#异步线程-1" class="headerlink" title="异步线程"></a>异步线程</h3><p>异步线程的实现以后在详细描述</p>
+<p>问题</p>
+<p>1.多线程之间在堆上分配内存时会有争用。但是antirez说因为redis在内存分配上使用的时间极少，可以忽略这种情况。</p>
+<p>如何考虑这个问题？</p>
+<p>参考：<a href="https://software.intel.com/zh-cn/articles/avoiding-heap-contention-among-threads" target="_blank" rel="noopener">https://software.intel.com/zh-cn/articles/avoiding-heap-contention-among-threads</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Redis/" rel="tag"># Redis</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/11/NGINX-HTTP2-处理流程/" rel="next" title="NGINX HTTP2 处理流程">
+                <i class="fa fa-chevron-left"></i> NGINX HTTP2 处理流程
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/12/21/Redis中的lru算法实现/" rel="prev" title="Redis中的lru算法实现">
+                Redis中的lru算法实现 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">56</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Redis是单进程单线程模式吗"><span class="nav-number">1.</span> <span class="nav-text">Redis是单进程单线程模式吗</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#看一个大集合的删除"><span class="nav-number">2.</span> <span class="nav-text">看一个大集合的删除</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#尝试渐进式删除"><span class="nav-number">3.</span> <span class="nav-text">尝试渐进式删除</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#异步线程"><span class="nav-number">4.</span> <span class="nav-text">异步线程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#共享对象"><span class="nav-number">4.1.</span> <span class="nav-text">共享对象</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#异步线程为何不能有共享数据"><span class="nav-number">4.1.1.</span> <span class="nav-text">异步线程为何不能有共享数据</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#如何共享"><span class="nav-number">4.1.2.</span> <span class="nav-text">如何共享</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#共享时如何删除"><span class="nav-number">4.1.3.</span> <span class="nav-text">共享时如何删除</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#效果如何"><span class="nav-number">4.1.4.</span> <span class="nav-text">效果如何</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#异步线程-1"><span class="nav-number">4.2.</span> <span class="nav-text">异步线程</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

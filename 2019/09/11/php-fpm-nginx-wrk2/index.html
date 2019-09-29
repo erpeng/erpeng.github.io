@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="NGINX,PHP-FPM,WRK,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="nginx配置增加如下nginx配置: 123log_format  main  &amp;apos;$remote_addr - $remote_user [$time_local] &amp;quot;$request&amp;quot; &amp;apos;                  &amp;apos;$status $body_bytes_sent $request_time $upstream_connect_tim">
+<meta name="keywords" content="NGINX,PHP-FPM,WRK">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nginx499原因探查2">
+<meta property="og:url" content="https://erpeng.github.io/2019/09/11/php-fpm-nginx-wrk2/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="nginx配置增加如下nginx配置: 123log_format  main  &amp;apos;$remote_addr - $remote_user [$time_local] &amp;quot;$request&amp;quot; &amp;apos;                  &amp;apos;$status $body_bytes_sent $request_time $upstream_connect_tim">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-09-29T09:46:30.774Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Nginx499原因探查2">
+<meta name="twitter:description" content="nginx配置增加如下nginx配置: 123log_format  main  &amp;apos;$remote_addr - $remote_user [$time_local] &amp;quot;$request&amp;quot; &amp;apos;                  &amp;apos;$status $body_bytes_sent $request_time $upstream_connect_tim">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/09/11/php-fpm-nginx-wrk2/">
+
+
+
+
+
+  <title>Nginx499原因探查2 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/09/11/php-fpm-nginx-wrk2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Nginx499原因探查2</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-09-11T00:00:00+08:00">
+                2019-09-11
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/09/11/php-fpm-nginx-wrk2/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/09/11/php-fpm-nginx-wrk2/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="nginx配置"><a href="#nginx配置" class="headerlink" title="nginx配置"></a>nginx配置</h2><p>增加如下nginx配置:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">log_format  main  &apos;$remote_addr - $remote_user [$time_local] &quot;$request&quot; &apos;</span><br><span class="line">                  &apos;$status $body_bytes_sent $request_time $upstream_connect_time  $upstream_header_time   $upstream_response_time  &quot;$http_referer&quot; &apos;</span><br><span class="line">                  &apos;&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;&apos;;</span><br></pre></td></tr></table></figure>
+<p>request_time:nginx从接收到客户端第一个字节到发送到客户端最后一个字节的时间<br>upstream_connect_time:nginx建立到上游连接的时间<br>upstream_header_time:nginx从建立到上游连接到收到上游响应头的时间<br>upstream_response_time:nginx从建立到上游连接到接收完响应的时间</p>
+<p>看一下nginx中对这三个值的计算逻辑:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">函数:ngx_http_upstream_connect</span><br><span class="line">		</span><br><span class="line">	    u-&gt;start_time = ngx_current_msec;//记录开始时间</span><br><span class="line"></span><br><span class="line">函数:ngx_http_upstream_finalize_request</span><br><span class="line"></span><br><span class="line">      u-&gt;state-&gt;response_time = ngx_current_msec - u-&gt;start_time;//计算response time</span><br><span class="line"></span><br><span class="line">函数:ngx_http_upstream_send_request 		 </span><br><span class="line">      if (u-&gt;state-&gt;connect_time == (ngx_msec_t) -1) &#123;</span><br><span class="line">          u-&gt;state-&gt;connect_time = ngx_current_msec - u-&gt;start_time; //计算连接时间</span><br><span class="line">      &#125;</span><br><span class="line">函数: ngx_http_upstream_process_header</span><br><span class="line">      u-&gt;state-&gt;header_time = ngx_current_msec - u-&gt;start_time;</span><br></pre></td></tr></table></figure>
+<p>流程为从开始建立连接记录一个start_time,然后可以发送请求的时候用当前时间减去start_time计算upstream_connect_time,收到响应头后通过当前时间减去start_time计算upstream_header_time,结束上游请求的时候用当前时间减去start_time计算upstream_response_time(<strong>注意如上变量有相应的nginx版本要求</strong>)</p>
+<p>upstream_header_time-upstream_connect_time可以理解为从发送请求开始到响应的时间<br>upstream_response_time-upstream_header_time如果很大,可以理解为响应数据量很大,耗时比较多</p>
+<p>继续实验,将php脚本sleep 1s,然后用wrk压测</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wrk -c 20  -t 20    --latency http://localhost:8800/index.php</span><br></pre></td></tr></table></figure>
+<p>php-fpm配置如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">pm.max_children = 8</span><br><span class="line">pm.start_servers = 2</span><br><span class="line">pm.min_spare_servers = 2</span><br><span class="line">pm.max_spare_servers = 4</span><br></pre></td></tr></table></figure>
+<p>观察nginx日志如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1 - - [11/Sep/2019:11:53:03 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 1.000 0.001  1.001   1.001  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 87 127.0.0.1 - - [11/Sep/2019:11:53:03 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 1.001 0.000  1.000   1.000  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 88 127.0.0.1 - - [11/Sep/2019:11:53:03 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 1.001 0.000  1.000   1.000  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 89 127.0.0.1 - - [11/Sep/2019:11:53:03 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 1.000 0.000  1.001   1.001  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 90 127.0.0.1 - - [11/Sep/2019:11:53:03 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 1.316 0.000  1.316   1.316  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 91 127.0.0.1 - - [11/Sep/2019:11:53:04 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.000 0.000  1.999   1.999  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 92 127.0.0.1 - - [11/Sep/2019:11:53:04 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.000 0.000  2.000   2.000  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 93 127.0.0.1 - - [11/Sep/2019:11:53:04 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.000 0.000  2.000   2.000  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 94 127.0.0.1 - - [11/Sep/2019:11:53:04 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.000 0.000  2.000   2.000  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 95 127.0.0.1 - - [11/Sep/2019:11:53:04 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.316 0.001  2.316   2.316  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 96 127.0.0.1 - - [11/Sep/2019:11:53:04 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.317 0.000  2.316   2.316  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 97 127.0.0.1 - - [11/Sep/2019:11:53:04 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.320 0.000  2.320   2.320  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 98 127.0.0.1 - - [11/Sep/2019:11:53:05 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.999 0.000  2.999   2.999  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line"> 99 127.0.0.1 - - [11/Sep/2019:11:53:05 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.998 0.000  2.999   2.999  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">100 127.0.0.1 - - [11/Sep/2019:11:53:05 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.998 0.000  2.998   2.998  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">101 127.0.0.1 - - [11/Sep/2019:11:53:05 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.999 0.000  2.999   2.999  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">102 127.0.0.1 - - [11/Sep/2019:11:53:05 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.315 0.000  3.315   3.315  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">103 127.0.0.1 - - [11/Sep/2019:11:53:05 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.315 0.000  3.315   3.315  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">104 127.0.0.1 - - [11/Sep/2019:11:53:05 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.315 0.000  3.316   3.316  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">105 127.0.0.1 - - [11/Sep/2019:11:53:05 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.319 0.000  3.319   3.319  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">106 127.0.0.1 - - [11/Sep/2019:11:53:06 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.001 0.000  3.001   3.001  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">107 127.0.0.1 - - [11/Sep/2019:11:53:06 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.001 0.001  3.002   3.002  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">108 127.0.0.1 - - [11/Sep/2019:11:53:06 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.001 0.001  3.002   3.002  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">109 127.0.0.1 - - [11/Sep/2019:11:53:06 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.001 0.000  3.001   3.001  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">110 127.0.0.1 - - [11/Sep/2019:11:53:06 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.001 0.000  3.001   3.001  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">111 127.0.0.1 - - [11/Sep/2019:11:53:06 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.317 0.001  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">112 127.0.0.1 - - [11/Sep/2019:11:53:06 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">113 127.0.0.1 - - [11/Sep/2019:11:53:06 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.322 0.000  2.321   2.321  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">114 127.0.0.1 - - [11/Sep/2019:11:53:07 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 3.000 0.000  3.001   3.001  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">115 127.0.0.1 - - [11/Sep/2019:11:53:07 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.685   2.685  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">116 127.0.0.1 - - [11/Sep/2019:11:53:07 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.683 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">117 127.0.0.1 - - [11/Sep/2019:11:53:07 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.681 0.000  2.680   2.680  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">118 127.0.0.1 - - [11/Sep/2019:11:53:07 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">119 127.0.0.1 - - [11/Sep/2019:11:53:07 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">120 127.0.0.1 - - [11/Sep/2019:11:53:07 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">121 127.0.0.1 - - [11/Sep/2019:11:53:07 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.321 0.000  2.321   2.321  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">122 127.0.0.1 - - [11/Sep/2019:11:53:08 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.685 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">123 127.0.0.1 - - [11/Sep/2019:11:53:08 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.685 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">124 127.0.0.1 - - [11/Sep/2019:11:53:08 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">125 127.0.0.1 - - [11/Sep/2019:11:53:08 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.680 0.000  2.681   2.681  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">126 127.0.0.1 - - [11/Sep/2019:11:53:08 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">127 127.0.0.1 - - [11/Sep/2019:11:53:08 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.317   2.317  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">128 127.0.0.1 - - [11/Sep/2019:11:53:08 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">129 127.0.0.1 - - [11/Sep/2019:11:53:08 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.321 0.000  2.321   2.321  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">130 127.0.0.1 - - [11/Sep/2019:11:53:09 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">131 127.0.0.1 - - [11/Sep/2019:11:53:09 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.685   2.685  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">132 127.0.0.1 - - [11/Sep/2019:11:53:09 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">133 127.0.0.1 - - [11/Sep/2019:11:53:09 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.680 0.001  2.681   2.681  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">134 127.0.0.1 - - [11/Sep/2019:11:53:09 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">135 127.0.0.1 - - [11/Sep/2019:11:53:09 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">136 127.0.0.1 - - [11/Sep/2019:11:53:09 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.317 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">137 127.0.0.1 - - [11/Sep/2019:11:53:09 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.321 0.000  2.321   2.321  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">138 127.0.0.1 - - [11/Sep/2019:11:53:10 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">139 127.0.0.1 - - [11/Sep/2019:11:53:10 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">140 127.0.0.1 - - [11/Sep/2019:11:53:10 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">141 127.0.0.1 - - [11/Sep/2019:11:53:10 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.681 0.000  2.680   2.680  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">142 127.0.0.1 - - [11/Sep/2019:11:53:10 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.319   2.319  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">143 127.0.0.1 - - [11/Sep/2019:11:53:10 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">144 127.0.0.1 - - [11/Sep/2019:11:53:10 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.318 0.000  2.318   2.318  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">145 127.0.0.1 - - [11/Sep/2019:11:53:10 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.321 0.000  2.321   2.321  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">146 127.0.0.1 - - [11/Sep/2019:11:53:11 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.001  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">147 127.0.0.1 - - [11/Sep/2019:11:53:11 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.683   2.683  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">148 127.0.0.1 - - [11/Sep/2019:11:53:11 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.684 0.000  2.683   2.683  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">149 127.0.0.1 - - [11/Sep/2019:11:53:11 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.680 0.000  2.681   2.681  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">150 127.0.0.1 - - [11/Sep/2019:11:53:11 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.319 0.000  2.319   2.319  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">151 127.0.0.1 - - [11/Sep/2019:11:53:11 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.319 0.000  2.319   2.319  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">152 127.0.0.1 - - [11/Sep/2019:11:53:11 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.319 0.000  2.319   2.319  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">153 127.0.0.1 - - [11/Sep/2019:11:53:11 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.321 0.000  2.321   2.321  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">154 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.683 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">155 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.683 0.000  2.684   2.684  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">156 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.685 0.000  2.685   2.685  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">157 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 200 14 2.682 0.000  2.681   2.681  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">158 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 1.018 0.000  -   1.019  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">159 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 1.018 0.000  -   1.018  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">160 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 1.018 0.000  -   1.018  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">161 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 1.018 0.000  -   1.018  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">162 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 0.700 0.000  -   0.700  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">163 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 0.697 0.000  -   0.698  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">164 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 0.700 0.000  -   0.700  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">165 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 0.700 0.000  -   0.700  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">166 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 0.018 0.000  -   0.018  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">167 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 0.016 0.000  -   0.017  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">168 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 0.016 0.001  -   0.017  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">169 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 0.016 0.000  -   0.016  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">170 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 2.020 0.000  -   2.019  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">171 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 2.019 0.000  -   2.019  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">172 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 2.019 0.000  -   2.019  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">173 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 2.019 0.000  -   2.018  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">174 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 1.702 0.000  -   1.701  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">175 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 1.702 0.000  -   1.701  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">176 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 1.702 0.000  -   1.701  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br><span class="line">177 127.0.0.1 - - [11/Sep/2019:11:53:12 +0800] &quot;GET /index.php HTTP/1.1&quot; 499 0 1.699 0.000  -   1.698  &quot;-&quot; &quot;-&quot; &quot;-&quot;</span><br></pre></td></tr></table></figure>
+<p>可以观察出如下规律:</p>
+<ul>
+<li>11:53:03开始到11:53:06响应时间从1s逐步增加到3s,之后下降稳定到2s多</li>
+<li>upstream_connect_time在us级别,request_time主要消耗在upstream的处理上.但上游每个请求实际耗时1s,说明其他请求在排队等待处理</li>
+<li>出现一批499,根本没有收到响应</li>
+</ul>
+<p>看一下php-fpm的日志:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[11-Sep-2019 11:53:05] WARNING: [pool default] server reached pm.max_children setting (8), consider raising it</span><br></pre></td></tr></table></figure>
+<p>11:53:05的时候打了一条warning,建议提高max_children.后续可以研究php-fpm是升到8个children之后打的日志还是升之前打的日志.根据nginx日志推测,2s之后才开始升到8个children.</p>
+<h2 id="nginx499源码流程"><a href="#nginx499源码流程" class="headerlink" title="nginx499源码流程"></a>nginx499源码流程</h2><p>nginx源码版本如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@rh ~ ]# ~/nginx-1.17.3/objs/nginx -v</span><br><span class="line">nginx version: nginx/1.17.3</span><br></pre></td></tr></table></figure></p>
+<p>在ngx_http_upstream_init_request函数中,会做如下设置:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">r-&gt;read_event_handler = ngx_http_upstream_rd_check_broken_connection;</span><br><span class="line">r-&gt;write_event_handler = ngx_http_upstream_wr_check_broken_connection;</span><br></pre></td></tr></table></figure></p>
+<p>即将客户端和nginx的读写回调函数分别设置为ngx_http_upstream_rd_check_broken_connection和ngx_http_upstream_wr_check_broken_connection,而这两个函数都是调用ngx_http_upstream_check_broken_connection.顾名思义,该函数检测客户端断开的连接,检测到之后会记录499.</p>
+<p>首先看看事件处理模块在ngx_epoll_process_events中会有如下代码:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">#if (NGX_HAVE_EPOLLRDHUP)</span><br><span class="line">            if (revents &amp; EPOLLRDHUP) &#123;</span><br><span class="line">                rev-&gt;pending_eof = 1;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            rev-&gt;available = 1;</span><br><span class="line">#endif</span><br></pre></td></tr></table></figure></p>
+<p>在使用 2.6.17 之后版本内核的服务器系统中，对端连接断开触发的 epoll 事件会包含 EPOLLIN | EPOLLRDHUP,如果有EPOLLRDHUP事件之后会设置event的pending_eof为1</p>
+<p>然后在ngx_http_upstream_check_broken_connection中有如下代码:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">#if (NGX_HAVE_EPOLLRDHUP)</span><br><span class="line"></span><br><span class="line">    if ((ngx_event_flags &amp; NGX_USE_EPOLL_EVENT) &amp;&amp; ngx_use_epoll_rdhup) &#123;</span><br><span class="line">        socklen_t  len;</span><br><span class="line"></span><br><span class="line">        if (!ev-&gt;pending_eof) &#123; //如果有RDHUP事件,则ev-&gt;pending_eof已被置为1</span><br><span class="line">            return;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        ev-&gt;eof = 1;</span><br><span class="line">        c-&gt;error = 1;</span><br><span class="line"></span><br><span class="line">        err = 0;</span><br><span class="line">        len = sizeof(ngx_err_t);</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line">         * BSDs and Linux return 0 and set a pending error in err</span><br><span class="line">         * Solaris returns -1 and sets errno</span><br><span class="line">         */</span><br><span class="line"></span><br><span class="line">        if (getsockopt(c-&gt;fd, SOL_SOCKET, SO_ERROR, (void *) &amp;err, &amp;len)</span><br><span class="line">            == -1)</span><br><span class="line">        &#123;</span><br><span class="line">            err = ngx_socket_errno;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        if (err) &#123;</span><br><span class="line">            ev-&gt;error = 1;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        if (!u-&gt;cacheable &amp;&amp; u-&gt;peer.connection) &#123;</span><br><span class="line">            ngx_log_error(NGX_LOG_INFO, ev-&gt;log, err,//打印错误日志</span><br><span class="line">                        &quot;epoll_wait() reported that client prematurely closed &quot;</span><br><span class="line">                        &quot;connection, so upstream connection is closed too&quot;);</span><br><span class="line">            ngx_http_upstream_finalize_request(r, u,</span><br><span class="line">                                               NGX_HTTP_CLIENT_CLOSED_REQUEST);//调用该函数结束请求.可以看到上文中upstream_response_time也是在该函数中计算的</span><br><span class="line">            return;</span><br><span class="line">        &#125;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>ngx_http_upstream_finalize_request中会做资源回收清理以及关闭上游的fd,然后继续调用        ngx_http_finalize_request(r, rc);</p>
+<p>调用链如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">(gdb) bt</span><br><span class="line">#0  ngx_http_post_request (r=r@entry=0x25ffad0, pr=pr@entry=0x2600010) at src/http/ngx_http_request.c:2408</span><br><span class="line">#1  0x000000000043e147 in ngx_http_terminate_request (r=r@entry=0x25ffad0, rc=rc@entry=499) at src/http/ngx_http_request.c:2658</span><br><span class="line">#2  0x000000000043ef96 in ngx_http_finalize_request (r=r@entry=0x25ffad0, rc=rc@entry=499) at src/http/ngx_http_request.c:2454</span><br><span class="line">#3  0x000000000044cd92 in ngx_http_upstream_finalize_request (r=r@entry=0x25ffad0, u=u@entry=0x2600e70, rc=rc@entry=499) at src/http/ngx_http_upstream.c:4450</span><br><span class="line">#4  0x000000000044d0b2 in ngx_http_upstream_check_broken_connection (r=0x25ffad0, ev=0x26479b0) at src/http/ngx_http_upstream.c:1423</span><br><span class="line">#5  0x000000000044d26e in ngx_http_upstream_rd_check_broken_connection (r=&lt;optimized out&gt;) at src/http/ngx_http_upstream.c:1296</span><br><span class="line">#6  0x000000000043e1c5 in ngx_http_request_handler (ev=&lt;optimized out&gt;) at src/http/ngx_http_request.c:2349</span><br><span class="line">#7  0x00000000004330c4 in ngx_epoll_process_events (cycle=&lt;optimized out&gt;, timer=&lt;optimized out&gt;, flags=&lt;optimized out&gt;) at src/event/modules/ngx_epoll_module.c:902</span><br><span class="line">#8  0x000000000042a558 in ngx_process_events_and_timers (cycle=cycle@entry=0x26022d0) at src/event/ngx_event.c:242</span><br><span class="line">#9  0x00000000004314a4 in ngx_worker_process_cycle (cycle=0x26022d0, data=&lt;optimized out&gt;) at src/os/unix/ngx_process_cycle.c:750</span><br><span class="line">#10 0x000000000042fbe2 in ngx_spawn_process (cycle=cycle@entry=0x26022d0, proc=proc@entry=0x431433 &lt;ngx_worker_process_cycle&gt;, data=data@entry=0x0,</span><br><span class="line">    name=name@entry=0x4830d5 &quot;worker process&quot;, respawn=respawn@entry=-4) at src/os/unix/ngx_process.c:199</span><br><span class="line">#11 0x000000000043076b in ngx_start_worker_processes (cycle=cycle@entry=0x26022d0, n=1, type=type@entry=-4) at src/os/unix/ngx_process_cycle.c:359</span><br><span class="line">#12 0x00000000004321b8 in ngx_master_process_cycle (cycle=0x26022d0, cycle@entry=0x25fe2c0) at src/os/unix/ngx_process_cycle.c:244</span><br><span class="line">#13 0x000000000040ca1b in main (argc=&lt;optimized out&gt;, argv=&lt;optimized out&gt;) at src/core/nginx.c:382</span><br></pre></td></tr></table></figure>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本文关注nginx如何检测客户端连接从而生成499的access log以及upstream的一些状态指标的计算逻辑.产生499时首先可以通过request time查看处理时间,如果小于客户端设置的超时时间,说明可能是网络等原因导致客户端主动断开.如果request time等于客户端设置的超时时间,那么就得从服务端查找原因.</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/NGINX/" rel="tag"># NGINX</a>
+          
+            <a href="/tags/PHP-FPM/" rel="tag"># PHP-FPM</a>
+          
+            <a href="/tags/WRK/" rel="tag"># WRK</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/09/07/php-fpm-nginx-wrk/" rel="next" title="Nginx499原因探查">
+                <i class="fa fa-chevron-left"></i> Nginx499原因探查
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/09/17/NGINX-graceful-stop-or-upgrade/" rel="prev" title="NGINX 平滑升级">
+                NGINX 平滑升级 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">56</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#nginx配置"><span class="nav-number">1.</span> <span class="nav-text">nginx配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#nginx499源码流程"><span class="nav-number">2.</span> <span class="nav-text">nginx499源码流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">3.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

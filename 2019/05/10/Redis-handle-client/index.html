@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Redis,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="本文从网络层视角看一下客户端连接,超时,输入输出缓冲区相关的一些知识 连接客户端连接之后做如下处理:  设置socket为non-blocking 设置socket为TCP_NODELAY 注册读取事件准备读取客户端请求  但如果已经超出maxclients配置的最大连接数,则会发送错误后断开连接注意是在连接已经建立之后才检测maxclients,为何不在accept的时候直接比较?因为直接断开对">
+<meta name="keywords" content="Redis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis连接处理">
+<meta property="og:url" content="https://erpeng.github.io/2019/05/10/Redis-handle-client/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="本文从网络层视角看一下客户端连接,超时,输入输出缓冲区相关的一些知识 连接客户端连接之后做如下处理:  设置socket为non-blocking 设置socket为TCP_NODELAY 注册读取事件准备读取客户端请求  但如果已经超出maxclients配置的最大连接数,则会发送错误后断开连接注意是在连接已经建立之后才检测maxclients,为何不在accept的时候直接比较?因为直接断开对">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-09-29T09:46:30.768Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Redis连接处理">
+<meta name="twitter:description" content="本文从网络层视角看一下客户端连接,超时,输入输出缓冲区相关的一些知识 连接客户端连接之后做如下处理:  设置socket为non-blocking 设置socket为TCP_NODELAY 注册读取事件准备读取客户端请求  但如果已经超出maxclients配置的最大连接数,则会发送错误后断开连接注意是在连接已经建立之后才检测maxclients,为何不在accept的时候直接比较?因为直接断开对">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/05/10/Redis-handle-client/">
+
+
+
+
+
+  <title>Redis连接处理 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/05/10/Redis-handle-client/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Redis连接处理</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-05-10T00:00:00+08:00">
+                2019-05-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/05/10/Redis-handle-client/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/05/10/Redis-handle-client/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>本文从网络层视角看一下客户端连接,超时,输入输出缓冲区相关的一些知识</p>
+<h2 id="连接"><a href="#连接" class="headerlink" title="连接"></a>连接</h2><p>客户端连接之后做如下处理:</p>
+<ul>
+<li>设置socket为non-blocking</li>
+<li>设置socket为TCP_NODELAY</li>
+<li>注册读取事件准备读取客户端请求</li>
+</ul>
+<p>但如果已经超出maxclients配置的最大连接数,则会发送错误后断开连接<br><strong>注意是在连接已经建立之后才检测maxclients,为何不在accept的时候直接比较?</strong><br>因为直接断开对客户端不太友好,客户端没法知道到底是什么原因导致的连接不了.该比较在连接之后并且是将client的fd设置为non-blocking之后,这样可以无阻塞的写入客户端错误原因</p>
+<p>代码参考:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">static void acceptCommonHandler(int fd, int flags, char *ip) &#123;</span><br><span class="line">    client *c;</span><br><span class="line">    if ((c = createClient(fd)) == NULL) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    if (listLength(server.clients) &gt; server.maxclients) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="处理顺序"><a href="#处理顺序" class="headerlink" title="处理顺序"></a>处理顺序</h2><p>redis处理时有如下两点:</p>
+<ul>
+<li>当客户端socket有新数据时,只执行一次read()的系统调用(不会循环读取直到读取完).防止请求量小的客户端被饿死</li>
+<li>待确认?</li>
+</ul>
+<h2 id="最大连接数"><a href="#最大连接数" class="headerlink" title="最大连接数"></a>最大连接数</h2><p>不设置maxclients时默认是10000的并发连接数限制<br>Redis内部需要使用32个文件描述符,如果32+maxclients超出操作系统设置的单进程最大能够打开的文件描述符(检查soft limit),则会在日志中打出</p>
+<p>系统层面(Linux)可以按如下两方法设置:</p>
+<ul>
+<li>ulimit -Sn 100000 # This will only work if hard limit is big enough.</li>
+<li>sysctl -w fs.file-max=100000</li>
+</ul>
+<h2 id="输出缓冲区"><a href="#输出缓冲区" class="headerlink" title="输出缓冲区"></a>输出缓冲区</h2><p>Redis中可以设置输出缓冲区的大小:</p>
+<ul>
+<li>hard limit:达到该值直接断开客户端连接</li>
+<li>soft limit:连续时间t内一直大于某个数值m,则断开连接</li>
+</ul>
+<p>不同类型客户端的默认值:</p>
+<ul>
+<li>normal clients:不限制</li>
+<li>pub/sub clients: hard limit 32M,soft limit 8M 60s</li>
+<li>slaves: hard limit 256M,soft limit 64M 60s</li>
+</ul>
+<p>代码详见:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">int checkClientOutputBufferLimits(client *c) &#123;</span><br><span class="line">   ...</span><br><span class="line">    if (server.client_obuf_limits[class].hard_limit_bytes &amp;&amp;</span><br><span class="line">        used_mem &gt;= server.client_obuf_limits[class].hard_limit_bytes)</span><br><span class="line">        hard = 1;</span><br><span class="line">    if (server.client_obuf_limits[class].soft_limit_bytes &amp;&amp;</span><br><span class="line">        used_mem &gt;= server.client_obuf_limits[class].soft_limit_bytes)</span><br><span class="line">        soft = 1;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">    if (soft) &#123;</span><br><span class="line">        if (c-&gt;obuf_soft_limit_reached_time == 0) &#123;</span><br><span class="line">            c-&gt;obuf_soft_limit_reached_time = server.unixtime;</span><br><span class="line">            soft = 0; /* First time we see the soft limit reached */</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            time_t elapsed = server.unixtime - c-&gt;obuf_soft_limit_reached_time;</span><br><span class="line"></span><br><span class="line">            if (elapsed &lt;=</span><br><span class="line">                server.client_obuf_limits[class].soft_limit_seconds) &#123;</span><br><span class="line">                soft = 0; /* The client still did not reached the max number of</span><br><span class="line">                             seconds for the soft limit to be considered</span><br><span class="line">                             reached. */</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        c-&gt;obuf_soft_limit_reached_time = 0;</span><br><span class="line">    &#125;</span><br><span class="line">    return soft || hard;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="输入缓冲区"><a href="#输入缓冲区" class="headerlink" title="输入缓冲区"></a>输入缓冲区</h2><p>硬性限制为1GB,超出之后会断开连接</p>
+<h2 id="超时"><a href="#超时" class="headerlink" title="超时"></a>超时</h2><p>默认没有空闲超时时间,但可以在redis.conf或者config set timeout value<br>注意超时只针对 normal clients,pub/sub模式下不计算该超时<br>Redis不会设置定时器去检查并且不会每次都顺序检查,而是增量式的检查.所以超时如果设置为10s,12s之后才断开也是正常的</p>
+<p>调用代码详见:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">int clientsCronHandleTimeout(client *c, mstime_t now_ms) &#123;</span><br><span class="line">    time_t now = now_ms/1000;</span><br><span class="line"></span><br><span class="line">    if (server.maxidletime &amp;&amp;</span><br><span class="line">        !(c-&gt;flags &amp; CLIENT_SLAVE) &amp;&amp;    /* no timeout for slaves */</span><br><span class="line">        !(c-&gt;flags &amp; CLIENT_MASTER) &amp;&amp;   /* no timeout for masters */</span><br><span class="line">        !(c-&gt;flags &amp; CLIENT_BLOCKED) &amp;&amp;  /* no timeout for BLPOP */</span><br><span class="line">        !(c-&gt;flags &amp; CLIENT_PUBSUB) &amp;&amp;   /* no timeout for Pub/Sub clients */</span><br><span class="line">        (now - c-&gt;lastinteraction &gt; server.maxidletime))</span><br><span class="line">    &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p>此处注意如何实现的增量式检查,代码如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">void clientsCron(void) &#123;</span><br><span class="line">    //每次只遍历iterations次,不会检查所有clients</span><br><span class="line">    while(listLength(server.clients) &amp;&amp; iterations--) &#123;</span><br><span class="line">        //rotate clients的链表,将最后一个node放到头部</span><br><span class="line">        listRotate(server.clients);</span><br><span class="line">        head = listFirst(server.clients);</span><br><span class="line">        c = listNodeValue(head);</span><br><span class="line">        //检查是否超时</span><br><span class="line">        if (clientsCronHandleTimeout(c,now)) continue;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>可以看到每次都不会进行遍历,而是增量式取固定个数去执行检测</p>
+<h2 id="client命令"><a href="#client命令" class="headerlink" title="client命令"></a>client命令</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">显示客户端状态</span><br><span class="line">client lists</span><br></pre></td></tr></table></figure>
+<ul>
+<li>addr 客户端地址</li>
+<li>fd  句柄号</li>
+<li>name 客户端名称-通过client setname设置</li>
+<li>age  连接存在时间</li>
+<li>idle 连接空闲时间</li>
+<li>flags 客户端类型 n代表normal clients</li>
+<li>omem  输出缓冲区内存使用大小</li>
+<li>cmd 客户端最后执行的命令</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">kill一个客户端 </span><br><span class="line">client kill</span><br></pre></td></tr></table></figure>
+<h2 id="tcp-keepalive"><a href="#tcp-keepalive" class="headerlink" title="tcp keepalive"></a>tcp keepalive</h2><p>3.2以上版本会设置tcp keepalive ,时间为300s<br>该机制能够检测出dead peers,并且如果客户端和服务端的中间代理有超时设置,可以避免被断开</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a href="https://redis.io/topics/clients" target="_blank" rel="noopener">https://redis.io/topics/clients</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Redis/" rel="tag"># Redis</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/04/30/Redis-stream/" rel="next" title="Redis stream简介">
+                <i class="fa fa-chevron-left"></i> Redis stream简介
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/05/13/how-to-design-a-log-system/" rel="prev" title="如何设计一个高并发的日志系统">
+                如何设计一个高并发的日志系统 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">56</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#连接"><span class="nav-number">1.</span> <span class="nav-text">连接</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#处理顺序"><span class="nav-number">2.</span> <span class="nav-text">处理顺序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#最大连接数"><span class="nav-number">3.</span> <span class="nav-text">最大连接数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#输出缓冲区"><span class="nav-number">4.</span> <span class="nav-text">输出缓冲区</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#输入缓冲区"><span class="nav-number">5.</span> <span class="nav-text">输入缓冲区</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#超时"><span class="nav-number">6.</span> <span class="nav-text">超时</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#client命令"><span class="nav-number">7.</span> <span class="nav-text">client命令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tcp-keepalive"><span class="nav-number">8.</span> <span class="nav-text">tcp keepalive</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考链接"><span class="nav-number">9.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
