@@ -91,7 +91,7 @@
 <meta property="og:site_name" content="erpeng&#39;s code area">
 <meta property="og:description" content="本文从网络层视角看一下客户端连接,超时,输入输出缓冲区相关的一些知识 连接客户端连接之后做如下处理:  设置socket为non-blocking 设置socket为TCP_NODELAY 注册读取事件准备读取客户端请求  但如果已经超出maxclients配置的最大连接数,则会发送错误后断开连接注意是在连接已经建立之后才检测maxclients,为何不在accept的时候直接比较?因为直接断开对">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-09-04T12:22:53.913Z">
+<meta property="og:updated_time" content="2019-09-29T09:46:30.768Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Redis连接处理">
 <meta name="twitter:description" content="本文从网络层视角看一下客户端连接,超时,输入输出缓冲区相关的一些知识 连接客户端连接之后做如下处理:  设置socket为non-blocking 设置socket为TCP_NODELAY 注册读取事件准备读取客户端请求  但如果已经超出maxclients配置的最大连接数,则会发送错误后断开连接注意是在连接已经建立之后才检测maxclients,为何不在accept的时候直接比较?因为直接断开对">
@@ -523,7 +523,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">54</span>
+                  <span class="site-state-item-count">56</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -536,7 +536,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">15</span>
+                  <span class="site-state-item-count">16</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
