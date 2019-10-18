@@ -72,7 +72,7 @@
 
 
 
-  <meta name="keywords" content="PHP,">
+  <meta name="keywords" content="go,trace,metric,">
 
 
 
@@ -83,18 +83,18 @@
 
 
 
-<meta name="description" content="本文通过Laravel的illuminate来说明如何实现一个ORM  ORM写法首先定义class A如下:1234567891011use Illuminate\Database\Eloquent\Model as Model;class A extends Model&amp;#123;    /**     * The table associated with the model.     *">
-<meta name="keywords" content="PHP">
+<meta name="description" content="Metrics/Tracing/LoggingMetrics:聚合指标,例如http请求数是一个counter,队列长度是一个gauge,请求时间是一个histogramLogging:离散的eventsTracing:request-scoped.一个请求范围内的调用关系 OpenTracing通过一个spc定义了实体和实体能力,解耦应用和后端tracing系统. OpenTracing Spe">
+<meta name="keywords" content="go,trace,metric">
 <meta property="og:type" content="article">
-<meta property="og:title" content="ORM快速入门">
-<meta property="og:url" content="https://erpeng.github.io/2019/09/03/orm-quickstart/index.html">
+<meta property="og:title" content="OpenTracing and OpenCensus-1">
+<meta property="og:url" content="https://erpeng.github.io/2019/10/18/opencensus/index.html">
 <meta property="og:site_name" content="erpeng&#39;s code area">
-<meta property="og:description" content="本文通过Laravel的illuminate来说明如何实现一个ORM  ORM写法首先定义class A如下:1234567891011use Illuminate\Database\Eloquent\Model as Model;class A extends Model&amp;#123;    /**     * The table associated with the model.     *">
+<meta property="og:description" content="Metrics/Tracing/LoggingMetrics:聚合指标,例如http请求数是一个counter,队列长度是一个gauge,请求时间是一个histogramLogging:离散的eventsTracing:request-scoped.一个请求范围内的调用关系 OpenTracing通过一个spc定义了实体和实体能力,解耦应用和后端tracing系统. OpenTracing Spe">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-09-29T09:46:30.773Z">
+<meta property="og:updated_time" content="2019-10-18T10:40:55.262Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="ORM快速入门">
-<meta name="twitter:description" content="本文通过Laravel的illuminate来说明如何实现一个ORM  ORM写法首先定义class A如下:1234567891011use Illuminate\Database\Eloquent\Model as Model;class A extends Model&amp;#123;    /**     * The table associated with the model.     *">
+<meta name="twitter:title" content="OpenTracing and OpenCensus-1">
+<meta name="twitter:description" content="Metrics/Tracing/LoggingMetrics:聚合指标,例如http请求数是一个counter,队列长度是一个gauge,请求时间是一个histogramLogging:离散的eventsTracing:request-scoped.一个请求范围内的调用关系 OpenTracing通过一个spc定义了实体和实体能力,解耦应用和后端tracing系统. OpenTracing Spe">
 
 
 
@@ -124,13 +124,13 @@
 
 
 
-  <link rel="canonical" href="https://erpeng.github.io/2019/09/03/orm-quickstart/">
+  <link rel="canonical" href="https://erpeng.github.io/2019/10/18/opencensus/">
 
 
 
 
 
-  <title>ORM快速入门 | erpeng's code area</title>
+  <title>OpenTracing and OpenCensus-1 | erpeng's code area</title>
   
 
 
@@ -266,7 +266,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/09/03/orm-quickstart/">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/10/18/opencensus/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="erpeng">
@@ -283,7 +283,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">ORM快速入门</h1>
+          <h1 class="post-title" itemprop="name headline">OpenTracing and OpenCensus-1</h1>
         
 
         <div class="post-meta">
@@ -295,8 +295,8 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-09-03T00:00:00+08:00">
-                2019-09-03
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-18T00:00:00+08:00">
+                2019-10-18
               </time>
             
 
@@ -314,8 +314,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2019/09/03/orm-quickstart/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/09/03/orm-quickstart/" itemprop="commentCount"></span>
+                <a href="/2019/10/18/opencensus/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/10/18/opencensus/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -348,29 +348,95 @@
       
 
       
-        <blockquote>
-<p>本文通过Laravel的illuminate来说明如何实现一个ORM</p>
-</blockquote>
-<h2 id="ORM写法"><a href="#ORM写法" class="headerlink" title="ORM写法"></a>ORM写法</h2><p>首先定义class A如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">use Illuminate\Database\Eloquent\Model as Model;</span><br><span class="line"></span><br><span class="line">class A extends Model</span><br><span class="line">&#123;</span><br><span class="line">    /**</span><br><span class="line">     * The table associated with the model.</span><br><span class="line">     *</span><br><span class="line">     * @var string</span><br><span class="line">     */</span><br><span class="line">    protected $table = &apos;table_a&apos;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>其中class A中定义了一个table属性,值为’table_a’</p>
-<p>然后php中通过如下方法获取table_a中的数据</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$rows = A::query()-&gt;whereIn(&apos;id&apos;, [1,2,3])-&gt;get()</span><br></pre></td></tr></table></figure>
-<p>对应sql语句为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select * from table_a where id in (1,2,3);</span><br></pre></td></tr></table></figure></p>
-<h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><ul>
-<li>自底向上思考,数据库只认sql语句,所以最终需要将ORM代码映射为相应的sql并执行</li>
-<li><p>执行时需要数据库连接,所以需要有一个connection对象(包括ip,port,username,password,db及其配置属性),并且connection对象实际也是可配置的,配置方法同table属性,和每一个model关联起来.如下:</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">/**</span><br><span class="line"> * The database connection associated with the model.</span><br><span class="line"> *</span><br><span class="line"> * @var string</span><br><span class="line"> */</span><br><span class="line">protected $connection = &apos;history&apos;;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>所以我们需要的只是连接和sql,其中连接可能是mysql,sqlite,sqlserver等,并且不同的数据库生成的sql也有一定的差异</p>
-</li>
+        <h2 id="Metrics-Tracing-Logging"><a href="#Metrics-Tracing-Logging" class="headerlink" title="Metrics/Tracing/Logging"></a>Metrics/Tracing/Logging</h2><p>Metrics:聚合指标,例如http请求数是一个counter,队列长度是一个gauge,请求时间是一个histogram<br>Logging:离散的events<br>Tracing:request-scoped.一个请求范围内的调用关系</p>
+<p>OpenTracing通过一个spc定义了实体和实体能力,解耦应用和后端tracing系统.</p>
+<h2 id="OpenTracing-Specification"><a href="#OpenTracing-Specification" class="headerlink" title="OpenTracing Specification"></a>OpenTracing Specification</h2><h3 id="模型"><a href="#模型" class="headerlink" title="模型"></a>模型</h3><h4 id="span定义"><a href="#span定义" class="headerlink" title="span定义"></a>span定义</h4><p>链路通过span定义,每个span包括如下状态:</p>
+<ul>
+<li>名称</li>
+<li>开始时间</li>
+<li>结束时间</li>
+<li>0或多个Span Tags</li>
+<li>0或多个Span Logs.key/value pairs附加一个时间戳</li>
+<li>一个SpanContext.</li>
+<li><strong>0或多个关联的Span</strong><br>SpanContext包括如下状态:</li>
+<li>trace 和 span ids</li>
+<li><strong>Baggage items:key/value paires</strong></li>
 </ul>
-<h2 id="illuminate实现"><a href="#illuminate实现" class="headerlink" title="illuminate实现"></a>illuminate实现</h2><p>从A::query()开始,调用链接如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">public static function query()</span><br><span class="line">&#123;</span><br><span class="line">    return (new static)-&gt;newQuery();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">public function newQuery()</span><br><span class="line">&#123;</span><br><span class="line">    $builder = $this-&gt;newQueryWithoutScopes();</span><br><span class="line">    ...</span><br><span class="line">    return $builder;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>query()返回值为\Illuminate\Database\Eloquent\Builder，调用时使用new static,为延迟静态绑定,所以下文中的$this都为class A的实例对象</p>
-<p>生成Eloquent\Builder的函数如下,\Illuminate\Database\Eloquent\Builder中有一个query属性为\Illuminate\Database\Query\Builder,Query\Builder下文再述<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">public function newQueryWithoutScopes()</span><br><span class="line">&#123;</span><br><span class="line">    $builder = $this-&gt;newEloquentBuilder(</span><br><span class="line">        $this-&gt;newBaseQueryBuilder()</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    return $builder-&gt;setModel($this)-&gt;with($this-&gt;with);</span><br><span class="line">&#125;</span><br><span class="line">protected function newBaseQueryBuilder()</span><br><span class="line">&#123;</span><br><span class="line">    $conn = $this-&gt;getConnection();</span><br><span class="line"></span><br><span class="line">    $grammar = $conn-&gt;getQueryGrammar();</span><br><span class="line"></span><br><span class="line">    return new QueryBuilder($conn, $grammar, $conn-&gt;getPostProcessor());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>注意newQueryWithoutScopes函数中最后的setModel函数,传入的参数为$this,即A的一个实例;下文代码中getTable获取表名时如果A中设置了table属性,则直接实用其属性值,即上述配置中的table_a,否则将类名格式化之后作为表名.<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">public function setModel(Model $model)</span><br><span class="line">&#123;</span><br><span class="line">    $this-&gt;model = $model;</span><br><span class="line"></span><br><span class="line">    $this-&gt;query-&gt;from($model-&gt;getTable());</span><br><span class="line"></span><br><span class="line">    return $this;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">public function getTable()</span><br><span class="line">&#123;</span><br><span class="line">    if (isset($this-&gt;table)) &#123;</span><br><span class="line">        return $this-&gt;table;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return str_replace(&apos;\\&apos;, &apos;&apos;, Str::snake(Str::plural(class_basename($this))));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>继续看whereIn函数,\Illuminate\Database\Eloquent\Builder中有一个魔术方法__call,whereIn实际会调用Eloquent\Builder中query属性,即\Illuminate\Database\Query\Builder的whereIn方法 </p>
-<p>get()函数同理也是调用query的get()方法,最终首先生成sql,然后通过mysql连接执行并返回结果</p>
-<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>后文详述生成sql以及连接生成相关的代码</p>
+<p>标准的Span Tags如下:</p>
+<p>基础tag:</p>
+<ul>
+<li>component: “grpc” or “django” or “JDBI”</li>
+<li>error: “true” or “false”</li>
+<li>span.kind :”client” or “server” or “producer” or “consumer”</li>
+<li>sampling.priority : 0 or 1 or 2</li>
+<li>peer.ipv4 : “127.0.0.1”</li>
+<li>peer.hostname : “ke.com”</li>
+</ul>
+<p>db相关:</p>
+<ul>
+<li>db.instance: “db1” or “db2”</li>
+<li>db.type : “redis” or “mysql”</li>
+<li>db.statement : “set mykey myvalue” or “select * from tb1 where id =1 “</li>
+<li>db.user : “readonly” or “writer_user1”</li>
+</ul>
+<p>http相关:</p>
+<ul>
+<li>http.method :”get” or “post”</li>
+<li>http.status_code : 200 or 404 or 503</li>
+<li>http.url : “<a href="https://ke.com&quot;" target="_blank" rel="noopener">https://ke.com&quot;</a></li>
+</ul>
+<p>mq相关:</p>
+<ul>
+<li>message_bus.destination : “tpoic name”</li>
+</ul>
+<p>标准的:Log Fields</p>
+<p>Log除了一个时间戳外有如下一些标准fields:</p>
+<ul>
+<li>error.kind : “Exception” or “OSError”</li>
+<li>error.object : “java.lang.UnsupportedOperationException” or “exceptions.NameError”</li>
+<li>event: “initialized” or “timed out”</li>
+<li>message: “Could not connect to backend” or “Cache invalidation succeeded”</li>
+<li>stack:  调用栈</li>
+</ul>
+<h4 id="span间的关系"><a href="#span间的关系" class="headerlink" title="span间的关系"></a>span间的关系</h4><p>ChildOf:parent span依赖于child span时是child of 关系.例如:</p>
+<ul>
+<li>server 端rpc的span与客户端的一个rpc调用是child of</li>
+<li>sql insert的一个span与orm中的save方法关系是child of</li>
+<li>一个父span并发执行许多子span,然后合并子请求的结果,关系也是child of</li>
+</ul>
+<p>followsfrom:父span不依赖于子span的结果.<br>例如生产者消费者关系</p>
+<h3 id="API"><a href="#API" class="headerlink" title="API"></a>API</h3><p>有三个关键概念:Tracer,Span,SpanContext</p>
+<p>Tracer有如下能力:</p>
+<ul>
+<li>开启一个Span</li>
+<li>将一个SpanContext注入一个载体</li>
+<li>将一个SpanContext从一个载体中解析出</li>
+</ul>
+<p>载体可以有如下几种类型:</p>
+<ul>
+<li>Text Map:key/value</li>
+<li>HTTP Headers</li>
+<li>Binary</li>
+</ul>
+<p>Span:</p>
+<ul>
+<li>覆盖span名字</li>
+<li>finish span</li>
+<li>set span tag</li>
+<li>set log fields</li>
+<li><strong>set/get baggage item</strong></li>
+</ul>
+<p>SpanContext:</p>
+<ul>
+<li>遍历baggage items</li>
+</ul>
+<h2 id="参考连接"><a href="#参考连接" class="headerlink" title="参考连接:"></a>参考连接:</h2><ul>
+<li><a href="https://opentracing.io/specification/" target="_blank" rel="noopener">https://opentracing.io/specification/</a></li>
+<li><a href="https://opentracing.io/specification/conventions/" target="_blank" rel="noopener">https://opentracing.io/specification/conventions/</a></li>
+<li><a href="https://github.com/yurishkuro/opentracing-tutorial/tree/master/go" target="_blank" rel="noopener">https://github.com/yurishkuro/opentracing-tutorial/tree/master/go</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/34318538" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/34318538</a></li>
+<li><a href="http://peter.bourgon.org/blog/2017/02/21/metrics-tracing-and-logging.html" target="_blank" rel="noopener">http://peter.bourgon.org/blog/2017/02/21/metrics-tracing-and-logging.html</a></li>
+</ul>
 
       
     </div>
@@ -388,7 +454,11 @@
       
         <div class="post-tags">
           
-            <a href="/tags/PHP/" rel="tag"># PHP</a>
+            <a href="/tags/go/" rel="tag"># go</a>
+          
+            <a href="/tags/trace/" rel="tag"># trace</a>
+          
+            <a href="/tags/metric/" rel="tag"># metric</a>
           
         </div>
       
@@ -401,8 +471,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/08/15/grpc-go-keepalive-server/" rel="next" title="grpc-go源码解析7-keepalive">
-                <i class="fa fa-chevron-left"></i> grpc-go源码解析7-keepalive
+              <a href="/2019/10/11/swig/" rel="next" title="swig使用-go调用c++">
+                <i class="fa fa-chevron-left"></i> swig使用-go调用c++
               </a>
             
           </div>
@@ -410,10 +480,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/09/04/orm-quickstart2/" rel="prev" title="ORM快速入门2">
-                ORM快速入门2 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -549,7 +615,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#ORM写法"><span class="nav-number">1.</span> <span class="nav-text">ORM写法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现思路"><span class="nav-number">2.</span> <span class="nav-text">实现思路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#illuminate实现"><span class="nav-number">3.</span> <span class="nav-text">illuminate实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Metrics-Tracing-Logging"><span class="nav-number">1.</span> <span class="nav-text">Metrics/Tracing/Logging</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#OpenTracing-Specification"><span class="nav-number">2.</span> <span class="nav-text">OpenTracing Specification</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#模型"><span class="nav-number">2.1.</span> <span class="nav-text">模型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#span定义"><span class="nav-number">2.1.1.</span> <span class="nav-text">span定义</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#span间的关系"><span class="nav-number">2.1.2.</span> <span class="nav-text">span间的关系</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#API"><span class="nav-number">2.2.</span> <span class="nav-text">API</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考连接"><span class="nav-number">3.</span> <span class="nav-text">参考连接:</span></a></li></ol></div>
             
 
           </div>
