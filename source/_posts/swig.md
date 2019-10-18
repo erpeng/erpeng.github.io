@@ -174,7 +174,7 @@ public:
 };
 
 ```
-SimpleClass中增加一个函数setCallBack,参数为增加的新类类SimpleClassCallback.然后增加一个实现:
+SimpleClass中增加一个函数setCallBack,参数为增加的新类SimpleClassCallback.然后增加一个实现:
 
 ```
 void SimpleClass::setCallBack(SimpleClassCallback *scc){
