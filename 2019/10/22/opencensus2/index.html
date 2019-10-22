@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="go,trace,metric,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="上一篇着重介绍OpenTracing spec相关内容.本章通过一些实例介绍OpenTracing.  说明参考https://github.com/yurishkuro/opentracing-tutorial/tree/master/go注意该代码仓库中引入jaeger-client-go使用的路径是”github.com/uber/jaeger-client-go/config”,而jae">
+<meta name="keywords" content="go,trace,metric">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OpenTracing and OpenCensus-2">
+<meta property="og:url" content="https://erpeng.github.io/2019/10/22/opencensus2/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="上一篇着重介绍OpenTracing spec相关内容.本章通过一些实例介绍OpenTracing.  说明参考https://github.com/yurishkuro/opentracing-tutorial/tree/master/go注意该代码仓库中引入jaeger-client-go使用的路径是”github.com/uber/jaeger-client-go/config”,而jae">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://erpeng.github.io/img/oc1.png">
+<meta property="og:image" content="https://erpeng.github.io/img/oc2.png">
+<meta property="og:updated_time" content="2019-10-22T13:07:21.662Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="OpenTracing and OpenCensus-2">
+<meta name="twitter:description" content="上一篇着重介绍OpenTracing spec相关内容.本章通过一些实例介绍OpenTracing.  说明参考https://github.com/yurishkuro/opentracing-tutorial/tree/master/go注意该代码仓库中引入jaeger-client-go使用的路径是”github.com/uber/jaeger-client-go/config”,而jae">
+<meta name="twitter:image" content="https://erpeng.github.io/img/oc1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/10/22/opencensus2/">
+
+
+
+
+
+  <title>OpenTracing and OpenCensus-2 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/10/22/opencensus2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">OpenTracing and OpenCensus-2</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-22T00:00:00+08:00">
+                2019-10-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/10/22/opencensus2/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/10/22/opencensus2/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>上一篇着重介绍OpenTracing spec相关内容.本章通过一些实例介绍OpenTracing.</p>
+</blockquote>
+<h2 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h2><p>参考<a href="https://github.com/yurishkuro/opentracing-tutorial/tree/master/go" target="_blank" rel="noopener">https://github.com/yurishkuro/opentracing-tutorial/tree/master/go</a><br>注意该代码仓库中引入jaeger-client-go使用的路径是”github.com/uber/jaeger-client-go/config”,而jaeger已经托管到了jaegertracing仓库,下载之后修改目录名或者修改import导入路径名均可<br>使用Jaeger作为后端,首先启动一个Jaeger的docker镜像<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">docker run \</span><br><span class="line">  --rm \</span><br><span class="line">  -p 6831:6831/udp \</span><br><span class="line">  -p 6832:6832/udp \</span><br><span class="line">  -p 16686:16686 \</span><br><span class="line">  jaegertracing/all-in-one:1.7 \</span><br><span class="line">  --log-level=debug</span><br></pre></td></tr></table></figure></p>
+<p>通过浏览器访问<a href="http://localhost:16686" target="_blank" rel="noopener">http://localhost:16686</a> 查看</p>
+<h2 id="示例1"><a href="#示例1" class="headerlink" title="示例1"></a>示例1</h2><p>为代码库中lesson2.单体程序<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go run hello.go ke.com</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">func main() &#123;</span><br><span class="line">	if len(os.Args) != 2 &#123;</span><br><span class="line">		panic(&quot;ERROR: Expecting one argument&quot;)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	tracer, closer := tracing.Init(&quot;hello-world&quot;) //定义一个hello-world的service</span><br><span class="line">	defer closer.Close()</span><br><span class="line">	opentracing.SetGlobalTracer(tracer)</span><br><span class="line"></span><br><span class="line">	helloTo := os.Args[1]</span><br><span class="line"></span><br><span class="line">	span := tracer.StartSpan(&quot;say-hello&quot;)  //开启一个名称为say-hello的span</span><br><span class="line">	span.SetTag(&quot;hello-to&quot;, helloTo) //设置一个tag,名称为&quot;hello-to&quot;,value为运行时的参数.UI界面可以根据tag进行检索</span><br><span class="line">	defer span.Finish()</span><br><span class="line"></span><br><span class="line">	ctx := opentracing.ContextWithSpan(context.Background(), span)//通过context将span中的traceId,spanId传递</span><br><span class="line"></span><br><span class="line">	helloStr := formatString(ctx, helloTo)</span><br><span class="line">	printHello(ctx, helloStr)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func formatString(ctx context.Context, helloTo string) string &#123;</span><br><span class="line">	span, _ := opentracing.StartSpanFromContext(ctx, &quot;formatString&quot;) //首先将span extract</span><br><span class="line">	defer span.Finish()</span><br><span class="line"></span><br><span class="line">	helloStr := fmt.Sprintf(&quot;Hello, %s!&quot;, helloTo)</span><br><span class="line">	span.LogFields(</span><br><span class="line">		log.String(&quot;event&quot;, &quot;string-format&quot;),</span><br><span class="line">		log.String(&quot;value&quot;, helloStr),</span><br><span class="line">	)  //设置span中的日志字段</span><br><span class="line"></span><br><span class="line">	return helloStr</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func printHello(ctx context.Context, helloStr string) &#123;</span><br><span class="line">	span, _ := opentracing.StartSpanFromContext(ctx, &quot;printHello&quot;) //将span extract</span><br><span class="line">	defer span.Finish()</span><br><span class="line"></span><br><span class="line">	println(helloStr)</span><br><span class="line">	span.LogKV(&quot;event&quot;, &quot;println&quot;) //设置日志属性</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>看看UI显示:<br><img src="/img/oc1.png" alt="总览"><br>左侧检索方式解释如下(具体值参考代码):</p>
+<ul>
+<li>Service:本例中为hello-world</li>
+<li>Operation:本例中为say-hello,printHello,formatString</li>
+<li>Tags:写法为<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https.status_code=200 error=true</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>本例中为hello-to=ke.com</p>
+<ul>
+<li>Lookback:回溯时间 Min Duration:最短执行时长 Max Duration:最长执行时长 Limit Resuls:显示条数</li>
+</ul>
+<p><img src="/img/oc2.png" alt="详情"></p>
+<ul>
+<li>执行时间轴</li>
+<li>每个operation具体的logs field以及执行时间</li>
+</ul>
+<h2 id="示例2"><a href="#示例2" class="headerlink" title="示例2"></a>示例2</h2><p>为lesson4,调用http请求,为微服务模式.如下执行<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go run hello.go ke.com baggage</span><br></pre></td></tr></table></figure></p>
+<p>代码如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">func main() &#123;</span><br><span class="line">	if len(os.Args) != 3 &#123;</span><br><span class="line">		panic(&quot;ERROR: Expecting two arguments&quot;)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	tracer, closer := tracing.Init(&quot;hello-world&quot;)</span><br><span class="line">	defer closer.Close()</span><br><span class="line">	opentracing.SetGlobalTracer(tracer)</span><br><span class="line"></span><br><span class="line">	helloTo := os.Args[1]</span><br><span class="line">	greeting := os.Args[2]</span><br><span class="line"></span><br><span class="line">	span := tracer.StartSpan(&quot;say-hello&quot;)</span><br><span class="line">	span.SetTag(&quot;hello-to&quot;, helloTo)</span><br><span class="line">	span.SetBaggageItem(&quot;greeting&quot;, greeting) //设置baggage</span><br><span class="line">	defer span.Finish()</span><br><span class="line"></span><br><span class="line">	ctx := opentracing.ContextWithSpan(context.Background(), span)</span><br><span class="line"></span><br><span class="line">	helloStr := formatString(ctx, helloTo)</span><br><span class="line">	printHello(ctx, helloStr)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func formatString(ctx context.Context, helloTo string) string &#123;</span><br><span class="line">	span, _ := opentracing.StartSpanFromContext(ctx, &quot;formatString&quot;)</span><br><span class="line">	defer span.Finish()</span><br><span class="line"></span><br><span class="line">	v := url.Values&#123;&#125;</span><br><span class="line">	v.Set(&quot;helloTo&quot;, helloTo)</span><br><span class="line">	url := &quot;http://localhost:8081/format?&quot; + v.Encode()</span><br><span class="line">	req, err := http.NewRequest(&quot;GET&quot;, url, nil)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		panic(err.Error())</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	ext.SpanKindRPCClient.Set(span) //ext包中封装语法糖,实际仍为set tag.本句为设置spankind为client</span><br><span class="line">	ext.HTTPUrl.Set(span, url) //设置span httpurl</span><br><span class="line">	ext.HTTPMethod.Set(span, &quot;GET&quot;) //设置span method</span><br><span class="line">	span.Tracer().Inject( //以http header为载体,将span上下文传递.</span><br><span class="line">		span.Context(),</span><br><span class="line">		opentracing.HTTPHeaders,</span><br><span class="line">		opentracing.HTTPHeadersCarrier(req.Header),</span><br><span class="line">	)</span><br><span class="line"></span><br><span class="line">	resp, err := xhttp.Do(req)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		panic(err.Error())</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	helloStr := string(resp)</span><br><span class="line"></span><br><span class="line">	span.LogFields(</span><br><span class="line">		log.String(&quot;event&quot;, &quot;string-format&quot;),</span><br><span class="line">		log.String(&quot;value&quot;, helloStr),</span><br><span class="line">	)</span><br><span class="line"></span><br><span class="line">	return helloStr</span><br><span class="line">&#125;</span><br><span class="line">...</span><br></pre></td></tr></table></figure></p>
+<p>看一下其中一个http服务:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">func main() &#123;</span><br><span class="line">	tracer, closer := tracing.Init(&quot;formatter&quot;)</span><br><span class="line">	defer closer.Close()</span><br><span class="line"></span><br><span class="line">	http.HandleFunc(&quot;/format&quot;, func(w http.ResponseWriter, r *http.Request) &#123;</span><br><span class="line">		spanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(r.Header))</span><br><span class="line">        //从http头中将span上下文取出</span><br><span class="line">		span := tracer.StartSpan(&quot;format&quot;, ext.RPCServerOption(spanCtx))</span><br><span class="line">		defer span.Finish()</span><br><span class="line"></span><br><span class="line">		greeting := span.BaggageItem(&quot;greeting&quot;) //取出baggage</span><br><span class="line">		if greeting == &quot;&quot; &#123;</span><br><span class="line">			greeting = &quot;Hello&quot;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		helloTo := r.FormValue(&quot;helloTo&quot;)</span><br><span class="line">		helloStr := fmt.Sprintf(&quot;%s, %s!&quot;, greeting, helloTo)</span><br><span class="line">		span.LogFields(</span><br><span class="line">			otlog.String(&quot;event&quot;, &quot;string-format&quot;),</span><br><span class="line">			otlog.String(&quot;value&quot;, helloStr),</span><br><span class="line">		)</span><br><span class="line">		w.Write([]byte(helloStr))</span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	log.Fatal(http.ListenAndServe(&quot;:8081&quot;, nil))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>具体示意图可自行实验查看</p>
+<h2 id="参考连接"><a href="#参考连接" class="headerlink" title="参考连接:"></a>参考连接:</h2><ul>
+<li><a href="https://opentracing.io/specification/" target="_blank" rel="noopener">https://opentracing.io/specification/</a></li>
+<li><a href="https://opentracing.io/specification/conventions/" target="_blank" rel="noopener">https://opentracing.io/specification/conventions/</a></li>
+<li><a href="https://github.com/yurishkuro/opentracing-tutorial/tree/master/go" target="_blank" rel="noopener">https://github.com/yurishkuro/opentracing-tutorial/tree/master/go</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/34318538" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/34318538</a></li>
+<li><a href="http://peter.bourgon.org/blog/2017/02/21/metrics-tracing-and-logging.html" target="_blank" rel="noopener">http://peter.bourgon.org/blog/2017/02/21/metrics-tracing-and-logging.html</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/go/" rel="tag"># go</a>
+          
+            <a href="/tags/trace/" rel="tag"># trace</a>
+          
+            <a href="/tags/metric/" rel="tag"># metric</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/10/18/opencensus/" rel="next" title="OpenTracing and OpenCensus-1">
+                <i class="fa fa-chevron-left"></i> OpenTracing and OpenCensus-1
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">59</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#说明"><span class="nav-number">1.</span> <span class="nav-text">说明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#示例1"><span class="nav-number">2.</span> <span class="nav-text">示例1</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#示例2"><span class="nav-number">3.</span> <span class="nav-text">示例2</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考连接"><span class="nav-number">4.</span> <span class="nav-text">参考连接:</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
