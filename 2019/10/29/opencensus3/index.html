@@ -83,15 +83,21 @@
 
 
 
+<meta name="description" content="本文关注metrics/trace/log的收集方式.通过三个常用的开源工具了解其实现原理  prometheus 脚本类工作(Short-lived jobs)可以通过Pushgateway收集,daemon可以直接通过引入client端收集并对外提供接口.Prometheus server可以通过定期调用接口获取metrics并且存储到时序数据库(TSDB)中 Prometheus web">
 <meta name="keywords" content="go,trace,metric">
 <meta property="og:type" content="article">
 <meta property="og:title" content="OpenTracing and OpenCensus-3">
 <meta property="og:url" content="https://erpeng.github.io/2019/10/29/opencensus3/index.html">
 <meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="本文关注metrics/trace/log的收集方式.通过三个常用的开源工具了解其实现原理  prometheus 脚本类工作(Short-lived jobs)可以通过Pushgateway收集,daemon可以直接通过引入client端收集并对外提供接口.Prometheus server可以通过定期调用接口获取metrics并且存储到时序数据库(TSDB)中 Prometheus web">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-10-29T12:15:29.384Z">
+<meta property="og:image" content="https://erpeng.github.io/img/op1.png">
+<meta property="og:image" content="https://erpeng.github.io/img/op2.jpg">
+<meta property="og:updated_time" content="2019-10-29T13:40:01.854Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="OpenTracing and OpenCensus-3">
+<meta name="twitter:description" content="本文关注metrics/trace/log的收集方式.通过三个常用的开源工具了解其实现原理  prometheus 脚本类工作(Short-lived jobs)可以通过Pushgateway收集,daemon可以直接通过引入client端收集并对外提供接口.Prometheus server可以通过定期调用接口获取metrics并且存储到时序数据库(TSDB)中 Prometheus web">
+<meta name="twitter:image" content="https://erpeng.github.io/img/op1.png">
 
 
 
@@ -345,7 +351,25 @@
       
 
       
-        
+        <blockquote>
+<p>本文关注metrics/trace/log的收集方式.通过三个常用的开源工具了解其实现原理</p>
+</blockquote>
+<h2 id="prometheus"><a href="#prometheus" class="headerlink" title="prometheus"></a>prometheus</h2><p><img src="/img/op1.png" alt="prometheus"></p>
+<p>脚本类工作(Short-lived jobs)可以通过Pushgateway收集,daemon可以直接通过引入client端收集并对外提供接口.Prometheus server可以通过定期调用接口获取metrics并且存储到时序数据库(TSDB)中</p>
+<p>Prometheus web UI或者Grafana或者API通过PromQL调用并且可视化数据</p>
+<p>AlertManager可以通过push的方式触发告警</p>
+<h2 id="jaeger"><a href="#jaeger" class="headerlink" title="jaeger"></a>jaeger</h2><p><img src="/img/op2.jpg" alt="jaeger"><br>jaeger的各种语言client实现了OpenTracing定义的接口.首先发送到本地的agent,agent需要部署到所有的宿主机上.agent发送到collector,collector做存储,ui做展示</p>
+<h2 id="logstash"><a href="#logstash" class="headerlink" title="logstash"></a>logstash</h2><p>logstash grok filter可以将非结构化的数据解析为结构化的数据<br>具体原理为通过正则匹配捕获之后放置到不同的字段中 </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">2016-07-11T23:56:42.000+00:00 INFO [MySecretApp.com.Transaction.Manager]:Starting transaction for session -464410bf-37bf-475a-afc0-498e0199f008</span><br></pre></td></tr></table></figure>
+<p>例如如上日志需要结构化为timestamp, log level, class, and then the rest of the message</p>
+<p>grok规则如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grok &#123;</span><br><span class="line">   match =&gt; &#123; &quot;message&quot; =&gt; &quot;%&#123;TIMESTAMP_ISO8601:timestamp&#125; %&#123;LOGLEVEL:log-level&#125; \[%&#123;DATA:class&#125;\]:%&#123;GREEDYDATA:message&#125;&quot; &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>常见模式定义查看该链接:<a href="https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns" target="_blank" rel="noopener">https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns</a></p>
+<p>grok也可以增加其他配置去操纵数据,参考:<a href="https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html#_synopsis_125" target="_blank" rel="noopener">https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html#_synopsis_125</a></p>
+<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><ul>
+<li><a href="https://logz.io/blog/logstash-grok/" target="_blank" rel="noopener">https://logz.io/blog/logstash-grok/</a></li>
+</ul>
+
       
     </div>
     
@@ -446,8 +470,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -508,6 +541,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#prometheus"><span class="nav-number">1.</span> <span class="nav-text">prometheus</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#jaeger"><span class="nav-number">2.</span> <span class="nav-text">jaeger</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#logstash"><span class="nav-number">3.</span> <span class="nav-text">logstash</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#链接"><span class="nav-number">4.</span> <span class="nav-text">链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
