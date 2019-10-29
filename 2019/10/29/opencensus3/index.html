@@ -72,7 +72,7 @@
 
 
 
-  <meta name="keywords" content="leveldb,">
+  <meta name="keywords" content="go,trace,metric,">
 
 
 
@@ -83,23 +83,15 @@
 
 
 
-<meta name="description" content="memtable持久化时机当我们使用Put命令时,会经过如下调用链:DBImpl::Put-&amp;gt;DB::Put-&amp;gt;DBImpl::Write-&amp;gt;DBImpl::MakeRoomForWrite该函数进行了如下判断:  level0的文件数超过了8个,该次写入阻塞1ms 当前memtable中写入量小于4M,则可以继续直接写入 如果存在immutable memtable,则阻塞等待">
-<meta name="keywords" content="leveldb">
+<meta name="keywords" content="go,trace,metric">
 <meta property="og:type" content="article">
-<meta property="og:title" content="leveldb源码解析2之memtable持久化">
-<meta property="og:url" content="https://erpeng.github.io/2019/06/27/leveldb-start-2/index.html">
+<meta property="og:title" content="OpenTracing and OpenCensus-3">
+<meta property="og:url" content="https://erpeng.github.io/2019/10/29/opencensus3/index.html">
 <meta property="og:site_name" content="erpeng&#39;s code area">
-<meta property="og:description" content="memtable持久化时机当我们使用Put命令时,会经过如下调用链:DBImpl::Put-&amp;gt;DB::Put-&amp;gt;DBImpl::Write-&amp;gt;DBImpl::MakeRoomForWrite该函数进行了如下判断:  level0的文件数超过了8个,该次写入阻塞1ms 当前memtable中写入量小于4M,则可以继续直接写入 如果存在immutable memtable,则阻塞等待">
 <meta property="og:locale" content="default">
-<meta property="og:image" content="https://erpeng.github.io/img/leveldb3-1.png">
-<meta property="og:image" content="https://erpeng.github.io/img/leveldb3-2.png">
-<meta property="og:image" content="https://erpeng.github.io/img/leveldb3-3.png">
-<meta property="og:image" content="https://erpeng.github.io/img/leveldb3-4.png">
-<meta property="og:updated_time" content="2019-09-29T09:46:30.773Z">
+<meta property="og:updated_time" content="2019-10-29T12:15:29.384Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="leveldb源码解析2之memtable持久化">
-<meta name="twitter:description" content="memtable持久化时机当我们使用Put命令时,会经过如下调用链:DBImpl::Put-&amp;gt;DB::Put-&amp;gt;DBImpl::Write-&amp;gt;DBImpl::MakeRoomForWrite该函数进行了如下判断:  level0的文件数超过了8个,该次写入阻塞1ms 当前memtable中写入量小于4M,则可以继续直接写入 如果存在immutable memtable,则阻塞等待">
-<meta name="twitter:image" content="https://erpeng.github.io/img/leveldb3-1.png">
+<meta name="twitter:title" content="OpenTracing and OpenCensus-3">
 
 
 
@@ -129,13 +121,13 @@
 
 
 
-  <link rel="canonical" href="https://erpeng.github.io/2019/06/27/leveldb-start-2/">
+  <link rel="canonical" href="https://erpeng.github.io/2019/10/29/opencensus3/">
 
 
 
 
 
-  <title>leveldb源码解析2之memtable持久化 | erpeng's code area</title>
+  <title>OpenTracing and OpenCensus-3 | erpeng's code area</title>
   
 
 
@@ -271,7 +263,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/06/27/leveldb-start-2/">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/10/29/opencensus3/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="erpeng">
@@ -288,7 +280,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">leveldb源码解析2之memtable持久化</h1>
+          <h1 class="post-title" itemprop="name headline">OpenTracing and OpenCensus-3</h1>
         
 
         <div class="post-meta">
@@ -300,8 +292,8 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-06-27T00:00:00+08:00">
-                2019-06-27
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-29T00:00:00+08:00">
+                2019-10-29
               </time>
             
 
@@ -319,8 +311,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2019/06/27/leveldb-start-2/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/06/27/leveldb-start-2/" itemprop="commentCount"></span>
+                <a href="/2019/10/29/opencensus3/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/10/29/opencensus3/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -353,54 +345,7 @@
       
 
       
-        <h2 id="memtable持久化时机"><a href="#memtable持久化时机" class="headerlink" title="memtable持久化时机"></a>memtable持久化时机</h2><p>当我们使用Put命令时,会经过如下调用链:<br>DBImpl::Put-&gt;DB::Put-&gt;DBImpl::Write-&gt;DBImpl::MakeRoomForWrite<br>该函数进行了如下判断:</p>
-<ul>
-<li>level0的文件数超过了8个,该次写入阻塞1ms</li>
-<li>当前memtable中写入量小于4M,则可以继续直接写入</li>
-<li>如果存在immutable memtable,则阻塞等待immutable memtable,直到其dump入磁盘</li>
-<li>如果level0的文件数超过了12个,阻塞等待compact level0的文件<br>上述条件都不满足时,执行如下代码:</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">delete log_;</span><br><span class="line">  delete logfile_;</span><br><span class="line">  logfile_ = lfile;</span><br><span class="line">  logfile_number_ = new_log_number;</span><br><span class="line">  log_ = new log::Writer(lfile);</span><br><span class="line">  imm_ = mem_;</span><br><span class="line">  has_imm_.Release_Store(imm_);</span><br><span class="line">  mem_ = new MemTable(internal_comparator_);</span><br><span class="line">  mem_-&gt;Ref();</span><br><span class="line">  force = false;   // Do not force another compaction if have room</span><br><span class="line">  MaybeScheduleCompaction();</span><br></pre></td></tr></table></figure>
-<p>原来的memtable赋值给immutable memtable,然后新建一个memtable,并进入compaction流程</p>
-<h2 id="sstable结构"><a href="#sstable结构" class="headerlink" title="sstable结构"></a>sstable结构</h2><p>接下来的关键函数调用链为DBImpl::BackgroundCall()-&gt;DBImpl::BackgroundCompaction()  -&gt; DBImpl::CompactMemTable()<br>该函数执行memtable dump到磁盘的流程,关键包括如下两点:</p>
-<ul>
-<li>从memtable生成sstable并持久化到磁盘,函数为WriteLevel0Table</li>
-<li>由于涉及到新文件的生成,因此需要更新manifest,函数为versions_-&gt;LogAndApply(&amp;edit, &amp;mutex_)<br>manifest的生成见前文,本文重点描述memtable持久化到sstable.涉及sstable的结构及关键代码逻辑</li>
-</ul>
-<p>首先看sstable的结构图:</p>
-<p><img src="/img/leveldb3-1.png" alt="leveldb3-1"></p>
-<p>上图关键点说明如下:</p>
-<ul>
-<li>data block中存放有序的key/value对,可压缩</li>
-<li>meta block可存储多种类型,常用的是bloom filter</li>
-<li>metaindex block中对应于每个meta block存放一个entry,key是meta block名称,值是指向对应metablock的一个BlockHandle(参见图,每个BlockHandle存放两个字段,一个是起始偏移量,一个是大小,通过BlockHandle去定位一个block)</li>
-<li>index block中也是对应于每个data block存放一个entry,key是大于等于该data block中最大值,小于下一个data block中的起始值.value也是指向data block的一个BlockHandle</li>
-<li>最后是footer,固定大小,根据footer能够首先定位metaindex block和index block的位置,然后通过这两者定位data block和meta block的位置</li>
-</ul>
-<p>data block中的key/value pair保存格式如下:</p>
-<p><img src="/img/leveldb3-2.png" alt="leveldb3-2"></p>
-<p>由于key是有序排列的,所以key之前必然会有重复前缀,每次插入时会与之前插入的key做比对,然后依次记录能共享的前缀字符数,不能共享的字符数,value的字符数以及key不能共享的部分和value部分</p>
-<p>注意其中会有一个重启点的概念,从每一个重启点开始之后的key/value对才会共享前缀,leveldb中默认16个key/value对有一个重启点</p>
-<p>每个block默认的大小为4k,写满4k后会flush依次.flush的时候会将重启点和trailer附加上,所以一个完整的data block的格式如下:</p>
-<p><img src="/img/leveldb3-3.png" alt="leveldb3-3"></p>
-<p>Flush的过程中还有关键的一些步骤,看下代码:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">void TableBuilder::Flush() &#123;</span><br><span class="line">  ...</span><br><span class="line"> 1. WriteBlock(&amp;r-&gt;data_block, &amp;r-&gt;pending_handle);</span><br><span class="line">  if (ok()) &#123;</span><br><span class="line"> 2.   r-&gt;pending_index_entry = true;</span><br><span class="line">    r-&gt;status = r-&gt;file-&gt;Flush();</span><br><span class="line">  &#125;</span><br><span class="line">  if (r-&gt;filter_block != NULL) &#123;</span><br><span class="line">    r-&gt;filter_block-&gt;StartBlock(r-&gt;offset);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<ul>
-<li>标记1处:在pending_handle中增加该block的大小和偏移量, 写index block时需要这些信息</li>
-<li>标记2处:将pending_index_entry置为true,因此在下次执行TableBuilder::Add时会去写index block.</li>
-</ul>
-<p>所以写入index block也比较简单,首先也是一个key/value对,格式同data block,但是key是大于等于上一个data block的最大值,小于下一个block的最小值,value是pending_handle中记录的上一个block的大小和偏移量(大小和偏移量会被encode为一个string)</p>
-<p>最终,在TableBuilder::Finish()中将index block写入,footer写入.即结束了一个sstable的构造.</p>
-<h2 id="bloom-filter写入"><a href="#bloom-filter写入" class="headerlink" title="bloom filter写入"></a>bloom filter写入</h2><p>第二节其实没有讲解meta block以及metaindex block的写入.这两者在当前情况下为一个bloom filter.我们看下如何生成这个meta block</p>
-<p>默认情况下,options中的filter_policy为null,可以赋值为NewBloomFilterPolicy(),来启用bloom filter.</p>
-<p>基本原理为构造bloom filter时需要传入一个唯一的参数bits_per_key_,代表每一个key需要多少bits,bloom filter为了达到尽量低的false positive,可以计算出一个hash次数的最优解,为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">k=(m/n)*ln2</span><br></pre></td></tr></table></figure></p>
-<p>其中m为占用的bits个数,n为key的个数,m/n即为bits_per_key_参数的值,因此bits_per_key*ln2即为每个key需要的hash次数.leveldb中每2K的数据生成一个bloom filter.具体调用链为:<br>FilterBlockBuilder中的AddKey-&gt;StartBlock-&gt;Finish,分别对应于data block中key/value的添加,一个block写满后的flush以及最后构造一个sstable结束的时候.</p>
-<p>生成的bloom filter放置于meta block,格式如下:</p>
-<p><img src="/img/leveldb3-4.png" alt="leveldb3-3"></p>
-<p>其中每个filter的格式为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">k|每个key占用的bits*key的个数.</span><br></pre></td></tr></table></figure></p>
-<p>k为哈希次数</p>
-<p>metaindex block的存储格式为:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">key:</span><br><span class="line">filter.leveldb.BuiltinBloomFilter2</span><br><span class="line">value(string):</span><br><span class="line">offset+meta block size</span><br></pre></td></tr></table></figure></p>
-<p>至此,sstable的写入已经介绍完毕.</p>
-
+        
       
     </div>
     
@@ -417,7 +362,11 @@
       
         <div class="post-tags">
           
-            <a href="/tags/leveldb/" rel="tag"># leveldb</a>
+            <a href="/tags/go/" rel="tag"># go</a>
+          
+            <a href="/tags/trace/" rel="tag"># trace</a>
+          
+            <a href="/tags/metric/" rel="tag"># metric</a>
           
         </div>
       
@@ -430,8 +379,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/06/26/leveldb-start-1/" rel="next" title="leveldb源码解析1之API">
-                <i class="fa fa-chevron-left"></i> leveldb源码解析1之API
+              <a href="/2019/10/22/opencensus2/" rel="next" title="OpenTracing and OpenCensus-2">
+                <i class="fa fa-chevron-left"></i> OpenTracing and OpenCensus-2
               </a>
             
           </div>
@@ -440,8 +389,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2019/06/28/leveldb-start-3/" rel="prev" title="leveldb源码解析3之compact">
-                leveldb源码解析3之compact <i class="fa fa-chevron-right"></i>
+              <a href="/2019/10/29/TDD/" rel="prev" title="TDD">
+                TDD <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -497,17 +446,8 @@
       
 
       
-        <ul class="sidebar-nav motion-element">
-          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
-            Table of Contents
-          </li>
-          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
-            Overview
-          </li>
-        </ul>
-      
 
-      <section class="site-overview-wrap sidebar-panel">
+      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -568,22 +508,6 @@
         </div>
       </section>
 
-      
-      <!--noindex-->
-        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
-          <div class="post-toc">
-
-            
-              
-            
-
-            
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#memtable持久化时机"><span class="nav-number">1.</span> <span class="nav-text">memtable持久化时机</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sstable结构"><span class="nav-number">2.</span> <span class="nav-text">sstable结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#bloom-filter写入"><span class="nav-number">3.</span> <span class="nav-text">bloom filter写入</span></a></li></ol></div>
-            
-
-          </div>
-        </section>
-      <!--/noindex-->
       
 
       

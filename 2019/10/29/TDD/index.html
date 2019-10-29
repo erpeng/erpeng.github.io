@@ -83,18 +83,18 @@
 
 
 
-<meta name="description" content="关于martin fowler关于测试的一些文章总结  TDD缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).遵循以下三个步骤:  首先编写功能相关的测试 编写功能代码直到通过测试 重构新旧代码,保持结构整洁  TDD能够带来两个好处:  有助于写出自测良好的代码 能够帮助开发者将">
+<meta name="description" content="martin fowler关于测试的一些文章总结  TDD缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).遵循以下三个步骤:  首先编写功能相关的测试 编写功能代码直到通过测试 重构新旧代码,保持结构整洁  TDD能够带来两个好处:  有助于写出自测良好的代码 能够帮助开发者将接口">
 <meta name="keywords" content="TDD,mock,stub">
 <meta property="og:type" content="article">
-<meta property="og:title" content="TDD 和  Test">
+<meta property="og:title" content="TDD">
 <meta property="og:url" content="https://erpeng.github.io/2019/10/29/TDD/index.html">
 <meta property="og:site_name" content="erpeng&#39;s code area">
-<meta property="og:description" content="关于martin fowler关于测试的一些文章总结  TDD缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).遵循以下三个步骤:  首先编写功能相关的测试 编写功能代码直到通过测试 重构新旧代码,保持结构整洁  TDD能够带来两个好处:  有助于写出自测良好的代码 能够帮助开发者将">
+<meta property="og:description" content="martin fowler关于测试的一些文章总结  TDD缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).遵循以下三个步骤:  首先编写功能相关的测试 编写功能代码直到通过测试 重构新旧代码,保持结构整洁  TDD能够带来两个好处:  有助于写出自测良好的代码 能够帮助开发者将接口">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-10-29T12:03:55.066Z">
+<meta property="og:updated_time" content="2019-10-29T12:07:20.590Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="TDD 和  Test">
-<meta name="twitter:description" content="关于martin fowler关于测试的一些文章总结  TDD缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).遵循以下三个步骤:  首先编写功能相关的测试 编写功能代码直到通过测试 重构新旧代码,保持结构整洁  TDD能够带来两个好处:  有助于写出自测良好的代码 能够帮助开发者将">
+<meta name="twitter:title" content="TDD">
+<meta name="twitter:description" content="martin fowler关于测试的一些文章总结  TDD缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).遵循以下三个步骤:  首先编写功能相关的测试 编写功能代码直到通过测试 重构新旧代码,保持结构整洁  TDD能够带来两个好处:  有助于写出自测良好的代码 能够帮助开发者将接口">
 
 
 
@@ -130,7 +130,7 @@
 
 
 
-  <title>TDD 和  Test | erpeng's code area</title>
+  <title>TDD | erpeng's code area</title>
   
 
 
@@ -283,7 +283,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">TDD 和  Test</h1>
+          <h1 class="post-title" itemprop="name headline">TDD</h1>
         
 
         <div class="post-meta">
@@ -349,7 +349,7 @@
 
       
         <blockquote>
-<p>关于martin fowler关于测试的一些文章总结</p>
+<p>martin fowler关于测试的一些文章总结</p>
 </blockquote>
 <h2 id="TDD"><a href="#TDD" class="headerlink" title="TDD"></a>TDD</h2><p>缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).<br>遵循以下三个步骤:</p>
 <ul>
@@ -377,10 +377,12 @@
 </ul>
 <p>所以建议在架构边界进行mock.例如mock数据库,web服务器,外部服务.</p>
 <p>并且这会迫使你去思考边界在哪,并且将边界实现为多态.因此你可以将边界外的组件独立部署</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">good architectures are inherently testable</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>good architectures are inherently testable</p>
+</blockquote>
 <p>martin fowler自己的习惯是不使用mocking tools,自己写边界的mock.因为mocking tools大部分有自己的domain languange,而且好多功能也用不着</p>
 <h2 id="mock-stub-spy"><a href="#mock-stub-spy" class="headerlink" title="mock stub spy"></a>mock stub spy</h2><p>接口:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">interface Authorizer &#123;</span><br><span class="line">  public Boolean authorize(String username, String password);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>stub:<br>用于测试已经授权或者未授权时的行为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public class AcceptingAuthorizerStub implements Authorizer &#123;</span><br><span class="line">  public Boolean authorize(String username, String password) &#123;</span><br><span class="line">	return true;</span><br><span class="line">  	  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>stub:<br>用于测试已经授权或者未授权时的行为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public class AcceptingAuthorizerStub implements Authorizer &#123;</span><br><span class="line">  public Boolean authorize(String username, String password) &#123;</span><br><span class="line">	return true;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>spy:<br>spy用来监视caller的行为,涉及代码内部的逻辑.例如测试结尾通过验证authorizeWasCalled是true来验证authorize确实被调用.<br>spy监视的内部动作越多,测试集会越耦合于代码,形成fragile tests<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">public class AcceptingAuthorizerSpy implements Authorizer &#123;</span><br><span class="line">  public boolean authorizeWasCalled = false;</span><br><span class="line"></span><br><span class="line">  public Boolean authorize(String username, String password) &#123;</span><br><span class="line">	authorizeWasCalled = true;</span><br><span class="line">	return true;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></p>
 <p>mock:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">public class AcceptingAuthorizerVerificationMock implements Authorizer &#123;</span><br><span class="line">  public boolean authorizeWasCalled = false;</span><br><span class="line"></span><br><span class="line">  public Boolean authorize(String username, String password) &#123;</span><br><span class="line">	authorizeWasCalled = true;</span><br><span class="line">	return true;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  public boolean verify() &#123;</span><br><span class="line">	return authorizedWasCalled;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>fake:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public class AcceptingAuthorizerFake implements Authorizer &#123;</span><br><span class="line"> public Boolean authorize(String username, String password) &#123;</span><br><span class="line">return username.equals(&quot;Bob&quot;);</span><br><span class="line"> &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
@@ -445,8 +447,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/10/22/opencensus2/" rel="next" title="OpenTracing and OpenCensus-2">
-                <i class="fa fa-chevron-left"></i> OpenTracing and OpenCensus-2
+              <a href="/2019/10/29/opencensus3/" rel="next" title="OpenTracing and OpenCensus-3">
+                <i class="fa fa-chevron-left"></i> OpenTracing and OpenCensus-3
               </a>
             
           </div>
@@ -533,7 +535,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">60</span>
+                  <span class="site-state-item-count">61</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
