@@ -1,5 +1,5 @@
 ---
-title: TDD 和  Test
+title: TDD
 date: 2019-10-29
 tags:
  - TDD
@@ -7,7 +7,7 @@ tags:
  - stub
 ---
 
-> 关于martin fowler关于测试的一些文章总结
+> martin fowler关于测试的一些文章总结
 
 ## TDD
 
@@ -39,9 +39,7 @@ TDD的第三个步骤很关键,否则容易写出 messy aggregation of code frag
 
 并且这会迫使你去思考边界在哪,并且将边界实现为多态.因此你可以将边界外的组件独立部署
 
-```
-good architectures are inherently testable
-```
+>good architectures are inherently testable
 
 martin fowler自己的习惯是不使用mocking tools,自己写边界的mock.因为mocking tools大部分有自己的domain languange,而且好多功能也用不着
 
@@ -61,7 +59,7 @@ stub:
 public class AcceptingAuthorizerStub implements Authorizer {
   public Boolean authorize(String username, String password) {
 	return true;
-  	  }
+	}
 }
 ```
 
