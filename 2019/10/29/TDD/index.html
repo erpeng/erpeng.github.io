@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="TDD,mock,stub,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="关于martin fowler关于测试的一些文章总结  TDD缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).遵循以下三个步骤:  首先编写功能相关的测试 编写功能代码直到通过测试 重构新旧代码,保持结构整洁  TDD能够带来两个好处:  有助于写出自测良好的代码 能够帮助开发者将">
+<meta name="keywords" content="TDD,mock,stub">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TDD 和  Test">
+<meta property="og:url" content="https://erpeng.github.io/2019/10/29/TDD/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="关于martin fowler关于测试的一些文章总结  TDD缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).遵循以下三个步骤:  首先编写功能相关的测试 编写功能代码直到通过测试 重构新旧代码,保持结构整洁  TDD能够带来两个好处:  有助于写出自测良好的代码 能够帮助开发者将">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-10-29T12:03:55.066Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="TDD 和  Test">
+<meta name="twitter:description" content="关于martin fowler关于测试的一些文章总结  TDD缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).遵循以下三个步骤:  首先编写功能相关的测试 编写功能代码直到通过测试 重构新旧代码,保持结构整洁  TDD能够带来两个好处:  有助于写出自测良好的代码 能够帮助开发者将">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/10/29/TDD/">
+
+
+
+
+
+  <title>TDD 和  Test | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/10/29/TDD/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">TDD 和  Test</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-10-29T00:00:00+08:00">
+                2019-10-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/10/29/TDD/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/10/29/TDD/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>关于martin fowler关于测试的一些文章总结</p>
+</blockquote>
+<h2 id="TDD"><a href="#TDD" class="headerlink" title="TDD"></a>TDD</h2><p>缘起于Kent Back极限编程(XP Extreme Programming)方法论中的一种方法-测试驱动开发(Test-Driven Development).<br>遵循以下三个步骤:</p>
+<ul>
+<li>首先编写功能相关的测试</li>
+<li>编写功能代码直到通过测试</li>
+<li>重构新旧代码,保持结构整洁</li>
+</ul>
+<p>TDD能够带来两个好处:</p>
+<ul>
+<li>有助于写出自测良好的代码</li>
+<li>能够帮助开发者将接口和实现分离.因为首先编写测试会迫使一个开发者将代码实现为面向接口(否则不容易编写测试用例)</li>
+</ul>
+<p>TDD的第三个步骤很关键,否则容易写出 messy aggregation of code fragments.</p>
+<h2 id="何时需要mock"><a href="#何时需要mock" class="headerlink" title="何时需要mock"></a>何时需要mock</h2><p>如果完全不使用mock:</p>
+<ul>
+<li>测试集的执行时间缓慢.有可能会调用大量的网络服务(数据库/rpc接口等等)</li>
+<li>测试覆盖率低.一些错误条件或者异常可能测试不到</li>
+<li>测试对系统敏感.可能系统负载高或者内存被其他人使用都容易影响测试结果</li>
+</ul>
+<p>如果全部使用mock:</p>
+<ul>
+<li>一些mock系统严重依赖于reflection,因此如果两个类之间交互时使用mock可能比直接交互还慢</li>
+<li>mock过多可能会使setup code异常复杂并且和具体代码实现紧密耦合</li>
+<li>mock过多会创建大量的interface类,创建目的仅仅是为了能够被mocking.导致过度抽象</li>
+</ul>
+<p>所以建议在架构边界进行mock.例如mock数据库,web服务器,外部服务.</p>
+<p>并且这会迫使你去思考边界在哪,并且将边界实现为多态.因此你可以将边界外的组件独立部署</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">good architectures are inherently testable</span><br></pre></td></tr></table></figure>
+<p>martin fowler自己的习惯是不使用mocking tools,自己写边界的mock.因为mocking tools大部分有自己的domain languange,而且好多功能也用不着</p>
+<h2 id="mock-stub-spy"><a href="#mock-stub-spy" class="headerlink" title="mock stub spy"></a>mock stub spy</h2><p>接口:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">interface Authorizer &#123;</span><br><span class="line">  public Boolean authorize(String username, String password);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>stub:<br>用于测试已经授权或者未授权时的行为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public class AcceptingAuthorizerStub implements Authorizer &#123;</span><br><span class="line">  public Boolean authorize(String username, String password) &#123;</span><br><span class="line">	return true;</span><br><span class="line">  	  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>spy:<br>spy用来监视caller的行为,涉及代码内部的逻辑.例如测试结尾通过验证authorizeWasCalled是true来验证authorize确实被调用.<br>spy监视的内部动作越多,测试集会越耦合于代码,形成fragile tests<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">public class AcceptingAuthorizerSpy implements Authorizer &#123;</span><br><span class="line">  public boolean authorizeWasCalled = false;</span><br><span class="line"></span><br><span class="line">  public Boolean authorize(String username, String password) &#123;</span><br><span class="line">	authorizeWasCalled = true;</span><br><span class="line">	return true;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></p>
+<p>mock:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">public class AcceptingAuthorizerVerificationMock implements Authorizer &#123;</span><br><span class="line">  public boolean authorizeWasCalled = false;</span><br><span class="line"></span><br><span class="line">  public Boolean authorize(String username, String password) &#123;</span><br><span class="line">	authorizeWasCalled = true;</span><br><span class="line">	return true;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  public boolean verify() &#123;</span><br><span class="line">	return authorizedWasCalled;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>fake:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public class AcceptingAuthorizerFake implements Authorizer &#123;</span><br><span class="line"> public Boolean authorize(String username, String password) &#123;</span><br><span class="line">return username.equals(&quot;Bob&quot;);</span><br><span class="line"> &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>martin fowler习惯是使用stub和spy,其他的基本不用</p>
+<h2 id="mocks-stubs区别"><a href="#mocks-stubs区别" class="headerlink" title="mocks stubs区别"></a>mocks stubs区别</h2><ul>
+<li>结果验证不同,stub是状态验证(state verification),mock是行为验证(behavior verification)</li>
+<li>本质上是测试和设计结合层面的不同</li>
+</ul>
+<p>test的四个流程:setup-exercise-verify-teardown</p>
+<p>正常测试方法:从仓库中获取货物然后填充到订单中<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">public class OrderStateTester extends TestCase &#123;</span><br><span class="line">  private static String TALISKER = &quot;Talisker&quot;;</span><br><span class="line">  private static String HIGHLAND_PARK = &quot;Highland Park&quot;;</span><br><span class="line">  private Warehouse warehouse = new WarehouseImpl();</span><br><span class="line"></span><br><span class="line">  protected void setUp() throws Exception &#123;</span><br><span class="line">    warehouse.add(TALISKER, 50);</span><br><span class="line">    warehouse.add(HIGHLAND_PARK, 25);</span><br><span class="line">  &#125;</span><br><span class="line">  public void testOrderIsFilledIfEnoughInWarehouse() &#123;</span><br><span class="line">    Order order = new Order(TALISKER, 50);</span><br><span class="line">    order.fill(warehouse);</span><br><span class="line">    assertTrue(order.isFilled());</span><br><span class="line">    assertEquals(0, warehouse.getInventory(TALISKER));</span><br><span class="line">  &#125;</span><br><span class="line">  public void testOrderDoesNotRemoveIfNotEnough() &#123;</span><br><span class="line">    Order order = new Order(TALISKER, 51);</span><br><span class="line">    order.fill(warehouse);</span><br><span class="line">    assertFalse(order.isFilled());</span><br><span class="line">    assertEquals(50, warehouse.getInventory(TALISKER));</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></p>
+<p>jMock:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">public class OrderInteractionTester extends MockObjectTestCase &#123;</span><br><span class="line">  private static String TALISKER = &quot;Talisker&quot;;</span><br><span class="line"></span><br><span class="line">  public void testFillingRemovesInventoryIfInStock() &#123;</span><br><span class="line">    //setup - data</span><br><span class="line">    Order order = new Order(TALISKER, 50);</span><br><span class="line">    Mock warehouseMock = new Mock(Warehouse.class);</span><br><span class="line">    </span><br><span class="line">    //setup - expectations</span><br><span class="line">    warehouseMock.expects(once()).method(&quot;hasInventory&quot;)</span><br><span class="line">      .with(eq(TALISKER),eq(50))</span><br><span class="line">      .will(returnValue(true));</span><br><span class="line">    warehouseMock.expects(once()).method(&quot;remove&quot;)</span><br><span class="line">      .with(eq(TALISKER), eq(50))</span><br><span class="line">      .after(&quot;hasInventory&quot;);</span><br><span class="line"></span><br><span class="line">    //exercise</span><br><span class="line">    order.fill((Warehouse) warehouseMock.proxy());</span><br><span class="line">    </span><br><span class="line">    //verify</span><br><span class="line">    warehouseMock.verify();</span><br><span class="line">    assertTrue(order.isFilled());</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  public void testFillingDoesNotRemoveIfNotEnoughInStock() &#123;</span><br><span class="line">    Order order = new Order(TALISKER, 51);    </span><br><span class="line">    Mock warehouse = mock(Warehouse.class);</span><br><span class="line">      </span><br><span class="line">    warehouse.expects(once()).method(&quot;hasInventory&quot;)</span><br><span class="line">      .withAnyArguments()</span><br><span class="line">      .will(returnValue(false));</span><br><span class="line"></span><br><span class="line">    order.fill((Warehouse) warehouse.proxy());</span><br><span class="line"></span><br><span class="line">    assertFalse(order.isFilled());</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></p>
+<p>有几点不同:</p>
+<ul>
+<li>warehouse使用mock而不是真实的class</li>
+<li>setup阶段除了设置数据,还设置了warehouse期望被调用的方式以及返回值.最后通过verify方法验证是否按setup调用</li>
+<li>warehouse不使用assert验证.验证的是行为而不是状态</li>
+</ul>
+<p>衍生出两种不同的流派:classic and mockist TDD</p>
+<ul>
+<li>classic setup阶段需要大量的协助对象创建.而mockist不需要</li>
+<li>mockist是test isolation,所有的第三方都是mock,测试不会因为第三方的bug而fragile.但classic test不只是一个单元测试,也是部分的集成测试</li>
+<li>mockist关注测试对象的行为,会和代码实现耦合更重</li>
+<li>mockist支持outside-in的方法,而关注domain model设计方式的更加倾向于classic testing</li>
+</ul>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a href="https://martinfowler.com/bliki/TestDrivenDevelopment.html" target="_blank" rel="noopener">https://martinfowler.com/bliki/TestDrivenDevelopment.html</a></li>
+<li><a href="https://blog.cleancoder.com/uncle-bob/2014/05/10/WhenToMock.html" target="_blank" rel="noopener">https://blog.cleancoder.com/uncle-bob/2014/05/10/WhenToMock.html</a></li>
+<li><a href="https://blog.cleancoder.com/uncle-bob/2014/05/14/TheLittleMocker.html" target="_blank" rel="noopener">https://blog.cleancoder.com/uncle-bob/2014/05/14/TheLittleMocker.html</a></li>
+<li><a href="https://martinfowler.com/articles/mocksArentStubs.html" target="_blank" rel="noopener">https://martinfowler.com/articles/mocksArentStubs.html</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/TDD/" rel="tag"># TDD</a>
+          
+            <a href="/tags/mock/" rel="tag"># mock</a>
+          
+            <a href="/tags/stub/" rel="tag"># stub</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/10/22/opencensus2/" rel="next" title="OpenTracing and OpenCensus-2">
+                <i class="fa fa-chevron-left"></i> OpenTracing and OpenCensus-2
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">60</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">21</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#TDD"><span class="nav-number">1.</span> <span class="nav-text">TDD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#何时需要mock"><span class="nav-number">2.</span> <span class="nav-text">何时需要mock</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mock-stub-spy"><span class="nav-number">3.</span> <span class="nav-text">mock stub spy</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mocks-stubs区别"><span class="nav-number">4.</span> <span class="nav-text">mocks stubs区别</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考链接"><span class="nav-number">5.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
