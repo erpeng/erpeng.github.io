@@ -30,7 +30,7 @@ Redis 2.6之前主会向从定时发送ping,防止从检测到超时.这种情�
 ```
 MINRELICAS <count> <min-idle>
 ```
-类似blpop这种阻塞命令,在min-idle的超时时间内等待至少cout个replica复制成功才返回.是不是感觉很熟悉,这就是后来的wait命令.
+类似blpop这种阻塞命令,在min-idle的超时时间内等待至少count个replica复制成功才返回.是不是感觉很熟悉,这就是后来的wait命令.
 
 
 ## 再谈psync
@@ -39,10 +39,19 @@ MINRELICAS <count> <min-idle>
 
 而且,replicas重启时会将replication ID和offset记录到rdb文件中.因此升级时可以先执行shutdown执行一个save&quit的流程,然后启动,仍然可以执行psync
 
-但是注意,如果只开启了AOF或者是从AOF恢复的数据,就不能够执行psync,因为AOF中并没有记录replication ID 和 offset,因此重启时可以先把持久化切换为RDB才可以.
+但是注意,如果只开启了AOF或者是从AOF恢复的数据,就不能够执行psync,因为AOF中并没有记录replication ID 和 offset,因此重启时可以先把持久化切换为RDB才可以重启后执行psyn.
+
+## psync2的两个bug
+* 参考链接4. 4.0版本初始引入psync2时,rdb文件中未保存lua script.当replica重启并且从rdb文件恢复时会成功执行psync.但此时如果master执行evalsha命令,由于replica中并没有sha1对应的script,导致主从不一致
+
+* 参考链接6. 由于不管是master还是replica都可以从rdb中同步repl id和repl offset,会导致主从不一致.由于rdb文件中未写入repl-stream-db,会导致psync后数据写入错误的db
+
 
 
 ##  参考链接
 * http://antirez.com/news/47
 * http://www.antirez.com/news/58
 * https://redis.io/topics/replication
+* https://github.com/antirez/redis/pull/4483
+* http://www.antirez.com/news/115
+* https://github.com/antirez/redis/issues/4316
