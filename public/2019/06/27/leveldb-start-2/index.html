@@ -95,7 +95,7 @@
 <meta property="og:image" content="https://erpeng.github.io/img/leveldb3-2.png">
 <meta property="og:image" content="https://erpeng.github.io/img/leveldb3-3.png">
 <meta property="og:image" content="https://erpeng.github.io/img/leveldb3-4.png">
-<meta property="og:updated_time" content="2019-09-21T11:16:33.937Z">
+<meta property="og:updated_time" content="2019-09-29T09:46:30.773Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="leveldb源码解析2之memtable持久化">
 <meta name="twitter:description" content="memtable持久化时机当我们使用Put命令时,会经过如下调用链:DBImpl::Put-&amp;gt;DB::Put-&amp;gt;DBImpl::Write-&amp;gt;DBImpl::MakeRoomForWrite该函数进行了如下判断:  level0的文件数超过了8个,该次写入阻塞1ms 当前memtable中写入量小于4M,则可以继续直接写入 如果存在immutable memtable,则阻塞等待">
@@ -522,7 +522,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">64</span>
+                  <span class="site-state-item-count">66</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -535,7 +535,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">22</span>
+                  <span class="site-state-item-count">23</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
