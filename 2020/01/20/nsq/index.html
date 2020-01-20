@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="go,nsq,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="版本说明:nsq v1.2.0版本.  功能安装mac:1$ brew install nsq 测试默认是foreground模式,需要在不同的shell下分别执行如下命令 1234567$ nsqlookupd //监听 tcp 4160,http 4161$ nsqd --lookupd-tcp-address=127.0.0.1:4160 //监听tcp 4150,htp 4151$ ns">
+<meta name="keywords" content="go,nsq">
+<meta property="og:type" content="article">
+<meta property="og:title" content="nsqd解析">
+<meta property="og:url" content="https://erpeng.github.io/2020/01/20/nsq/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="版本说明:nsq v1.2.0版本.  功能安装mac:1$ brew install nsq 测试默认是foreground模式,需要在不同的shell下分别执行如下命令 1234567$ nsqlookupd //监听 tcp 4160,http 4161$ nsqd --lookupd-tcp-address=127.0.0.1:4160 //监听tcp 4150,htp 4151$ ns">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://erpeng.github.io/img/nsqd.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/nsqd_flow.png">
+<meta property="og:image" content="https://erpeng.github.io/img/nsqd_struct.png">
+<meta property="og:image" content="https://erpeng.github.io/img/TopicAndChannel.png">
+<meta property="og:image" content="https://erpeng.github.io/img/Message.png">
+<meta property="og:image" content="https://erpeng.github.io/img/protocolV2.png">
+<meta property="og:image" content="https://erpeng.github.io/img/protocol.png">
+<meta property="og:updated_time" content="2020-01-20T07:11:45.704Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="nsqd解析">
+<meta name="twitter:description" content="版本说明:nsq v1.2.0版本.  功能安装mac:1$ brew install nsq 测试默认是foreground模式,需要在不同的shell下分别执行如下命令 1234567$ nsqlookupd //监听 tcp 4160,http 4161$ nsqd --lookupd-tcp-address=127.0.0.1:4160 //监听tcp 4150,htp 4151$ ns">
+<meta name="twitter:image" content="https://erpeng.github.io/img/nsqd.gif">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2020/01/20/nsq/">
+
+
+
+
+
+  <title>nsqd解析 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2020/01/20/nsq/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">nsqd解析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-01-20T00:00:00+08:00">
+                2020-01-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2020/01/20/nsq/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2020/01/20/nsq/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>版本说明:nsq v1.2.0版本.</p>
+</blockquote>
+<h2 id="功能"><a href="#功能" class="headerlink" title="功能"></a>功能</h2><h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><p>mac:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ brew install nsq</span><br></pre></td></tr></table></figure></p>
+<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>默认是foreground模式,需要在不同的shell下分别执行如下命令</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ nsqlookupd //监听 tcp 4160,http 4161</span><br><span class="line">$ nsqd --lookupd-tcp-address=127.0.0.1:4160 //监听tcp 4150,htp 4151</span><br><span class="line">$ nsqadmin --lookupd-http-address=127.0.0.1:4161  //监听htp 4171,通过http://127.0.0.1:4171/ 打开UI管理面板</span><br><span class="line">$ curl -d &apos;hello world 1&apos; &apos;http://127.0.0.1:4151/pub?topic=test&apos; //topic test下publish消息</span><br><span class="line">$ nsq_to_file --topic=test --output-dir=/tmp --lookupd-http-address=127.0.0.1:4161 //可在/tmp目录下查看持久化文件内容</span><br><span class="line">$ curl -d &apos;hello world 2&apos; &apos;http://127.0.0.1:4151/pub?topic=test&apos; //topic test下publish消息</span><br><span class="line">$ curl -d &apos;hello world 3&apos; &apos;http://127.0.0.1:4151/pub?topic=test&apos; //topic test下publish消息</span><br></pre></td></tr></table></figure>
+<h3 id="Guarantees"><a href="#Guarantees" class="headerlink" title="Guarantees"></a>Guarantees</h3><ul>
+<li>默认不持久化,可配置</li>
+<li>delive-policy:at-least-once,客户端自己保证幂等性</li>
+<li>push模式</li>
+<li>消息无序</li>
+<li>CAP中占CA,保证最终一致性</li>
+</ul>
+<h3 id="design"><a href="#design" class="headerlink" title="design"></a>design</h3><p><img src="/img/nsqd.gif" alt="nsqd"></p>
+<ul>
+<li>topic描述数据,channel描述下游consumer的功能</li>
+<li>topic-&gt;channel,多播,一个topic中所有channel中都有相同的全量信息</li>
+<li>channel-&gt;consumers,负载均衡</li>
+<li>nsqd:服务节点,保存topic和data</li>
+<li>nsqlookupd:服务发现节点,client通过nsqlookupd发现某个topic属于哪个nsqd.启动多个但不会互相传递信息,只保证最终一致性</li>
+<li>nsqadmin:可视化查看服务和消息 </li>
+<li>at-least-once:通过客户端发送FIN(finish)或者REQ(re-queue)确认是否处理成功.否则放入requeue继续重试</li>
+<li>–mem-queue-size通过该参数控制内存占用</li>
+</ul>
+<p><img src="/img/nsqd_flow.png" alt="flow"></p>
+<ul>
+<li>通过客户端flow control,更新RDY状态控制nsqd push消息的条数</li>
+</ul>
+<h2 id="代码解析"><a href="#代码解析" class="headerlink" title="代码解析"></a>代码解析</h2><p><strong>nsq中的channel写为channel,go语言中的channel写为go-chan</strong></p>
+<h3 id="结构体分析"><a href="#结构体分析" class="headerlink" title="结构体分析"></a>结构体分析</h3><p>关键结构体为:</p>
+<ul>
+<li>NSQD</li>
+<li>Topic</li>
+<li>Channel</li>
+<li>Message</li>
+</ul>
+<p>NSQD管理Topic以及监听tcp和http端口,Topic管理Channel,Channel管理message.</p>
+<h4 id="NSQD"><a href="#NSQD" class="headerlink" title="NSQD"></a>NSQD</h4><p><img src="/img/nsqd_struct.png" alt="NSQD"><br>属性和方法见名思义,关键介绍一下queueScanLoop方法.<br>每个channel中有两个优先级队列,分别处理在途消息的超时和延迟消息的传递.queueScanLoop在一个单独的goroutine中执行,模仿redis的主动过期算法,每100ms随机选取20个channel查看在途和延迟的优先级队列,如果需要处理的channel个数超出25%,则继续处理其他channel的在途和延迟队列.否则等待下一个周期</p>
+<h4 id="Topic-amp-Channel"><a href="#Topic-amp-Channel" class="headerlink" title="Topic&amp;Channel"></a>Topic&amp;Channel</h4><p><img src="/img/TopicAndChannel.png" alt="TopicChannel"><br>关键介绍Topic的messagePump方法<br>该方法将一个topic中的所有数据写入该topic下的所有channel中.</p>
+<h4 id="Message"><a href="#Message" class="headerlink" title="Message"></a>Message</h4><p><img src="/img/Message.png" alt="Message"></p>
+<p>Message是每条消息的具体结构.</p>
+<h3 id="协议解析"><a href="#协议解析" class="headerlink" title="协议解析"></a>协议解析</h3><p>context中保存一个NSQD实例指针,protocolV2具体执行协议的解析<br>协议解析参考链接2</p>
+<h4 id="protocolV2"><a href="#protocolV2" class="headerlink" title="protocolV2"></a>protocolV2</h4><p><img src="/img/protocolV2.png" alt="protocalV2"></p>
+<h4 id="protocal"><a href="#protocal" class="headerlink" title="protocal"></a>protocal</h4><p><img src="/img/protocol.png" alt="protocal"></p>
+<h2 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h2><p>文中未对消息传递过程做进一步说明,例如起了多少goroutine,每个goroutine具体执行什么任务,goroutine之间如何传递信息(即一些关键的go channel).这些内容可以单独写一篇文章.本文重点是实践一种源代码阅读的方法:</p>
+<ul>
+<li>了解nsqd的原理及设计思路(通过阅读参考链接中的文档)</li>
+<li>通过每个文件的代码行数及关键结构体了解整体框架(阅读代码)</li>
+<li>结构体之间的关系</li>
+</ul>
+<p>如此,只需3-4小时即可快速掌握一个5000行左右代码的组件(gin/nsqd都是5000行左右代码)</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a href="https://nsq.io/overview/design.html" target="_blank" rel="noopener">https://nsq.io/overview/design.html</a></li>
+<li><a href="https://nsq.io/overview/internals.html" target="_blank" rel="noopener">https://nsq.io/overview/internals.html</a></li>
+<li><a href="https://nsq.io/clients/tcp_protocol_spec.html" target="_blank" rel="noopener">https://nsq.io/clients/tcp_protocol_spec.html</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/go/" rel="tag"># go</a>
+          
+            <a href="/tags/nsq/" rel="tag"># nsq</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/01/16/go-gin/" rel="next" title="gin框架分析">
+                <i class="fa fa-chevron-left"></i> gin框架分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">68</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">25</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#功能"><span class="nav-number">1.</span> <span class="nav-text">功能</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#安装"><span class="nav-number">1.1.</span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#测试"><span class="nav-number">1.2.</span> <span class="nav-text">测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Guarantees"><span class="nav-number">1.3.</span> <span class="nav-text">Guarantees</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#design"><span class="nav-number">1.4.</span> <span class="nav-text">design</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#代码解析"><span class="nav-number">2.</span> <span class="nav-text">代码解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#结构体分析"><span class="nav-number">2.1.</span> <span class="nav-text">结构体分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#NSQD"><span class="nav-number">2.1.1.</span> <span class="nav-text">NSQD</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Topic-amp-Channel"><span class="nav-number">2.1.2.</span> <span class="nav-text">Topic&amp;Channel</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Message"><span class="nav-number">2.1.3.</span> <span class="nav-text">Message</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#协议解析"><span class="nav-number">2.2.</span> <span class="nav-text">协议解析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#protocolV2"><span class="nav-number">2.2.1.</span> <span class="nav-text">protocolV2</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#protocal"><span class="nav-number">2.2.2.</span> <span class="nav-text">protocal</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#说明"><span class="nav-number">3.</span> <span class="nav-text">说明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考链接"><span class="nav-number">4.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
