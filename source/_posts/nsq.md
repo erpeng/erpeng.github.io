@@ -1,6 +1,6 @@
 ---
-title: nsq
-date: 2020-01-19 
+title: nsqd解析
+date: 2020-01-20 
 tags:
  - nsq
  - go
@@ -71,9 +71,7 @@ NSQD管理Topic以及监听tcp和http端口,Topic管理Channel,Channel管理mess
 #### NSQD
 ![NSQD](/img/nsqd_struct.png)
 属性和方法见名思义,关键介绍一下queueScanLoop方法.
-每个channel中有两个优先级队列,分别处理在途消息的超时和延迟消息的传递.queueScanLoop在一个单独
-的goroutine中执行,模仿redis的主动过期算法,每100ms随机选取20个channel查看在途和延迟的优先级队列,如果需要处理的channel个数超出25%,
-则继续处理其他channel的在途和延迟队列.否则等待下一个周期
+每个channel中有两个优先级队列,分别处理在途消息的超时和延迟消息的传递.queueScanLoop在一个单独的goroutine中执行,模仿redis的主动过期算法,每100ms随机选取20个channel查看在途和延迟的优先级队列,如果需要处理的channel个数超出25%,则继续处理其他channel的在途和延迟队列.否则等待下一个周期
 
 
 #### Topic&Channel
@@ -103,10 +101,14 @@ context中保存一个NSQD实例指针,protocolV2具体执行协议的解析
 
 ![protocal](/img/protocol.png)
 
+## 说明
 
-### 关键go-chan
+文中未对消息传递过程做进一步说明,例如起了多少goroutine,每个goroutine具体执行什么任务,goroutine之间如何传递信息(即一些关键的go channel).这些内容可以单独写一篇文章.本文重点是实践一种源代码阅读的方法:
+* 了解nsqd的原理及设计思路(通过阅读参考链接中的文档)
+* 通过每个文件的代码行数及关键结构体了解整体框架(阅读代码)
+* 结构体之间的关系
 
-
+如此,只需3-4小时即可快速掌握一个5000行左右代码的组件(gin/nsqd都是5000行左右代码)
 
 ## 参考链接
 
