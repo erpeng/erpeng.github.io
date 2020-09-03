@@ -262,6 +262,153 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2020/09/03/ffmpeg/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/09/03/ffmpeg/" itemprop="url">ffmpeg笔记</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-09-03T00:00:00+08:00">
+                2020-09-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2020/09/03/ffmpeg/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2020/09/03/ffmpeg/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+          Components组件描述
+
+libavutil:描述时间、视频大小、帧率、码率、颜色、渠道语法格式
+包括字符串处理函数、随机数生成器、数学函数、加密函数
+
+
+libswscale:图形变换，图片rescaling和像素格式变换
+视频rescaling:改变视频大小
+改变图片格式和颜色空间
+
+
+l
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2020/09/03/ffmpeg/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2020/08/04/Go-Sync-Map/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1242,143 +1389,6 @@ Application flowwebrtc api包括两部分,媒体设备控制（ca
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/11/24/lua-c-api2/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="erpeng">
-      <meta itemprop="description" content>
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="erpeng's code area">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/11/24/lua-c-api2/" itemprop="url">c和lua-2</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-11-24T00:00:00+08:00">
-                2019-11-24
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2019/11/24/lua-c-api2/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/11/24/lua-c-api2/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-          C functionsc函数必须按一定的签名来写,如下:1typedef int (*lua_CFunction) (lua_State *L);
-例如从lua中调用c写的sin函数,如下:12345static int l_sin (lua_State *L) &#123;  double d =
-          ...
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2019/11/24/lua-c-api2/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/11/24/lua-c-api3/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1515,7 +1525,7 @@ Application flowwebrtc api包括两部分,媒体设备控制（ca
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/11/19/lua-c-api/">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/11/24/lua-c-api2/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="erpeng">
@@ -1534,7 +1544,7 @@ Application flowwebrtc api包括两部分,媒体设备控制（ca
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/11/19/lua-c-api/" itemprop="url">c和lua</a></h1>
+                <a class="post-title-link" href="/2019/11/24/lua-c-api2/" itemprop="url">c和lua-2</a></h1>
         
 
         <div class="post-meta">
@@ -1546,8 +1556,8 @@ Application flowwebrtc api包括两部分,媒体设备控制（ca
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-11-19T00:00:00+08:00">
-                2019-11-19
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-11-24T00:00:00+08:00">
+                2019-11-24
               </time>
             
 
@@ -1565,8 +1575,8 @@ Application flowwebrtc api包括两部分,媒体设备控制（ca
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2019/11/19/lua-c-api/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/11/19/lua-c-api/" itemprop="commentCount"></span>
+                <a href="/2019/11/24/lua-c-api2/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/11/24/lua-c-api2/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -1596,13 +1606,12 @@ Application flowwebrtc api包括两部分,媒体设备控制（ca
       
         
           
-          An Overview of the C API
-C API既可以将lua作为library供c代码调用,也可以将c代码作为libraray供lua调用
-c 和 lua之间通过一个virtual stack交流.所有的数据交换和API调用都发生在stack,stack上也可以保存一些中间变量.该st
+          C functionsc函数必须按一定的签名来写,如下:1typedef int (*lua_CFunction) (lua_State *L);
+例如从lua中调用c写的sin函数,如下:12345static int l_sin (lua_State *L) &#123;  double d =
           ...
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2019/11/19/lua-c-api/#more" rel="contents">
+            <a class="btn" href="/2019/11/24/lua-c-api2/#more" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -1690,7 +1699,7 @@ c 和 lua之间通过一个virtual stack交流.所有的数据交换和API调用
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">72</span>
+                  <span class="site-state-item-count">73</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -1703,7 +1712,7 @@ c 和 lua之间通过一个virtual stack交流.所有的数据交换和API调用
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">34</span>
+                  <span class="site-state-item-count">35</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
