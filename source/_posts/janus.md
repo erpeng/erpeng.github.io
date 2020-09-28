@@ -21,6 +21,7 @@ rfc3550:Real-time transport Protocol,适用场景如下:
 * Layered Encodings
 
 ### 格式
+```
   0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -33,6 +34,7 @@ rfc3550:Real-time transport Protocol,适用场景如下:
    |            contributing source (CSRC) identifiers             |
    |                             ....                              |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
 
 * version（2bit):固定为2
 * P(1bit):是否有pading
@@ -55,7 +57,7 @@ rfc3550:Real-time transport Protocol,适用场景如下:
 
 SR:Sender Report RTCP Packet
 
-
+```
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -91,6 +93,8 @@ block  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
        |                  profile-specific extensions                  |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
 
 ## SDP 
 
@@ -107,6 +111,7 @@ m=audio 9 UDP/TLS/RTP/SAVPF 111 103 104 9 0 8 106 105 13 126
 m=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 102 122 127 121 125 107 108 109 124 120 123 119 114 115 116
 ...
 ```
+```
 * "v="开始到"m="是会话级描述
 * "m="开始到下一个"m="是媒体级描述
 * o=<username> <session id> <version> <network type> <address type> <address> 
@@ -116,6 +121,7 @@ m=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 102 122 127 121 125 107 108 109 
 * m=<media> <port> <transport> <fmt list> fmt list表示payload type
 * a=<TYPE>或 a=<TYPE>:<VALUES> 如 a=rtpmap:<payload type> <encoding name>/<clock rate>[/<encodingparameters>]
                                  a=fmtp:<payload type> <format specific parameters>
+```
 
 ## STUN
 
@@ -159,7 +165,6 @@ NAT种类:
   被访问主机的IP
 }
 * 端口限制锥形
-
 {
   内网IP，
   内网端口，
