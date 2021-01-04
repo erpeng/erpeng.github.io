@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Message Queue,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Introduction关键特性:bandwidth-efficient,lightweight,high latency networks因为这些特性,所以MQTT很适合物联网的环境,从技术角度来说,消息队列有很多,为何MQTT会有这些特性呢？进一步,如何设计一个协议能达到这些特性.  加密端口8883,非加密端口1883 pub/sub模式,包括客户端和Message broker,默认使用T">
+<meta name="keywords" content="Message Queue">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MQTT学习笔记">
+<meta property="og:url" content="https://erpeng.github.io/2021/01/04/mqtt/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="Introduction关键特性:bandwidth-efficient,lightweight,high latency networks因为这些特性,所以MQTT很适合物联网的环境,从技术角度来说,消息队列有很多,为何MQTT会有这些特性呢？进一步,如何设计一个协议能达到这些特性.  加密端口8883,非加密端口1883 pub/sub模式,包括客户端和Message broker,默认使用T">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2021-01-04T12:33:32.005Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MQTT学习笔记">
+<meta name="twitter:description" content="Introduction关键特性:bandwidth-efficient,lightweight,high latency networks因为这些特性,所以MQTT很适合物联网的环境,从技术角度来说,消息队列有很多,为何MQTT会有这些特性呢？进一步,如何设计一个协议能达到这些特性.  加密端口8883,非加密端口1883 pub/sub模式,包括客户端和Message broker,默认使用T">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2021/01/04/mqtt/">
+
+
+
+
+
+  <title>MQTT学习笔记 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2021/01/04/mqtt/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">MQTT学习笔记</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-01-04T00:00:00+08:00">
+                2021-01-04
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2021/01/04/mqtt/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2021/01/04/mqtt/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>关键特性:bandwidth-efficient,lightweight,high latency networks<br>因为这些特性,所以MQTT很适合物联网的环境,从技术角度来说,消息队列有很多,为何MQTT会有这些特性呢？进一步,如何设计一个协议能达到这些特性.</p>
+<ul>
+<li>加密端口8883,非加密端口1883</li>
+<li>pub/sub模式,包括客户端和Message broker,默认使用TCP传输信息</li>
+<li>如果没有订阅者,broker丢弃消息,除非publisher指定消息为retained.但broker只会保存最近一条消息(消息可丢失,适用于类型重复并且大量的消息)</li>
+<li>有14种消息类型,每个消息由control message和数据组成,control message最小可以只有2个字节,data可以有256M字节(报文control message确实比较轻量)</li>
+<li>MQTT-SN,变种,可以通过UDP或者蓝牙传输信息</li>
+</ul>
+<p>MQTT v5.0</p>
+<ul>
+<li>ACK信息支持返回codes,能够提供失败原因</li>
+<li>订阅者能够进行负载均衡</li>
+<li>消息过期时间,过期之后被删除</li>
+<li>Topic别名:Topic能够被一个数字代表(减少流量)</li>
+</ul>
+<p>QOS:</p>
+<ul>
+<li>At most once:不用ack,fire and forgot</li>
+<li>At least once:一直重试直到收到ack</li>
+<li>Exactly once:只有一份数据会被收到 (ssured delivery)</li>
+</ul>
+<h2 id="协议分析"><a href="#协议分析" class="headerlink" title="协议分析"></a>协议分析</h2><h3 id="结构"><a href="#结构" class="headerlink" title="结构"></a>结构</h3><table>
+<thead>
+<tr>
+<th>Structure</th>
+<th>结构</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fixed header, present in all MQTT Control Packets</td>
+<td>固定长度头部</td>
+</tr>
+<tr>
+<td>Variable header, present in some MQTT Control Packets</td>
+<td>可变长度头部</td>
+</tr>
+<tr>
+<td>Payload, present in some MQTT Control Packets</td>
+<td>Payload</td>
+</tr>
+</tbody>
+</table>
+<h3 id="固定头部"><a href="#固定头部" class="headerlink" title="固定头部"></a>固定头部</h3><p>第一个字节:<br>前4bit表明包类型,后4bit根据不同的包类型可以置不同的flag<br>0,15两种类型保留,因此共有2^4-2=14种包的类型,参考链接2 Table2.1和Table2.2</p>
+<p>2-5字节(Remaining Length):<br>2-5字节表示可变头部+Payload的大小,注意该部分会编码为一个可变长度模式,最多4字节,0x00-0xFFFFFF7F(最大表示256MB),最少1字节,0x00-0x7F(最大表示127).可变长度模式低7位编码数据,最高位表示是否有后续字节.比较通用的一种方式,详情参考链接2 2.2.3</p>
+<h3 id="可变头部"><a href="#可变头部" class="headerlink" title="可变头部"></a>可变头部</h3><p>某些MQTT包会包括可变头部</p>
+<h4 id="Packet-Identifier"><a href="#Packet-Identifier" class="headerlink" title="Packet Identifier"></a>Packet Identifier</h4><p>两字节,当subscribe,unsubscribe,publish(Qos&gt;0)必须包括一个16bit的非空标识符,如果一个客户端重发一个包,需要使用相同的标识符<br>Publish Qos为0时不需要包括标识符</p>
+<p>puback,pubrec(receive),pubrel(pubrelease)包必须包含和publish相同的标识符.suback和unsuback也必须和subscribe,unsubscribe相同的标识符</p>
+<h3 id="Payload"><a href="#Payload" class="headerlink" title="Payload"></a>Payload</h3><p>某些MQTT包会包括Payload</p>
+<h2 id="包分析"><a href="#包分析" class="headerlink" title="包分析"></a>包分析</h2><h3 id="CONNECT"><a href="#CONNECT" class="headerlink" title="CONNECT"></a>CONNECT</h3><p>客户端进行连接时必须发送的第一个包</p>
+<p>可变头部:</p>
+<ul>
+<li>可变头部为10字节,头6字节是UTF-8编码,包括两字节的长度字段(长度为4)+ “MQTT”这个协议名称.通过该值可以检测一个流是否为MQTT协议</li>
+<li>第7个字节为Protocol Level,version 3.1.1的该字段为 (0x04).CONNACK返回码为0x01时说明该协议版本不被server支持</li>
+<li>第8个字节为Connect Flags,可以用来控制server的行为或者指示Payloads内容,由低位到高位分别解释如下:<ul>
+<li>0bit:reserved</li>
+<li>1bit:clean session 会话管理的生命周期.设置为0时会收到所有QOS为1和2的消息,即使客户端在该消息发布时已经断开.clean  session为0时服务端还会保存客户端的订阅情况.因此如果想保证客户端断开后不丢消息,可以将QOS设置为1或者2,并且clean session设置为0</li>
+<li>2bit:will flag  遗愿标志,设置为1表明一个连接建立后,和连接相关的一个will message(遗愿信息)必须保存到服务端.之后如果客户单没有发送disconnect就断开,那么遗愿信息需要发送到指定的topic中.will topic和will message必须在payload中出现.会发送遗愿信息的情况包括:服务端发现了网络错误或者I/O错误,客户端在keep alive 时间内没有发送心跳,客户端未发送disconnect就关闭了连接以及服务端因为协议错误关闭了连接.will message发送之后就会删除或者是客户端发送disconnect后删除</li>
+<li>3-4bit:will qos will flag为0时该值为0x00,will flag为1时可以为0x00,0x01,0x02</li>
+<li>5bit: will retain 决定一个will message publish之后是否继续retained</li>
+<li>6bit: password flag 为0表明payload中没有密码,为1表明有密码.如果User Name Flag为0,则password flag必须为0</li>
+<li>7bit: user name flag 参考password flag</li>
+</ul>
+</li>
+<li>9-10字节:keep alive interval,如果该时间内仍未有包传输,客户端应该传输一个PINGREQ包并且收到相应的PINGRESP包,以此来进行两端的探活.最大值为18hours12minutes15seconds.可以不设置</li>
+</ul>
+<p>Payload:</p>
+<p>length-prefixed fields,出现顺序为Client Identifier,Will Topic,Will Message,User Name,Password</p>
+<ul>
+<li>Client Identifier:1-23字节长的UTF-8字符串,包括数字和大小写字母.如果服务端拒绝了一个ClientId,CONNACK返回0x02(Identifier rejected)</li>
+<li>Will Topic:UTF-8编码的字符串,根据Will Flag是否设置为1决定是否有该字段</li>
+<li>Will Message:Will Flag设置为1后有该字段.决定发送给Will Topic的消息.最长65535字节</li>
+<li>User Name: User Name Flag设置为1时有该字段</li>
+<li>Password:同 User Name</li>
+</ul>
+<h3 id="CONNACK"><a href="#CONNACK" class="headerlink" title="CONNACK"></a>CONNACK</h3><p>可变头部</p>
+<ul>
+<li>1byte(connect acknowledge flags):7-1都是0,reserved,0表示session present flag,即session是否存在</li>
+<li>2byte(connect return code):0x00 connection accepted,0x01 connect refused,unacceptable protocol version,0x02 connection refused,identifier rejected,0x03 server unavailable,0x04 username or password malformed,0x05 not authorized</li>
+</ul>
+<p>Payload:<br>no payload</p>
+<p>（未完待续)</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a href="https://en.wikipedia.org/wiki/MQTT" target="_blank" rel="noopener">https://en.wikipedia.org/wiki/MQTT</a></li>
+<li><a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html" target="_blank" rel="noopener">http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Message-Queue/" rel="tag"># Message Queue</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/11/02/leveldb-start-4/" rel="next" title="Rocksdb">
+                <i class="fa fa-chevron-left"></i> Rocksdb
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">78</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Introduction"><span class="nav-number">1.</span> <span class="nav-text">Introduction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#协议分析"><span class="nav-number">2.</span> <span class="nav-text">协议分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#结构"><span class="nav-number">2.1.</span> <span class="nav-text">结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#固定头部"><span class="nav-number">2.2.</span> <span class="nav-text">固定头部</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#可变头部"><span class="nav-number">2.3.</span> <span class="nav-text">可变头部</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Packet-Identifier"><span class="nav-number">2.3.1.</span> <span class="nav-text">Packet Identifier</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Payload"><span class="nav-number">2.4.</span> <span class="nav-text">Payload</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#包分析"><span class="nav-number">3.</span> <span class="nav-text">包分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CONNECT"><span class="nav-number">3.1.</span> <span class="nav-text">CONNECT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CONNACK"><span class="nav-number">3.2.</span> <span class="nav-text">CONNACK</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考链接"><span class="nav-number">4.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
