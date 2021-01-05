@@ -69,7 +69,7 @@ puback,pubrec(receive),pubrel(pubrelease)包必须包含和publish相同的标�
 可变头部:
 
 * 可变头部为10字节,头6字节是UTF-8编码,包括两字节的长度字段(长度为4)+ "MQTT"这个协议名称.通过该值可以检测一个流是否为MQTT协议
-* 第7个字节为Protocol Level,version 3.1.1的该字段为 (0x04).CONNACK返回码为0x01时说明该协议版本不被server支持
+* 第7个字节为Protocol Level,version 3.1.1的该字段为 (0x04),version 5.0的该字段为（0x05),CONNACK返回码为0x01时说明该协议版本不被server支持
 * 第8个字节为Connect Flags,可以用来控制server的行为或者指示Payloads内容,由低位到高位分别解释如下:
 	* 0bit:reserved
 	* 1bit:clean session 会话管理的生命周期.设置为0时会收到所有QOS为1和2的消息,即使客户端在该消息发布时已经断开.clean  session为0时服务端还会保存客户端的订阅情况.因此如果想保证客户端断开后不丢消息,可以将QOS设置为1或者2,并且clean session设置为0
@@ -99,7 +99,142 @@ length-prefixed fields,出现顺序为Client Identifier,Will Topic,Will Message,
 Payload:
 no payload
 
-（未完待续)
+### PUBLISH
+
+固定头部(第一字节):
+* 3bit:DUP 设置为0表明该包头一次发送.如果设置为1,表明有可能是重发.所有Qos为0的包该值都必须设置为0
+* 1-2bit:Qos 0 At most once,1 At least once,2 Exactly once
+* 0bit:Retain 是否保存最近一条消息,以便发送给新来的订阅者.特别适用于以不规则频率发送状态信息,这样新的订阅者可以直接收到最近的状态
+
+可变头部:
+UTF-8编码的Topic Nmae和Packet Identifier(只有Qos是1和2时有该字段)
+
+Payload:
+可以为空
+
+Response:
+根据Qos,0-无Reponse,1-PUBACK,2-PUBREC
+
+### PUBACK
+PUBLISH QOS为1时的响应  
+固定头部(第二字节):0x02 可变头部有两个字节,没有Payload
+可变头部:两字节,包括publish packet的 Packet Identifier
+Payload:无
+
+### PUBREC
+PUBLISH QOS为2时的响应 part1
+固定头部(第二字节):0x02 可变头部有两个字节,没有Payload
+可变头部:两字节,包括publish packet的 Packet Identifier
+Payload:无
+
+
+### PUBREL
+PUBLISH QOS为2时的响应 part2
+固定头部(第一字节):0x62 reserved,必须这样设置
+固定头部(第二字节):0x02 可变头部有两个字节,没有Payload
+可变头部:两字节,包括publish packet的 Packet Identifier
+Payload:无
+
+
+### PUBCOMP
+PUBLISH QOS为2时的响应 part3
+固定头部(第一字节):0x70 reserved,必须这样设置
+固定头部(第二字节):0x02 可变头部有两个字节,没有Payload
+可变头部:两字节,包括publish packet的 Packet Identifier
+Payload:无
+
+### SUBSCRIBE
+固定头部(第一字节):0x82 reserved,必须这样设置
+可变头部:两字节 Packet Identifier
+Payload:
+必须包含至少一组Topic Filter/QOS对
+TOPIC Filter是UTF8编码,紧随其后的一字节,高6bit固定为000000,后2bit为QOS
+
+Response:
+回复SUBACK,每一个topic filter/qos对回复一个return code.
+QOS由publish和subcribe双方共同确定,如果subscribe QOS为2,则意味着由publish方决定QOS
+
+### SUBACK
+固定头部(第一字节):0x90 reserved,必须这样设置
+可变头部:两字节 Packet Identifier
+Payload:
+0x00 - Success - Maximum QoS 0 
+0x01 - Success - Maximum QoS 1 
+0x02 - Success - Maximum QoS 2 
+0x80 - Failure 
+
+Payload中的每一个Maximum QOS和SUBCRIBE时的Topic filter顺序一一对应
+
+### UNSUBSCRIBE 
+固定头部(第一字节):0xA2 reserved,必须这样设置
+可变头部:两字节 Packet Identifier
+Payload:
+必须包含至少一个Topic Filter
+
+Response:
+UNSUBACK
+
+### UNSUBACK
+固定头部(第一字节):0xB0 reserved,必须这样设置
+可变头部:两字节 Packet Identifier
+Payload:
+无
+
+### PINGREQ
+固定头部(第一字节):0xC0 reserved,必须这样设置
+固定头部(第二字节):0x00 
+没有可变头部,没有Payload
+
+Response:
+PINGRESP
+
+### PINGRESP
+固定头部(第一字节):0xD0 reserved,必须这样设置
+固定头部(第二字节):0x00 
+没有可变头部,没有Payload
+
+### DISCONNECT
+固定头部(第一字节):0xE0 reserved,必须这样设置
+固定头部(第二字节):0x00 
+没有可变头部,没有Payload
+
+## 操作行为
+### 保存会话状态
+### 网络连接 
+有序、不丢、字节流,MQTT3.1使用TCP/IP
+### QoS
+* Qos0:发送端不重试,接收端不回复
+* QoS1:发送端必须有一个唯一的标识符,发送一个publish消息,直到收到puback才算确认.收到puback之后该标识符可以复用
+接收端回复puback,发送之后即使收到相同标识符的也算新的publication
+发送端首先需要保存消息,收到puback之后再将其删除
+* QoS2:发送端必须有一个唯一的标识符,发送一个publish消息,直到收到pubrec才算确认.之后发送pubrel,直到收到pubcomp之后才算确认.收到pubrel之后该标识符可以复用.发送pubrel之后不能再次发送publish
+接收端收到pubrel之前,所有相同的publish消息都需要用标识符一样的pubrec来回复(可以避免重复处理相同的消息).pubrel消息用pubcomp消息确认,发送pubcomp之后即使收到相同标识符的publish消息也会当作新消息处理
+发送端首先store message,接收端也会store message,发送端收到pubrec之后丢弃消息但会保存标识符,然后发送pubrel,接收端此时会开始发送消息,并且回复pubcomp(同时会丢弃之前保存的消息),发送端收到pubcomp之后丢弃状态算是发送完成
+
+### 消息发送重试
+当客户端和服务端重连并且clean session为0时,服务端需要重发没有确认过的publish消息以及pubrel消息.
+
+### 消息接收者
+### 消息有序性
+一般来说,需要保持publish消息以及重发publish,puback,pubrec,pubrel消息的有序性.即按接收顺序发送
+如果in-flight window设置为1,那么每个消息必须确认之后才会开始发送下一个消息
+
+### Topic Names和Topic Filters
+"/" level分隔符
+"#"必须出现在一个Topic Filter的最后边,代表父level和任意多的子Level."+"可以出现在任意位置,但只能代表一个level
+"$"开头的名称被服务端用作特殊目的,例如$SYS/,不建议客户端使用.订阅"#"会包括所有消息但不包括$开头的消息
+大小写敏感,开头和结尾加/会生成一个不同的Topic名称或者过滤器
+
+### 处理错误
+如果有protocol violation,需要关闭网络连接
+
+## 安全性
+
+## 使用websocket作为传输层
+SubProtocol Identifier是mqtt
+
+## Conformance
+
 
 ## 参考链接
 * https://en.wikipedia.org/wiki/MQTT
