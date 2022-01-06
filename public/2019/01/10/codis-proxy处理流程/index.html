@@ -1,37 +1,797 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!DOCTYPE html>
 
 
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="codis," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="proxy启动cmd&#x2F;proxy&#x2F;main.go文件 解析配置文件之后重点是proxy.New(config)函数 该函数中，首先会创建一个Proxy结构体，如下: 1234567891011type Proxy struct &amp;#123;    mu sync.Mutex	...    config *Config    router *Router &#x2F;&#x2F;Router中比较重要的是连接池和slo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="codis proxy处理流程">
+<meta property="og:url" content="https://erpeng.github.io/2019/01/10/codis-proxy%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="proxy启动cmd&#x2F;proxy&#x2F;main.go文件 解析配置文件之后重点是proxy.New(config)函数 该函数中，首先会创建一个Proxy结构体，如下: 1234567891011type Proxy struct &amp;#123;    mu sync.Mutex	...    config *Config    router *Router &#x2F;&#x2F;Router中比较重要的是连接池和slo">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/codis1.png">
+<meta property="article:published_time" content="2019-01-10T07:14:04.000Z">
+<meta property="article:modified_time" content="2019-09-29T09:46:30.770Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="codis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/codis1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/01/10/codis-proxy处理流程/"/>
+
+
+
+
+
+  <title>codis proxy处理流程 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/01/10/codis-proxy%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">codis proxy处理流程</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-01-10T15:14:04+08:00">
+                2019-01-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/01/10/codis-proxy%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/01/10/codis-proxy%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="proxy启动"><a href="#proxy启动" class="headerlink" title="proxy启动"></a>proxy启动</h2><p>cmd/proxy/main.go文件</p>
+<p>解析配置文件之后重点是proxy.New(config)函数</p>
+<p>该函数中，首先会创建一个Proxy结构体，如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Proxy <span class="keyword">struct</span> &#123;</span><br><span class="line">    mu sync.Mutex</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line">    config *Config</span><br><span class="line">    router *Router <span class="comment">//Router中比较重要的是连接池和slots</span></span><br><span class="line">	...</span><br><span class="line">	lproxy net.Listener <span class="comment">//19000端口的Listener</span></span><br><span class="line">    ladmin net.Listener <span class="comment">//11080端口的Listener</span></span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后起两个协程,分别处理11080和19000端口的请求</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">go</span> s.serveAdmin()</span><br><span class="line"><span class="keyword">go</span> s.serveProxy()</span><br></pre></td></tr></table></figure>
+<p>我们重点看s.serveProxy()的处理流程，即redis client连接19000端口后proxy如何分发到codis server并且将结果返回到客户端</p>
+<h2 id="Proxy处理"><a href="#Proxy处理" class="headerlink" title="Proxy处理"></a>Proxy处理</h2><p>s.serverProxy也启动了两个协程，一个协程对router中连接池中的连接进行连接可用性检测，另一个协程是一个死循环，accept lproxy端口的连接，并且启动一个新的Session进行处理，代码流程如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">(l net.Listener)</span> <span class="params">(err error)</span></span> &#123;</span><br><span class="line">    <span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">        eh &lt;- err</span><br><span class="line">    &#125;()</span><br><span class="line">    <span class="keyword">for</span> &#123;</span><br><span class="line">        c, err := s.acceptConn(l)<span class="comment">//accept连接</span></span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> err</span><br><span class="line">        &#125;</span><br><span class="line">        NewSession(c, s.config).Start(s.router)<span class="comment">//启动一个新的session进行处理</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;(s.lproxy)<span class="comment">//s为proxy,s.lproxy即19000端口的监听</span></span><br></pre></td></tr></table></figure>
+<p>首先介绍一下Request结构体，该结构体会贯穿整个流程</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Request <span class="keyword">struct</span> &#123;</span><br><span class="line">    Multi []*redis.Resp  <span class="comment">//保存请求命令,按redis的resp协议类型将请求保存到Multi字段中</span></span><br><span class="line">    Batch *sync.WaitGroup <span class="comment">//返回响应时,会在Batch处等待,r.Batch.Wait(),所以可以做到当请求执行完成后才会执行返回函数</span></span><br><span class="line"></span><br><span class="line">    Group *sync.WaitGroup</span><br><span class="line"></span><br><span class="line">    Broken *atomic2.Bool</span><br><span class="line"></span><br><span class="line">    OpStr <span class="keyword">string</span></span><br><span class="line">    OpFlag</span><br><span class="line"></span><br><span class="line">    Database <span class="keyword">int32</span></span><br><span class="line">    UnixNano <span class="keyword">int64</span></span><br><span class="line"></span><br><span class="line">    *redis.Resp <span class="comment">//保存响应数据,也是redis的resp协议类型</span></span><br><span class="line">    Err error</span><br><span class="line"></span><br><span class="line">    Coalesce <span class="function"><span class="keyword">func</span><span class="params">()</span> <span class="title">error</span> //聚合函数,适用于<span class="title">mget</span>/<span class="title">mset</span>等需要聚合响应的操作命令</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Start函数处理流程如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">tasks := NewRequestChanBuffer(<span class="number">1024</span>)<span class="comment">//tasks是一个指向RequestChan的指针,RequestChan结构体中有一个data字段,data字段是个数组，保存1024个指向Request的指针</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">    s.loopWriter(tasks)<span class="comment">//从RequestChan的data中取出请求并且返回给客户端，如果是mget/mset这种需要聚合相应的请求,则会等待所有拆分的子请求执行完毕后执行聚合函数，然后将结果返回给客户端</span></span><br><span class="line">    decrSessions()</span><br><span class="line">&#125;()</span><br><span class="line"></span><br><span class="line"><span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">    s.loopReader(tasks, d)<span class="comment">//首先根据key计算该key分配到哪个slot.在此步骤中只会将slot对应的连接取出，然后将请求放到连接的input字段中。</span></span><br><span class="line">    tasks.Close()</span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure>
+<p>可以看到,s.loopWriter只是从RequestChan的data字段中取出请求并且返回给客户端，通过上文Request结构体的介绍，可以看到，通过在request的Batch执行wait操作，只有请求处理完成后loopWriter才会执行</p>
+<p>下边我们看loopReader的执行流程</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">r := &amp;Request&#123;&#125;   <span class="comment">//新建一个Request结构体，该结构体会贯穿请求的始终，请求字段，响应字段都放在Request中</span></span><br><span class="line">    r.Multi = multi</span><br><span class="line">    r.Batch = &amp;sync.WaitGroup&#123;&#125;</span><br><span class="line">    r.Database = s.database</span><br><span class="line">    r.UnixNano = start.UnixNano()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> err := s.handleRequest(r, d); err != <span class="literal">nil</span> &#123;  <span class="comment">//执行handleRequest函数，处理请求</span></span><br><span class="line">        r.Resp = redis.NewErrorf(<span class="string">&quot;ERR handle request, %s&quot;</span>, err) </span><br><span class="line">        tasks.PushBack(r)</span><br><span class="line">        <span class="keyword">if</span> breakOnFailure &#123;</span><br><span class="line">            <span class="keyword">return</span> err</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        tasks.PushBack(r) <span class="comment">//如果handleRequest执行成功，将请求r放入tasks(即上文的RequestChan)的data字段中。loopWriter会从该字段中获取请求并且返回给客户端</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>看handleRequest函数如何处理请求,重点是router的dispatch函数</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *Router)</span> <span class="title">dispatch</span><span class="params">(r *Request)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">    hkey := getHashKey(r.Multi, r.OpStr)<span class="comment">//hkey为请求的key</span></span><br><span class="line">    <span class="keyword">var</span> id = Hash(hkey) % MaxSlotNum <span class="comment">//hash请求的key之后对1024取模,获取该key分配到哪个slot</span></span><br><span class="line">    slot := &amp;s.slots[id] <span class="comment">//slot都保存在router的slots数组中,获取对应的slot</span></span><br><span class="line">    <span class="keyword">return</span> slot.forward(r, hkey)<span class="comment">//执行slot的forward函数</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>forward函数调用process函数，返回一个BackendConn结构,然后调用其PushBack函数将请求放入bc.input中</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(d *forwardSync)</span> <span class="title">Forward</span><span class="params">(s *Slot, r *Request, hkey []<span class="keyword">byte</span>)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">    s.lock.RLock()</span><br><span class="line">    bc, err := d.process(s, r, hkey) <span class="comment">//返回一个连接,并且将请求放入BackendConn的input中</span></span><br><span class="line">    s.lock.RUnlock()</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> err</span><br><span class="line">    &#125;</span><br><span class="line">    bc.PushBack(r)</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line">bc.PushBack(r)函数如下:</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(bc *BackendConn)</span> <span class="title">PushBack</span><span class="params">(r *Request)</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> r.Batch != <span class="literal">nil</span> &#123;</span><br><span class="line">        r.Batch.Add(<span class="number">1</span>) <span class="comment">//将请求的Batch执行add 1的操作，注意前文中的loopWriter会在Batch处等待</span></span><br><span class="line">    &#125;</span><br><span class="line">    bc.input &lt;- r <span class="comment">//将请求放入bc.input channel</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>至此可以看到,Proxy的处理流程</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">loopWriter-&gt;RuquestChan的data字段中读取请求并且返回。在Batch处等待</span><br><span class="line"></span><br><span class="line">loopReader-&gt;将请求放入RequestChan的data字段中，并且将请求放入bc.input channel中。在Batch处加1</span><br></pre></td></tr></table></figure>
+<p>很明显,Proxy并没有真正处理请求,肯定会有goroutine从bc.input中读取请求并且处理完成后在Batch处减1，这样当请求执行完成后,loopWriter就可以返回给客户端端响应了。</p>
+<h2 id="BackendConn的处理流程"><a href="#BackendConn的处理流程" class="headerlink" title="BackendConn的处理流程"></a>BackendConn的处理流程</h2><p>从上文得知,proxy结构体中有一个router字段，类型为Router,结构体类型如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Router <span class="keyword">struct</span> &#123;</span><br><span class="line">    mu sync.RWMutex</span><br><span class="line">    pool <span class="keyword">struct</span> &#123;</span><br><span class="line">        primary *sharedBackendConnPool <span class="comment">//连接池</span></span><br><span class="line">        replica *sharedBackendConnPool</span><br><span class="line">    &#125;</span><br><span class="line">    slots [MaxSlotNum]Slot <span class="comment">//slot</span></span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Router的pool中管理连接池,执行fillSlot时会真正生成连接，放入Slot结构体的backend字段的bc字段中，Slot结构体如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Slot <span class="keyword">struct</span> &#123;</span><br><span class="line">    id   <span class="keyword">int</span></span><br><span class="line">    ...</span><br><span class="line">    backend, migrate <span class="keyword">struct</span> &#123;</span><br><span class="line">        id <span class="keyword">int</span></span><br><span class="line">        bc *sharedBackendConn</span><br><span class="line">    &#125;</span><br><span class="line">	...</span><br><span class="line">    method forwardMethod</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们看一下bc字段的结构体sharedBackendConn:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> sharedBackendConn <span class="keyword">struct</span> &#123;</span><br><span class="line">    addr <span class="keyword">string</span> <span class="comment">//codis server的地址</span></span><br><span class="line">    host []<span class="keyword">byte</span> <span class="comment">//codis server主机名</span></span><br><span class="line">    port []<span class="keyword">byte</span> <span class="comment">//codis server的端口</span></span><br><span class="line"></span><br><span class="line">    owner *sharedBackendConnPool <span class="comment">//属于哪个连接池</span></span><br><span class="line">    conns [][]*BackendConn <span class="comment">//二维数组,一般codis server会有16个db,第一个维度为0-15的数组,每个db可以有多个BackendConn连接</span></span><br><span class="line"></span><br><span class="line">    single []*BackendConn <span class="comment">//如果每个db只有一个BackendConn连接，则直接放入single中。当每个db有多个连接时会从conns中选一个返回，而每个db只有一个连接时，直接从single中返回</span></span><br><span class="line"></span><br><span class="line">    refcnt <span class="keyword">int</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>每个BackendConn中有一个 input chan *Request字段,是一个channel,channel中的内容为Request指针。也就是第二章节loopReader选取一个BackendConn后，会将请求放入input中。</p>
+<p>下边我们看看处理BackendConn input字段中数据的协程是如何启动并处理数据的。代码路径为pkg/proxy/backend.go的newBackendConn函数</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewBackendConn</span><span class="params">(addr <span class="keyword">string</span>, database <span class="keyword">int</span>, config *Config)</span> *<span class="title">BackendConn</span></span> &#123;</span><br><span class="line">    bc := &amp;BackendConn&#123;</span><br><span class="line">        addr: addr, config: config, database: database,</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//1024长度的管道,存放1024个*Request</span></span><br><span class="line">    bc.input = <span class="built_in">make</span>(<span class="keyword">chan</span> *Request, <span class="number">1024</span>)</span><br><span class="line">    bc.retry.delay = &amp;DelayExp2&#123;</span><br><span class="line">        Min: <span class="number">50</span>, Max: <span class="number">5000</span>,</span><br><span class="line">        Unit: time.Millisecond,</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">go</span> bc.run()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> bc</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到，在此处创建的BackendConn结构，并且初始化bc.input字段。连接池的建立是在proxy初始化启动的时候就会建立好。继续看bc.run()函数的处理流程</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(bc *BackendConn)</span> <span class="title">run</span><span class="params">()</span></span> &#123;</span><br><span class="line">    log.Warnf(<span class="string">&quot;backend conn [%p] to %s, db-%d start service&quot;</span>,</span><br><span class="line">        bc, bc.addr, bc.database)</span><br><span class="line">    <span class="keyword">for</span> round := <span class="number">0</span>; bc.closed.IsFalse(); round++ &#123;</span><br><span class="line">        log.Warnf(<span class="string">&quot;backend conn [%p] to %s, db-%d round-[%d]&quot;</span>,</span><br><span class="line">            bc, bc.addr, bc.database, round)</span><br><span class="line">        <span class="keyword">if</span> err := bc.loopWriter(round); err != <span class="literal">nil</span> &#123; <span class="comment">//执行loopWriter函数，此处的loopWriter和第二章节的loopWriter只是名称相同，是两个不同的处理函数</span></span><br><span class="line">            bc.delayBeforeRetry()</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    log.Warnf(<span class="string">&quot;backend conn [%p] to %s, db-%d stop and exit&quot;</span>,</span><br><span class="line">        bc, bc.addr, bc.database)</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(bc *BackendConn)</span> <span class="title">loopWriter</span><span class="params">(round <span class="keyword">int</span>)</span> <span class="params">(err error)</span></span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    c, tasks, err := bc.newBackendReader(round, bc.config) <span class="comment">//调用newBackendReader函数。注意此处的tasks也是一个存放*Request的channel,用来此处的loopWriter和loopReader交流信息</span></span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> err</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> r := <span class="keyword">range</span> bc.input &#123; <span class="comment">//可以看到,此处的loopWriter会从bc.input中取出数据并且处理</span></span><br><span class="line">		...</span><br><span class="line">        <span class="keyword">if</span> err := p.EncodeMultiBulk(r.Multi); err != <span class="literal">nil</span> &#123; <span class="comment">//将请求编码并且发送到codis server</span></span><br><span class="line">            <span class="keyword">return</span> bc.setResponse(r, <span class="literal">nil</span>, fmt.Errorf(<span class="string">&quot;backend conn failure, %s&quot;</span>, err))</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> err := p.Flush(<span class="built_in">len</span>(bc.input) == <span class="number">0</span>); err != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> bc.setResponse(r, <span class="literal">nil</span>, fmt.Errorf(<span class="string">&quot;backend conn failure, %s&quot;</span>, err))</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            tasks &lt;- r  <span class="comment">//将请求放入tasks这个channel中</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意此处的loopWriter会从bc.input中取出数据发送到codis server,bc.newBackendReader会起一个loopReader,从codis server中读取数据并且写到request结构体中，此处的loopReader和loopWriter通过tasks这个channel通信。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(bc *BackendConn)</span> <span class="title">newBackendReader</span><span class="params">(round <span class="keyword">int</span>, config *Config)</span> <span class="params">(*redis.Conn, <span class="keyword">chan</span>&lt;- *Request, error)</span></span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    tasks := <span class="built_in">make</span>(<span class="keyword">chan</span> *Request, config.BackendMaxPipeline)<span class="comment">//创建task这个channel并且返回给loopWriter</span></span><br><span class="line">    <span class="keyword">go</span> bc.loopReader(tasks, c, round)<span class="comment">//启动loopReader</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> c, tasks, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(bc *BackendConn)</span> <span class="title">loopReader</span><span class="params">(tasks &lt;-<span class="keyword">chan</span> *Request, c *redis.Conn, round <span class="keyword">int</span>)</span> <span class="params">(err error)</span></span> &#123;</span><br><span class="line">   	...</span><br><span class="line">    <span class="keyword">for</span> r := <span class="keyword">range</span> tasks &#123;  <span class="comment">//从tasks中取出响应</span></span><br><span class="line">        resp, err := c.Decode()</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> bc.setResponse(r, <span class="literal">nil</span>, fmt.Errorf(<span class="string">&quot;backend conn failure, %s&quot;</span>, err))</span><br><span class="line">        &#125;</span><br><span class="line">        ...</span><br><span class="line">        bc.setResponse(r, resp, <span class="literal">nil</span>)<span class="comment">//设置响应数据到request结构体中</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(bc *BackendConn)</span> <span class="title">setResponse</span><span class="params">(r *Request, resp *redis.Resp, err error)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">    r.Resp, r.Err = resp, err <span class="comment">//Request的Resp字段设置为响应值</span></span><br><span class="line">    <span class="keyword">if</span> r.Group != <span class="literal">nil</span> &#123;</span><br><span class="line">        r.Group.Done()</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> r.Batch != <span class="literal">nil</span> &#123;</span><br><span class="line">        r.Batch.Done() <span class="comment">//注意此处会对Batch执行减1操作，这样proxy中的loopWriter可以聚合响应并返回</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>总结一下,BackendConn中的函数功能如下</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">loopWriter-&gt;从bc.input中取出请求并且发给codis server,并且将请求放到tasks channel中</span><br><span class="line"></span><br><span class="line">loopReader-&gt;从tasks中取出请求，设置codis server的响应字段到Request的Resp字段中，并且将Batch执行减1操作</span><br></pre></td></tr></table></figure>
+
+<p>小结<br>一图胜千言，图片版权归李老师，如下</p>
+<p><img src="/img/codis1.png" alt="codis"></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/codis/" rel="tag"># codis</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/21/Redis%E4%B8%AD%E7%9A%84lru%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/" rel="next" title="Redis中的lru算法实现">
+                <i class="fa fa-chevron-left"></i> Redis中的lru算法实现
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/01/31/Redis%E7%9A%84resp%E5%8D%8F%E8%AE%AE/" rel="prev" title="Redis的resp协议">
+                Redis的resp协议 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
 
     <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+          </div>
+          
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#proxy%E5%90%AF%E5%8A%A8"><span class="nav-number">1.</span> <span class="nav-text">proxy启动</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Proxy%E5%A4%84%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">Proxy处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BackendConn%E7%9A%84%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">BackendConn的处理流程</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

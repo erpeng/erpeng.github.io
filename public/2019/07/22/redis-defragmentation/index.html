@@ -1,37 +1,785 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!DOCTYPE html>
 
 
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Redis," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="内存碎片举个例子,假设一个Redis实例中共有5GB的数据,然后删除了2GB数据,RSS仍旧可能是5G.也就是说并不是在Redis中将key删除后就会将占用的内存返回给OS.这个特性并不是Redis独有的,因为该特性是由服务端代码使用的内存分配器决定的(libc的malloc,jemalloc,tcmalloc等等,在Linux下,Redis默认使用jemalloc).为什么分配器这么做呢？这是一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis 内存碎片">
+<meta property="og:url" content="https://erpeng.github.io/2019/07/22/redis-defragmentation/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="内存碎片举个例子,假设一个Redis实例中共有5GB的数据,然后删除了2GB数据,RSS仍旧可能是5G.也就是说并不是在Redis中将key删除后就会将占用的内存返回给OS.这个特性并不是Redis独有的,因为该特性是由服务端代码使用的内存分配器决定的(libc的malloc,jemalloc,tcmalloc等等,在Linux下,Redis默认使用jemalloc).为什么分配器这么做呢？这是一">
+<meta property="og:locale">
+<meta property="article:published_time" content="2019-07-21T16:00:00.000Z">
+<meta property="article:modified_time" content="2019-09-29T09:46:30.774Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="Redis">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/07/22/redis-defragmentation/"/>
+
+
+
+
+
+  <title>Redis 内存碎片 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/07/22/redis-defragmentation/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Redis 内存碎片</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-07-22T00:00:00+08:00">
+                2019-07-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/07/22/redis-defragmentation/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/07/22/redis-defragmentation/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="内存碎片"><a href="#内存碎片" class="headerlink" title="内存碎片"></a>内存碎片</h2><p>举个例子,假设一个Redis实例中共有5GB的数据,然后删除了2GB数据,RSS仍旧可能是5G.也就是说并不是在Redis中将key删除后就会将占用的内存返回给OS.这个特性并不是Redis独有的,因为该特性是由服务端代码使用的内存分配器决定的(libc的malloc,jemalloc,tcmalloc等等,在Linux下,Redis默认使用jemalloc).为什么分配器这么做呢？这是一种必然但同时也是一种优化,必然是因为内存分配都是以page为单位的,如果删除的key所在的page仍然有其他key,很明显这个page是不能被回收的;优化是因为如果此时增加新的key,例如重新增加了2GB的数据,RSS可能仍然为5GB,即可以复用之前标记为删除的内存</p>
+<h2 id="碎片整理"><a href="#碎片整理" class="headerlink" title="碎片整理"></a>碎片整理</h2><p>从Redis4.0开始,引入了一个新的功能,叫做active defragmentation.基本配置如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">//是否开启activedefrag</span><br><span class="line">activedefrag yes</span><br><span class="line"></span><br><span class="line">//碎片字节数最低要求,达到该字节之后才开启碎片整理</span><br><span class="line">active-defrag-ignore-bytes 100mb</span><br><span class="line"></span><br><span class="line">//碎片化比率,超过该比率才开启碎片整理</span><br><span class="line">active-defrag-threshold-lower 10</span><br><span class="line"></span><br><span class="line">//碎片化比率上限,超过该值后会加大碎片整理力度</span><br><span class="line">active-defrag-threshold-upper 100</span><br><span class="line"></span><br><span class="line">//碎片整理力度,最低为CPU的5%</span><br><span class="line">active-defrag-cycle-min 5</span><br><span class="line"></span><br><span class="line">//碎片整理力度,最高为CPU的75%</span><br><span class="line">active-defrag-cycle-max 75</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">//最大的set/hash/zset/list中的fields个数,超过该值时不会实时清理</span><br><span class="line"></span><br><span class="line">active-defrag-max-scan-fields 1000</span><br></pre></td></tr></table></figure>
+
+<p>两个疑问:</p>
+<ul>
+<li>原理是什么,怎么进行碎片整理?</li>
+<li>为什么是active defragmentation,active代表什么？上述配置项如何理解?<br>我们在如下两个章节依次回答这两个问题</li>
+</ul>
+<h3 id="碎片整理的原理"><a href="#碎片整理的原理" class="headerlink" title="碎片整理的原理"></a>碎片整理的原理</h3><p>在4.0之前如果遇到碎片化特别严重该如何处理呢？<br>其实很简单,Windows系统如何整理硬盘碎片呢？拷贝磁盘中的数据到另一张磁盘然后再拷贝回来即可.同样,在Mysql中如果一个表经过大量的增删改查造成大量的页空洞而导致表空间占用超过实际数据大小的时候,可以使用如下命令收缩表空间.该命令同样是一个新建临时表-&gt;拷贝数据-&gt;rename临时表为t的过程.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">alter talbe t engine=InnoDB;</span><br></pre></td></tr></table></figure>
+
+<p>以上两个例子都是硬盘碎片整理,Redis需要的是内存碎片整理,可以通过重启Redis实例来达到该目的.重启之后Redis需要加载AOF或者RDB文件来重新构造内存,从而达到碎片整理的目的.</p>
+<p>但线上服务重启可不是一个常规操作,有没有不重启就能整理内存碎片的方法呢?参考下节</p>
+<h3 id="active-defragmentation"><a href="#active-defragmentation" class="headerlink" title="active defragmentation"></a>active defragmentation</h3><p>active碎片整理,不需要重启Redis实例,渐进式的逐步整理内存(注意该功能默认关闭,并且只适用于使用jemalloc分配器的情况).</p>
+<p>如何实现呢？如果我们能够判断哪块内存碎片化比较严重,那么将该内存中的数据移动到其他内存中,这样是不是就能回收碎片化严重的内存了？我们看下关键代码片段:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">void* activeDefragAlloc(void *ptr) &#123;</span><br><span class="line">    int bin_util, run_util;</span><br><span class="line">    size_t size;</span><br><span class="line">    void *newptr;</span><br><span class="line">    if(!je_get_defrag_hint(ptr, &amp;bin_util, &amp;run_util)) &#123;</span><br><span class="line">        server.stat_active_defrag_misses++;</span><br><span class="line">        return NULL;</span><br><span class="line">    &#125;</span><br><span class="line">    //run和bin都是jemalloc中的术语,此处判断是否需要进行回收操作</span><br><span class="line">    if (run_util &gt; bin_util || run_util == 1&lt;&lt;16) &#123;</span><br><span class="line">        server.stat_active_defrag_misses++;</span><br><span class="line">        return NULL;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    //重新分配一块空间,并且进行赋值操作</span><br><span class="line">    size = zmalloc_size(ptr);</span><br><span class="line">    newptr = zmalloc_no_tcache(size);</span><br><span class="line">    memcpy(newptr, ptr, size);</span><br><span class="line">    zfree_no_tcache(ptr);</span><br><span class="line">    return newptr;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先通过je_get_defrag_hint函数获取值判断是否需要进行回收操作,如果需要,则重新分配空间并赋值后返回新的空间地址</p>
+<p>该功能的函数调用链为serverCron()-&gt;databasesCron()-&gt;activeDefragCycle(),在周期函数serverCron中调用.在activeDefragCycle()中会调用computeDefragCycles(),配置参数基本都在该函数中体现.该函数会控制是否需要进行碎片整理工作,如果需要,最多能够使用多长的时间进行碎片整理.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">void computeDefragCycles() &#123;</span><br><span class="line">    size_t frag_bytes;</span><br><span class="line">    //碎片率和碎片字节数</span><br><span class="line">    float frag_pct = getAllocatorFragmentation(&amp;frag_bytes);</span><br><span class="line">    //碎片率和碎片字节数是否超过了active-defrag-ignore-bytes和active-defrag-threshold-lower,如果没有超出则不进行整理</span><br><span class="line">    if (!server.active_defrag_running) &#123;</span><br><span class="line">        if(frag_pct &lt; server.active_defrag_threshold_lower || frag_bytes &lt; server.active_defrag_ignore_bytes)</span><br><span class="line">            return;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /* Calculate the adaptive aggressiveness of the defrag */</span><br><span class="line">    //根据碎片化率计算需要的cpu百分比.</span><br><span class="line">    int cpu_pct = INTERPOLATE(frag_pct,</span><br><span class="line">            server.active_defrag_threshold_lower,</span><br><span class="line">            server.active_defrag_threshold_upper,</span><br><span class="line">            server.active_defrag_cycle_min,</span><br><span class="line">            server.active_defrag_cycle_max);</span><br><span class="line">    cpu_pct = LIMIT(cpu_pct,</span><br><span class="line">            server.active_defrag_cycle_min,</span><br><span class="line">            server.active_defrag_cycle_max);</span><br><span class="line">    if (!server.active_defrag_running ||</span><br><span class="line">        cpu_pct &gt; server.active_defrag_running)</span><br><span class="line">    &#123;</span><br><span class="line">        server.active_defrag_running = cpu_pct;</span><br><span class="line">        serverLog(LL_VERBOSE,</span><br><span class="line">            &quot;Starting active defrag, frag=%.0f%%, frag_bytes=%zu, cpu=%d%%&quot;,</span><br><span class="line">            frag_pct, frag_bytes, cpu_pct);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<ul>
+<li>首先获取当前的碎片字节和碎片化率,并判断碎片字节数和碎片率是否超过了active-defrag-ignore-bytes和active-defrag-threshold-lower,如果没有超出则不进行整理</li>
+<li>根据碎片化率计算需要占用的cpu百分比,计算公式如下,假设frag_pct为40<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">5+(40-10)*(75-5)/(100-10) = 28(按默认配置计算)</span><br><span class="line">公式为:</span><br><span class="line">#define INTERPOLATE(x, x1, x2, y1, y2) ( (y1) + ((x)-(x1)) * ((y2)-(y1)) / ((x2)-(x1)) )</span><br><span class="line">#define LIMIT(y, min, max) ((y)&lt;(min)? min: ((y)&gt;(max)? max: (y)))</span><br></pre></td></tr></table></figure>
+通过碎片化率计算出碎片整理需要的cpu_pct之后如何计算超时时间呢？<br>代码如下:<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">start = ustime();</span><br><span class="line">timelimit = 1000000*server.active_defrag_running/server.hz/100;</span><br><span class="line">if (timelimit &lt;= 0) timelimit = 1;</span><br><span class="line">endtime = start + timelimit;</span><br></pre></td></tr></table></figure>
+server.active_defrag_runnin即为上文计算的cpu_pct,1000000单位为us,即1s,server.hz决定每秒执行多少次serverCron,1000000/server.hz即为每次执行serverCron的最大时间,乘以cpu_pct/100即为该次碎片整理允许占用的最大时间.</li>
+</ul>
+<h2 id="jemalloc"><a href="#jemalloc" class="headerlink" title="jemalloc"></a>jemalloc</h2><p>通过上文所述,获取碎片字节、碎片化率以及判断一个指针所在空间是否需要进行碎片整理都是通过jemalloc相关的函数得知.如有需要,需对jemalloc有一个整体认知.</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a target="_blank" rel="noopener" href="http://download.redis.io/redis-stable/redis.conf">http://download.redis.io/redis-stable/redis.conf</a></li>
+<li><a target="_blank" rel="noopener" href="https://redis.io/topics/memory-optimization">https://redis.io/topics/memory-optimization</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Redis/" rel="tag"># Redis</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/07/12/redis-resp3/" rel="next" title="Redis resp3协议解析">
+                <i class="fa fa-chevron-left"></i> Redis resp3协议解析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/07/30/grpc-go-example/" rel="prev" title="grpc-go源码解析1-example">
+                grpc-go源码解析1-example <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
 
     <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+          </div>
+          
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E7%A2%8E%E7%89%87"><span class="nav-number">1.</span> <span class="nav-text">内存碎片</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A2%8E%E7%89%87%E6%95%B4%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">碎片整理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A2%8E%E7%89%87%E6%95%B4%E7%90%86%E7%9A%84%E5%8E%9F%E7%90%86"><span class="nav-number">2.1.</span> <span class="nav-text">碎片整理的原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#active-defragmentation"><span class="nav-number">2.2.</span> <span class="nav-text">active defragmentation</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#jemalloc"><span class="nav-number">3.</span> <span class="nav-text">jemalloc</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">4.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

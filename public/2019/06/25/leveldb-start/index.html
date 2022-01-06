@@ -1,37 +1,822 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!DOCTYPE html>
 
 
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="leveldb," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="leveldb是一款google开源的key&#x2F;value持久化存储.facebook基于其开发了rocksdb.各大厂商如360 pika,阿里巴巴x-engine等基于其开发出了自己的k&#x2F;v持久化存储.Hbase的底层存储方式也基本类似leveldb.该系列文章会通过源码深入分析leveldb实现.  APIleveldb是一个storage library,对外提供三个主要接口 123Put">
+<meta property="og:type" content="article">
+<meta property="og:title" content="leveldb源码解析0之Log及MANIFEST文件格式">
+<meta property="og:url" content="https://erpeng.github.io/2019/06/25/leveldb-start/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="leveldb是一款google开源的key&#x2F;value持久化存储.facebook基于其开发了rocksdb.各大厂商如360 pika,阿里巴巴x-engine等基于其开发出了自己的k&#x2F;v持久化存储.Hbase的底层存储方式也基本类似leveldb.该系列文章会通过源码深入分析leveldb实现.  APIleveldb是一个storage library,对外提供三个主要接口 123Put">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/leveldb1-1.png">
+<meta property="og:image" content="https://erpeng.github.io/img/leveldb1-2.png">
+<meta property="article:published_time" content="2019-06-24T16:00:00.000Z">
+<meta property="article:modified_time" content="2019-09-29T09:46:30.773Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="leveldb">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/leveldb1-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/06/25/leveldb-start/"/>
+
+
+
+
+
+  <title>leveldb源码解析0之Log及MANIFEST文件格式 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/06/25/leveldb-start/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">leveldb源码解析0之Log及MANIFEST文件格式</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-06-25T00:00:00+08:00">
+                2019-06-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/06/25/leveldb-start/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/06/25/leveldb-start/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>leveldb是一款google开源的key/value持久化存储.facebook基于其开发了rocksdb.各大厂商如360 pika,阿里巴巴x-engine等基于其开发出了自己的k/v持久化存储.Hbase的底层存储方式也基本类似leveldb.<br>该系列文章会通过源码深入分析leveldb实现.</p>
+</blockquote>
+<h2 id="API"><a href="#API" class="headerlink" title="API"></a>API</h2><p>leveldb是一个storage library,对外提供三个主要接口</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Put(key,value)</span><br><span class="line">Get(key)</span><br><span class="line">Delete(key)</span><br></pre></td></tr></table></figure>
+<p>Put接口存储一个key/value对,Get接口通过key获取其value值,Delete接口删除一个key/value对.如果对同一个key Put两次,两次的key在内部保存时会通过增加一个sequence字段来区分.如果Delete一个key,也只是将该key的value设置为null,并且标记该key为删除.</p>
+<p>key/value在日志中保存格式如图1-1</p>
+<p><img src="/img/leveldb1-1.png" alt="leveldbkv"></p>
+<h2 id="读写顺序"><a href="#读写顺序" class="headerlink" title="读写顺序"></a>读写顺序</h2><p>leveldb写入分两步, 第一步写入一个redo log(保证断电或系统crash时数据的完整性),第二步写入一个memtable,memtable是一个skiplist的组织形式.可以看到写入会相当高效,只是一个log的磁盘顺序写以及一个内存skiplist的插入操作.</p>
+<p>读取时首先从内存中读取(包括memtable和immutable memtable),如果没有读取到,则从磁盘上依次从level0,level1直到最后一个level读取(一般来说,会首先通过布隆过滤器判断是否有该值,是一个quick path,能快速过滤不存在的值)</p>
+<p>内存中除了memtable可能会存在一个immutable memtable,即一个只读的memtable,这种双buffer的设计是出于什么考虑呢?</p>
+<p>首先leveldb不同于redis,redis的数据都是存储在内存之中,而leveldb的数据存储于硬盘.内存操作肯定是快于硬盘,但一则内存贵,二则内存毕竟容量有限.leveldb的memtable是限制容量的,超过容量需要dump到磁盘.那么dump时为了不阻塞写入,首先将memtable赋值给immutable memtable,然后新建一个memtable继续写入.后台有线程会将immutable memtable写入磁盘.</p>
+<p>接着考虑第二个问题,为何需要多个level？</p>
+<p>首先memtable中的key是有序的,但是会有重合,所以dump到磁盘形成level0的文件的时候每个文件的key是会有重合的.这会给读操作带来性能上的损耗(因为可能需要读取多个文件).因此首先level0的文件个数是有限制的,其次会将level0的文件下沉形成一个无key重叠的level1.如果说level1是为了提高读取效率,为什么需要level2,level3等更高层次的文件呢?这个应该是跟compaction有关,后文详细叙述.</p>
+<p>第三个问题,每个level是文件数量增加,单文件大小不变还是文件大小增加,文件数量不变抑或文件大小和数量都增加呢?</p>
+<p>leveldb是单文件大小不变,每一层的总大小按10倍增加,也就是总的文件数量会增加.该问题的具体原因及原理留待思考,后文详述</p>
+<h2 id="redo-log"><a href="#redo-log" class="headerlink" title="redo log"></a>redo log</h2><p>首先看看leveldb的redo log的写入格式及一些操作<br>编写如下写入代码:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">leveldb::WriteOptions writeOptions;</span><br><span class="line">for (unsigned int i = 0; i &lt; 2; ++i)</span><br><span class="line">&#123;</span><br><span class="line">    ostringstream keyStream;</span><br><span class="line">    keyStream &lt;&lt; &quot;Key&quot; &lt;&lt; 0;</span><br><span class="line">    </span><br><span class="line">    ostringstream valueStream;</span><br><span class="line">    valueStream &lt;&lt; &quot;Test data value: &quot; &lt;&lt; i;</span><br><span class="line">    </span><br><span class="line">    db-&gt;Put(writeOptions, keyStream.str(), valueStream.str());</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>写入两次Key0,第一次value值为”Test data value: 0”,第二次value值为”Test data value: 1”<br>在写入日志记录处打断点:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">b $leveldbhome$/db/log_writer.cc:36</span><br></pre></td></tr></table></figure>
+
+<p>执行到该步之后,我们输出写入日志的数据:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">(gdb)p *ptr@37</span><br><span class="line">$12 = &quot;\005\000\000\000\000\000\000\000\001\000\000\000\001\004Key0\022Test data value: 0&quot;</span><br></pre></td></tr></table></figure>
+
+<p>参考上文key/value保存格式:<br>“\005\000\000\000\000\000\000\000”:8字节为sequence,在此处为5<br>“\001\000\000\000”:4字节的count,说明此batch中只有一条数据.batch后文详述<br>“\001”:1字节的type,表明这是一个key/value对<br>“\004Key0”:key长度为4,值为Key0<br>“\022Test data value: 0”:value长度为18,值为”Test data value: 0”</p>
+<p>我们接着看一下保存在log中的格式,代码参见db/log_writer.cc 36行开始的如下函数</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Status Writer::AddRecord(const Slice&amp; slice) </span><br></pre></td></tr></table></figure>
+
+<p>log格式如图1-2</p>
+<p><img src="/img/leveldb1-2.png" alt="leveldb1-2"></p>
+<p>crc和length很好理解,type和trailer是做什么用呢？<br>首先一个log按32KB大小的block写入,如果一个block在某次写入后剩余字节数小于等于6字节(头部为7字节,即如果写不下一个头部,则附加trailer),则按剩余长度补充\x00,即trailer.</p>
+<p>如果一次写入超过32KB,那么该写入需要跨多个block,通过type字段来区分该block是写入的哪个位置.<br>type类型如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">kFullType = 1,</span><br><span class="line">kFirstType = 2,</span><br><span class="line">kMiddleType = 3,</span><br><span class="line">kLastType = 4</span><br></pre></td></tr></table></figure>
+<p>kFullType即一个block可以容纳该次写入,其他三项表明该block分别是此次写入的开始,中间部分和结尾</p>
+<p>我们看下实际日志文件的输出:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">a@zsh_test ~/leveldb/sample/testdb$ls -rlht</span><br><span class="line">total 16K</span><br><span class="line">-rw-r--r-- 1 xiaoju xiaoju  0 Jun 25 18:23 LOCK</span><br><span class="line">-rw-rw-r-- 1 xiaoju xiaoju 50 Jun 25 18:23 MANIFEST-000002</span><br><span class="line">-rw-rw-r-- 1 xiaoju xiaoju 16 Jun 25 18:23 CURRENT</span><br><span class="line">-rw-rw-r-- 1 xiaoju xiaoju 57 Jun 25 18:23 LOG</span><br><span class="line">-rw-rw-r-- 1 xiaoju xiaoju 88 Jun 25 18:23 000003.log</span><br><span class="line">a@zsh_test ~/leveldb/sample/testdb$xxd 000003.log</span><br><span class="line">0000000: 56f9 2117 2500 0101 0000 0000 0000 0001  V.!.%...........</span><br><span class="line">0000010: 0000 0001 044b 6579 3012 5465 7374 2064  .....Key0.Test d</span><br><span class="line">0000020: 6174 6120 7661 6c75 653a 2030 8177 4ff8  ata value: 0.wO.</span><br><span class="line">0000030: 2500 0102 0000 0000 0000 0001 0000 0001  %...............</span><br><span class="line">0000040: 044b 6579 3112 5465 7374 2064 6174 6120  .Key1.Test data</span><br><span class="line">0000050: 7661 6c75 653a 2031                      value: 1</span><br></pre></td></tr></table></figure>
+<p>逐行分析如下:</p>
+<ul>
+<li>4字节crc,2字节length为2*16+5=37,1字节type为01即kFullType.8字节sequence为1,4字节count为1,共19字节</li>
+<li>1字节type为01表明是key/value,1字节key_len为4,4字节key为Key0.1字节value_len为18,18字节value为”Test data value: 0”.共25字节</li>
+<li>接下来是一个新的block,解析同上文.只是sequence变为2<br>可以看到length字段是每个record的大小</li>
+</ul>
+<h2 id="打开一个数据库"><a href="#打开一个数据库" class="headerlink" title="打开一个数据库"></a>打开一个数据库</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Status DB::Open(const Options&amp; options, const std::string&amp; dbname,DB** dbptr)</span><br></pre></td></tr></table></figure>
+<p>该接口位于db_impl.cc文件<br>对一个db执行put,get,delete操作之前需要先调用Open接口打开一个db.其中第二个参数是db所有文件的父节点,例如:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">a@zsh_test ~/leveldb/sample/testdb$ls -rlht</span><br><span class="line">total 16K</span><br><span class="line">-rw-r--r-- 1 xiaoju xiaoju  0 Jun 25 18:23 LOCK</span><br><span class="line">-rw-rw-r-- 1 xiaoju xiaoju 50 Jun 25 18:23 MANIFEST-000002</span><br><span class="line">-rw-rw-r-- 1 xiaoju xiaoju 16 Jun 25 18:23 CURRENT</span><br><span class="line">-rw-rw-r-- 1 xiaoju xiaoju 57 Jun 25 18:23 LOG</span><br><span class="line">-rw-rw-r-- 1 xiaoju xiaoju 88 Jun 25 18:23 000003.log</span><br></pre></td></tr></table></figure>
+<p>dbname如果为testdb,则会在testdb目录下生成上述文件</p>
+<p>我们看下Open接口做了哪些事情:</p>
+<ul>
+<li>构建一个DBImpl实例,初始化各种实例变量.详见如下代码:<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">DBImpl* impl = new DBImpl(options, dbname);</span><br></pre></td></tr></table></figure>
+  其中比较关键的是versions_这个变量,为一个VersionSet.Version相关的有三个类型,Version,VersionEdit,VersionSet,主要是用来实现MVCC.VersionSet是一个双向环形链表,链表节点为一个个Version,每次当文件有变动时(例如compact)会生成一个VersionEdit记录变动.具体后文详述</li>
+<li>执行recover过程.recover主要分为两步,其一为通过MANIFEST文件中记录的VersionEdit,逐步应用之后生成一个当前的Version;其二为通过LOG文件中的数据生成memtable.详见如下代码:<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Status s = impl-&gt;Recover(&amp;edit, &amp;save_manifest);</span><br></pre></td></tr></table></figure>
+  Recover中依次执行如下:<pre><code>  * 创建dbname这个目录,如果首次打开数据库,则创建一个CURRENT文件并且指向MANIFEST-000001.
+  * 执行VersionSet的Recover函数生成当前Version
+  * 执行DBImpl::RecoverLogFile函数通过未dump入磁盘的log文件生成memtable
+</code></pre>
+</li>
+<li>生成log写入句柄和一个新的memtable</li>
+<li>执行VersionSet::LogAndApply生成一个新的MANIFEST文件<br>  生成的MANIFEST文件包括如下内容:<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">a@zsh_test ~/leveldb/sample/testdb$xxd  MANIFEST-000002</span><br><span class="line">0000000: 56f9 b8f8 1c00 0101 1a6c 6576 656c 6462  V........leveldb</span><br><span class="line">0000010: 2e42 7974 6577 6973 6543 6f6d 7061 7261  .BytewiseCompara</span><br><span class="line">0000020: 746f 72a4 9c8b be08 0001 0203 0900 0304  tor.............</span><br><span class="line">0000030: 0400</span><br></pre></td></tr></table></figure>
+  MANIFEST保存格式同上文所述的log,我们依次查看.<pre><code>  * 4字节crc,2字节length为28,1字节type为full类型.然后是1字节的Version相关字段表示,01表示kComparator,1字节长度为26,接下来是comparator名字:leveldb.BytewiseComparator,正好是26个字节.
+  * 同理接下来首先是4字节crc,2字节length为8,1字节type为full类型.然后是1字节的Version相关字段,02表示kLogNumber,1字节为log_number_为3;1字节的Version相关字段,09表示kPrevLogNumber,1字节为prev_log_number_为0;03为kNextFileNumber,next_file_number_为04;04为kLastSequence,last_sequence_为0
+</code></pre>
+</li>
+<li>删除过期文件,如果需要compact,则执行compact</li>
+<li>将impl赋值给Open函数签名中的dbptr并返回(DBImpl继承于DB,因此可以赋值)</li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/leveldb/" rel="tag"># leveldb</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/06/13/go-plan9-assemble/" rel="next" title="go汇编">
+                <i class="fa fa-chevron-left"></i> go汇编
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/06/26/leveldb-start-1/" rel="prev" title="leveldb源码解析1之API">
+                leveldb源码解析1之API <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
 
     <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+          </div>
+          
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#API"><span class="nav-number">1.</span> <span class="nav-text">API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%BB%E5%86%99%E9%A1%BA%E5%BA%8F"><span class="nav-number">2.</span> <span class="nav-text">读写顺序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redo-log"><span class="nav-number">3.</span> <span class="nav-text">redo log</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AA%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="nav-number">4.</span> <span class="nav-text">打开一个数据库</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

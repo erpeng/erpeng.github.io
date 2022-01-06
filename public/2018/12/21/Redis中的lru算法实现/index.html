@@ -1,37 +1,816 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!DOCTYPE html>
 
 
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Redis," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="lru是什么lru(least recently used)是一种缓存置换算法。即在缓存有限的情况下，如果有新的数据需要加载进缓存，则需要将最不可能被继续访问的缓存剔除掉。因为缓存是否可能被访问到没法做预测，所以基于如下假设实现该算法: 如果一个key经常被访问，那么该key的idle time应该是最小的。 (但这个假设也是基于概率，并不是充要条件,很明显,idle time最小的,甚至都不一定">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis中的lru算法实现">
+<meta property="og:url" content="https://erpeng.github.io/2018/12/21/Redis%E4%B8%AD%E7%9A%84lru%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="lru是什么lru(least recently used)是一种缓存置换算法。即在缓存有限的情况下，如果有新的数据需要加载进缓存，则需要将最不可能被继续访问的缓存剔除掉。因为缓存是否可能被访问到没法做预测，所以基于如下假设实现该算法: 如果一个key经常被访问，那么该key的idle time应该是最小的。 (但这个假设也是基于概率，并不是充要条件,很明显,idle time最小的,甚至都不一定">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/lru1.png">
+<meta property="og:image" content="https://erpeng.github.io/img/lru2.png">
+<meta property="article:published_time" content="2018-12-21T05:54:13.000Z">
+<meta property="article:modified_time" content="2019-09-29T09:46:30.768Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="Redis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/lru1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2018/12/21/Redis中的lru算法实现/"/>
+
+
+
+
+
+  <title>Redis中的lru算法实现 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2018/12/21/Redis%E4%B8%AD%E7%9A%84lru%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Redis中的lru算法实现</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-12-21T13:54:13+08:00">
+                2018-12-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/21/Redis%E4%B8%AD%E7%9A%84lru%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2018/12/21/Redis%E4%B8%AD%E7%9A%84lru%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="lru是什么"><a href="#lru是什么" class="headerlink" title="lru是什么"></a>lru是什么</h2><p>lru(least recently used)是一种缓存置换算法。即在缓存有限的情况下，如果有新的数据需要加载进缓存，则需要将最不可能被继续访问的缓存剔除掉。因为缓存是否可能被访问到没法做预测，所以基于如下假设实现该算法:</p>
+<p><strong>如果一个key经常被访问，那么该key的idle time应该是最小的</strong>。</p>
+<p>(但这个假设也是基于概率，并不是充要条件,很明显,idle time最小的,甚至都不一定会被再次访问到)</p>
+<p>这也就是lru的实现思路。首先实现一个双向链表,每次有一个key被访问之后，就把被访问的key放到链表的头部。当缓存不够时,直接从尾部逐个摘除。</p>
+<p>在这种假设下的实现方法很明显会有一个问题，例如mysql中执行如下一条语句:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> table_a;</span><br></pre></td></tr></table></figure>
+
+<p>如果table_a中有大量数据并且读取之后不会继续使用,则lru头部会被大量的table_a中的数据占据。这样会造成热点数据被逐出缓存从而导致大量的磁盘io</p>
+<p>mysql innodb的buffer pool使用了一种改进的lru算法，大意是将lru链表分成两部分，一部分为newlist,一部分为oldlist,newlist是头部热点数据，oldlist是非热点数据,oldlist默认占整个list长度的3/8.当初次加载一个page的时候，会首先放入oldlist的头部，再次访问时才会移动到newlist.具体参考如下文章:</p>
+<p><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/innodb-buffer-pool.html">https://dev.mysql.com/doc/refman/8.0/en/innodb-buffer-pool.html</a></p>
+<p>而Redis整体上是一个大的dict，如果实现一个双向链表需要在每个key上首先增加两个指针，需要16个字节，并且额外需要一个list结构体去存储该双向链表的头尾节点信息。Redis作者认为这样实现不仅内存占用太大，而且可能导致性能降低。他认为既然lru本来就是基于假设做出的算法，为什么不能模拟实现一个lru呢。</p>
+<h2 id="Redis中的实现"><a href="#Redis中的实现" class="headerlink" title="Redis中的实现"></a>Redis中的实现</h2><p>首先Redis并没有使用双向链表实现一个lru算法。具体实现方法接下来逐步介绍</p>
+<p>首先看一下robj结构体(Redis整体上是一个大的dict,key是一个string,而value都会保存为一个robj)</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisObject</span> &#123;</span></span><br><span class="line">	...</span><br><span class="line">    <span class="keyword">unsigned</span> lru:LRU_BITS; <span class="comment">//LRU_BITS为24bit</span></span><br><span class="line">	...</span><br><span class="line">&#125; robj;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>我们看到每个robj中都有一个24bit长度的lru字段，lru字段里边保存的是一个时间戳。看下边的代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">robj *<span class="title">lookupKey</span><span class="params">(redisDb *db, robj *key, <span class="keyword">int</span> flags)</span> </span>&#123;</span><br><span class="line">	...</span><br><span class="line">	        <span class="keyword">if</span> (server.maxmemory_policy &amp; MAXMEMORY_FLAG_LFU) &#123; <span class="comment">//如果配置的是lfu方式，则更新lfu</span></span><br><span class="line">                updateLFU(val);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                val-&gt;lru = LRU_CLOCK();<span class="comment">//否则按lru方式更新</span></span><br><span class="line">            &#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在Redis的dict中每次按key获取一个值的时候，都会调用lookupKey函数,如果配置使用了lru模式,该函数会更新value中的lru字段为当前秒级别的时间戳(lfu方式后文再描述)。</p>
+<p>那么，虽然记录了每个value的时间戳，但是淘汰时总不能挨个遍历dict中的所有槽，逐个比较lru大小吧。</p>
+<p>Redis初始的实现算法很简单，随机从dict中取出五个key,淘汰一个lru字段值最小的。(随机选取的key是个可配置的参数maxmemory-samples,默认值为5).</p>
+<p>在3.0的时候，又改进了一版算法，首先第一次随机选取的key都会放入一个pool中(pool的大小为16),pool中的key是按lru大小顺序排列的。接下来每次随机选取的keylru值必须小于pool中最小的lru才会继续放入，直到将pool放满。放满之后，每次如果有新的key需要放入，需要将pool中lru最大的一个key取出。</p>
+<p>淘汰的时候，直接从pool中选取一个lru最小的值然后将其淘汰。</p>
+<p>我们知道Redis执行命令时首先会调用processCommand函数，在processCommand中会进行key的淘汰，代码如下:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">processCommmand</span><span class="params">()</span></span>&#123;</span><br><span class="line">	...</span><br><span class="line">    <span class="keyword">if</span> (server.maxmemory &amp;&amp; !server.lua_timedout) &#123;</span><br><span class="line">        <span class="keyword">int</span> out_of_memory = freeMemoryIfNeeded() == C_ERR;<span class="comment">//如果开启了maxmemory的限制,则会调用freeMemoryIfNeeded()函数，该函数中进行缓存的淘汰</span></span><br><span class="line">	...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>可以看到，lru本身是基于概率的猜测，这个算法也是基于概率的猜测，也就是作者说的模拟lru.那么效果如何呢？作者做了个实验，如下图所示</p>
+<p><img src="/img/lru1.png" alt="lru"></p>
+<p>首先加入n个key并顺序访问这n个key,之后加入n/2个key（假设redis中只能保存n个key,于是会有n/2个key被逐出）.上图中浅灰色为被逐出的key,淡蓝色是新增加的key,灰色的为最近被访问的key(即不会被lru逐出的key)</p>
+<p>左上图为理想中的lru算法,新增加的key和最近被访问的key都不应该被逐出。</p>
+<p>可以看到,Redis2.8当每次随机采样5个key时，新增加的key和最近访问的key都有一定概率被逐出</p>
+<p>Redis3.0增加了pool后效果好一些(右下角的图)。当Redis3.0增加了pool并且将采样key增加到10个后，基本等同于理想中的lru(虽然还是有一点差距)</p>
+<p>如果继续增加采样的key或者pool的大小，作者发现很能进一步优化lru算法,于是作者开始转换思路。</p>
+<p>上文介绍了实现lru的一种思路,即<strong>如果一个key经常被访问，那么该key的idle time应该是最小的</strong></p>
+<p>那么能不能换一种思路呢。<strong>如果能够记录一个key被访问的次数,那么经常被访问的key最有可能再次被访问到。这也就是lfu(least frequently used),访问次数最少的最应该被逐出</strong></p>
+<p>lfu的代码如下:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">updateLFU</span><span class="params">(robj *val)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> counter = LFUDecrAndReturn(val);<span class="comment">//首先计算是否需要将counter衰减</span></span><br><span class="line">    counter = LFULogIncr(counter);<span class="comment">//根据上述返回的counter计算新的counter</span></span><br><span class="line">    val-&gt;lru = (LFUGetTimeInMinutes()&lt;&lt;<span class="number">8</span>) | counter; <span class="comment">//robj中的lru字段只有24bits,lfu复用该字段。高16位存储一个分钟数级别的时间戳，低8位存储访问计数</span></span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="function"><span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="title">LFUDecrAndReturn</span><span class="params">(robj *o)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> ldt = o-&gt;lru &gt;&gt; <span class="number">8</span>;<span class="comment">//原来保存的时间戳</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> counter = o-&gt;lru &amp; <span class="number">255</span>; <span class="comment">//原来保存的counter</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> num_periods = server.lfu_decay_time ? LFUTimeElapsed(ldt) / server.lfu_decay_time : <span class="number">0</span>;</span><br><span class="line">    <span class="comment">//server.lfu_decay_time默认为1,每经过一分钟counter衰减1</span></span><br><span class="line">    <span class="keyword">if</span> (num_periods)</span><br><span class="line">        counter = (num_periods &gt; counter) ? <span class="number">0</span> : counter - num_periods;<span class="comment">//如果需要衰减,则计算衰减后的值</span></span><br><span class="line">    <span class="keyword">return</span> counter;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="function"><span class="keyword">uint8_t</span> <span class="title">LFULogIncr</span><span class="params">(<span class="keyword">uint8_t</span> counter)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (counter == <span class="number">255</span>) <span class="keyword">return</span> <span class="number">255</span>;<span class="comment">//counter最大只能存储到255,到达后不再增加</span></span><br><span class="line">    <span class="keyword">double</span> r = (<span class="keyword">double</span>)rand()/RAND_MAX;<span class="comment">//算一个随机的小数值</span></span><br><span class="line">    <span class="keyword">double</span> baseval = counter - LFU_INIT_VAL;<span class="comment">//新加入的key初始counter设置为LFU_INIT_VAL,为5.不设置为0的原因是防止直接被逐出</span></span><br><span class="line">    <span class="keyword">if</span> (baseval &lt; <span class="number">0</span>) baseval = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">double</span> p = <span class="number">1.0</span>/(baseval*server.lfu_log_factor+<span class="number">1</span>);<span class="comment">//server.lfu_log_facotr默认为10</span></span><br><span class="line">    <span class="keyword">if</span> (r &lt; p) counter++;<span class="comment">//可以看到,counter越大,则p越小，随机值r小于p的概率就越小。换言之,counter增加起来会越来越缓慢</span></span><br><span class="line">    <span class="keyword">return</span> counter;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="function"><span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="title">LFUGetTimeInMinutes</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> (server.unixtime/<span class="number">60</span>) &amp; <span class="number">65535</span>;<span class="comment">//获取分钟级别的时间戳</span></span><br><span class="line">&#125;</span><br><span class="line"> </span><br></pre></td></tr></table></figure>
+
+<p>lfu本质上是一个概率计数器，称为morris counter.随着访问次数的增加,counter的增加会越来越缓慢。如下是访问次数与counter值之间的关系</p>
+<p><img src="/img/lru2.png" alt="lru2"></p>
+<p>factor即server.lfu_log_facotr配置值，默认为10.可以看到,一个key访问一千万次以后counter值才会到达255.factor值越小, counter越灵敏</p>
+<p>lfu随着分钟数对counter做衰减是基于一个原理:过去被大量访问的key不一定现在仍然会被访问。相当于除了计数，给时间也增加了一定的权重。</p>
+<p>淘汰时就很简单了，仍然是一个pool,随机选取10个key,counter最小的被淘汰</p>
+<h2 id="算法验证"><a href="#算法验证" class="headerlink" title="算法验证"></a>算法验证</h2><p>redis-cli提供了一个参数,可以验证lru算法的效率。主要是通过验证hits/miss的比率，来判断淘汰算法是否有效。命中比率高说明确实淘汰了不会被经常访问的key.具体做法如下:</p>
+<p>配置redis lru算法为 allkeys-lru</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">test ~/redis-5.0.0$./src/redis-cli -p 6380</span><br><span class="line">127.0.0.1:6380&gt; config set maxmemory 50m //设置redis最大使用50M内存</span><br><span class="line">OK</span><br><span class="line">127.0.0.1:6380&gt; config get  maxmemory-policy</span><br><span class="line">1) &quot;maxmemory-policy&quot;</span><br><span class="line">2) &quot;noeviction&quot;</span><br><span class="line">127.0.0.1:6380&gt; config set maxmemory-policy allkeys-lru//设置lru算法为allkeys-lru</span><br><span class="line">OK</span><br></pre></td></tr></table></figure>
+<p>执行redis-cli –lru-test验证命中率</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./src/redis-cli -p 6380 --lru-test 1000000//模拟100万个key</span><br></pre></td></tr></table></figure>
+
+<p>通过info查看使用的内存和被逐出的keys</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"># Memory</span><br><span class="line">used_memory:50001216</span><br><span class="line">...</span><br><span class="line">evicted_keys:115092</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>查看lru-test的输出</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">131250 Gets/sec | Hits: 124113 (94.56%) | Misses: 7137 (5.44%)</span><br><span class="line">132250 Gets/sec | Hits: 125091 (94.59%) | Misses: 7159 (5.41%)</span><br><span class="line">131250 Gets/sec | Hits: 124027 (94.50%) | Misses: 7223 (5.50%)</span><br><span class="line">133000 Gets/sec | Hits: 125855 (94.63%) | Misses: 7145 (5.37%)</span><br><span class="line">136250 Gets/sec | Hits: 128882 (94.59%) | Misses: 7368 (5.41%)</span><br><span class="line">139750 Gets/sec | Hits: 132231 (94.62%) | Misses: 7519 (5.38%)</span><br><span class="line">136000 Gets/sec | Hits: 128702 (94.63%) | Misses: 7298 (5.37%)</span><br><span class="line">134500 Gets/sec | Hits: 127374 (94.70%) | Misses: 7126 (5.30%)</span><br><span class="line">134750 Gets/sec | Hits: 127427 (94.57%) | Misses: 7323 (5.43%)</span><br><span class="line">134250 Gets/sec | Hits: 127004 (94.60%) | Misses: 7246 (5.40%)</span><br><span class="line">138500 Gets/sec | Hits: 131019 (94.60%) | Misses: 7481 (5.40%)</span><br><span class="line">130000 Gets/sec | Hits: 122918 (94.55%) | Misses: 7082 (5.45%)</span><br><span class="line">126500 Gets/sec | Hits: 119646 (94.58%) | Misses: 6854 (5.42%)</span><br><span class="line">132750 Gets/sec | Hits: 125672 (94.67%) | Misses: 7078 (5.33%)</span><br><span class="line">136000 Gets/sec | Hits: 128563 (94.53%) | Misses: 7437 (5.47%)</span><br><span class="line">132500 Gets/sec | Hits: 125450 (94.68%) | Misses: 7050 (5.32%)</span><br><span class="line">132250 Gets/sec | Hits: 125234 (94.69%) | Misses: 7016 (5.31%)</span><br><span class="line">133000 Gets/sec | Hits: 125761 (94.56%) | Misses: 7239 (5.44%)</span><br><span class="line">134750 Gets/sec | Hits: 127431 (94.57%) | Misses: 7319 (5.43%)</span><br><span class="line">130750 Gets/sec | Hits: 123707 (94.61%) | Misses: 7043 (5.39%)</span><br><span class="line">133500 Gets/sec | Hits: 126195 (94.53%) | Misses: 7305 (5.47%)</span><br></pre></td></tr></table></figure>
+<p>大概有5%-5.5%之间的miss概率。我们将lru策略切换为allkeys-lfu，再次实验</p>
+<p>结果如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">131250 Gets/sec | Hits: 124480 (94.84%) | Misses: 6770 (5.16%)</span><br><span class="line">134750 Gets/sec | Hits: 127926 (94.94%) | Misses: 6824 (5.06%)</span><br><span class="line">130000 Gets/sec | Hits: 123458 (94.97%) | Misses: 6542 (5.03%)</span><br><span class="line">127750 Gets/sec | Hits: 121231 (94.90%) | Misses: 6519 (5.10%)</span><br><span class="line">130500 Gets/sec | Hits: 123958 (94.99%) | Misses: 6542 (5.01%)</span><br><span class="line">130500 Gets/sec | Hits: 123935 (94.97%) | Misses: 6565 (5.03%)</span><br><span class="line">131250 Gets/sec | Hits: 124622 (94.95%) | Misses: 6628 (5.05%)</span><br><span class="line">131250 Gets/sec | Hits: 124618 (94.95%) | Misses: 6632 (5.05%)</span><br><span class="line">128000 Gets/sec | Hits: 121315 (94.78%) | Misses: 6685 (5.22%)</span><br><span class="line">129000 Gets/sec | Hits: 122585 (95.03%) | Misses: 6415 (4.97%)</span><br><span class="line">132000 Gets/sec | Hits: 125277 (94.91%) | Misses: 6723 (5.09%)</span><br><span class="line">134000 Gets/sec | Hits: 127329 (95.02%) | Misses: 6671 (4.98%)</span><br><span class="line">131750 Gets/sec | Hits: 125258 (95.07%) | Misses: 6492 (4.93%)</span><br><span class="line">136000 Gets/sec | Hits: 129207 (95.01%) | Misses: 6793 (4.99%)</span><br><span class="line">135500 Gets/sec | Hits: 128659 (94.95%) | Misses: 6841 (5.05%)</span><br><span class="line">133750 Gets/sec | Hits: 126995 (94.95%) | Misses: 6755 (5.05%)</span><br><span class="line">131250 Gets/sec | Hits: 124680 (94.99%) | Misses: 6570 (5.01%)</span><br><span class="line">129750 Gets/sec | Hits: 123408 (95.11%) | Misses: 6342 (4.89%)</span><br><span class="line">130500 Gets/sec | Hits: 124043 (95.05%) | Misses: 6457 (4.95%)</span><br></pre></td></tr></table></figure>
+<p>%5左右的miss率，在这个测试下,lfu比lru的预测准确率略微高一些。</p>
+<p>在实际生产环境中,不同的redis访问模式需要配置不同的lru策略， 然后可以通过lru test工具验证效果。</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><p>1.<a target="_blank" rel="noopener" href="http://antirez.com/news/109">http://antirez.com/news/109</a></p>
+<p>2.<a target="_blank" rel="noopener" href="https://redis.io/topics/lru-cache">https://redis.io/topics/lru-cache</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Redis/" rel="tag"># Redis</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/15/Redis-%E6%87%92%E5%88%A0%E9%99%A4-lazy-free-%E7%AE%80%E5%8F%B2/" rel="next" title="Redis 懒删除(lazy free)简史">
+                <i class="fa fa-chevron-left"></i> Redis 懒删除(lazy free)简史
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/01/10/codis-proxy%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/" rel="prev" title="codis proxy处理流程">
+                codis proxy处理流程 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
 
     <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+          </div>
+          
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#lru%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">1.</span> <span class="nav-text">lru是什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Redis%E4%B8%AD%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">Redis中的实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AE%97%E6%B3%95%E9%AA%8C%E8%AF%81"><span class="nav-number">3.</span> <span class="nav-text">算法验证</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">4.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

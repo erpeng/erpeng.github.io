@@ -1,37 +1,849 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!DOCTYPE html>
 
 
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Mysql," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="引言理解Mysql的redo log,binlog,主从及其延迟参考极客时间mysql45讲之第2讲,12讲,15讲,23讲,24讲,25讲,26讲,27讲,28讲 redolog与binlogredolog 固定大小,循环写入 redolog相比直接在磁盘中写入修改的好处是将随机写转换为顺序写,并且有组提交的优化 checkpoint是redo中的一个位置,该位置之前的redolog可以覆盖掉,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mysql redo binlog 主从及其延迟">
+<meta property="og:url" content="https://erpeng.github.io/2019/04/22/Mysql-redo-binlog-master-slave/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="引言理解Mysql的redo log,binlog,主从及其延迟参考极客时间mysql45讲之第2讲,12讲,15讲,23讲,24讲,25讲,26讲,27讲,28讲 redolog与binlogredolog 固定大小,循环写入 redolog相比直接在磁盘中写入修改的好处是将随机写转换为顺序写,并且有组提交的优化 checkpoint是redo中的一个位置,该位置之前的redolog可以覆盖掉,">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/mysql.jpeg">
+<meta property="article:published_time" content="2019-04-21T16:00:00.000Z">
+<meta property="article:modified_time" content="2019-09-29T09:46:30.767Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="Mysql">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/mysql.jpeg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/04/22/Mysql-redo-binlog-master-slave/"/>
+
+
+
+
+
+  <title>Mysql redo binlog 主从及其延迟 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/04/22/Mysql-redo-binlog-master-slave/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Mysql redo binlog 主从及其延迟</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-04-22T00:00:00+08:00">
+                2019-04-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/04/22/Mysql-redo-binlog-master-slave/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/04/22/Mysql-redo-binlog-master-slave/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>理解Mysql的redo log,binlog,主从及其延迟<br>参考极客时间<strong>mysql45讲</strong>之第2讲,12讲,15讲,23讲,24讲,25讲,26讲,27讲,28讲</p>
+<h2 id="redolog与binlog"><a href="#redolog与binlog" class="headerlink" title="redolog与binlog"></a>redolog与binlog</h2><h3 id="redolog"><a href="#redolog" class="headerlink" title="redolog"></a>redolog</h3><ul>
+<li>固定大小,循环写入</li>
+<li>redolog相比直接在磁盘中写入修改的好处是将随机写转换为顺序写,并且有组提交的优化</li>
+<li>checkpoint是redo中的一个位置,该位置之前的redolog可以覆盖掉,因为已经写入了磁盘</li>
+</ul>
+<h3 id="binlog"><a href="#binlog" class="headerlink" title="binlog"></a>binlog</h3><ul>
+<li>statement 完整的语句</li>
+<li>row 行的内容 update时是一行修改前的一行修改后的  insert和delete也是会将完整的数据记录下来</li>
+<li>因为statement格式可能会导致主从上执行该语句时产生不一致,所以有了row格式.但是row格式占用空间过大,所以有了mixed格式,由Mysql决定是使用statement还是row</li>
+<li>row格式有个好处是会保存完整的数据,所以只要反向操作就可以恢复数据.因此还是建议保存为row格式</li>
+<li>事务提交的时候才会刷binlog,如果一个事务很大,必须等事务执行完成才写binlog,才会传给从,会导致主从延迟过大<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">回放mysql binlog</span><br><span class="line">mysqlbinlog master.000001  --start-position=2738 --stop-position=2973 | mysql -h127.0.0.1 -P13000 -u$user -p$pwd;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h3 id="redolog与binlog的差异"><a href="#redolog与binlog的差异" class="headerlink" title="redolog与binlog的差异"></a>redolog与binlog的差异</h3><ul>
+<li>一个是引擎层的日志,一个是server层的日志</li>
+<li>一个是物理日志,即某个数据页做了什么修改;一个是逻辑日志,记录语句的原始逻辑</li>
+<li>一个是循环写,一个是追加写</li>
+</ul>
+<h3 id="两阶段提交"><a href="#两阶段提交" class="headerlink" title="两阶段提交"></a>两阶段提交</h3><ul>
+<li>写入redolog,处于prepare状态</li>
+<li>写入binlog</li>
+<li>提交事务,处于commit状态</li>
+</ul>
+<p>处于commit状态的直接恢复,如果处于prepare但是未commit的,根据XID找binlog中的事务是否完整,完整则认为该事务是可以提交的,如果不完整则回滚之</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">innodb_flush_log_at_trx_commit = 1 即每次事务提交时的redolog都落盘</span><br><span class="line">innodb_flush_log_at_trx_commit = 0 即每次事务提交时的redolog都只在redo log buffer中</span><br><span class="line">innodb_flush_log_at_trx_commit = 2 即每次事务提交时的redolog都只write,在操作系统的page cache中</span><br><span class="line">innodb有一个后台线程会定期将redo log buffer中的数据write到page cache,然后fsync到磁盘.即使一个事务未提交也会刷盘</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">sync_binlog = 1 每次事务的binlog都落盘</span><br><span class="line">sync_binlog = 0 只write不fsync,由操作系统定期去fsync</span><br><span class="line">sync_binlog = N (N&gt;=2)只write,累计N个事务后才会fsync</span><br></pre></td></tr></table></figure>
+<h3 id="fsync的优化"><a href="#fsync的优化" class="headerlink" title="fsync的优化"></a>fsync的优化</h3><p>由于fsync很耗时,所以redo有一个组提交的优化,刷新时会将其他事务写的log一起刷新到磁盘</p>
+<h2 id="MySQL为什么有时候会”抖”一下"><a href="#MySQL为什么有时候会”抖”一下" class="headerlink" title="MySQL为什么有时候会”抖”一下"></a>MySQL为什么有时候会”抖”一下</h2><p>为什么某条SQL语句会突然变慢了</p>
+<ul>
+<li>redo过小,导致write pos即将超出checkpoint,所以需要刷新脏页,推进checkpoint</li>
+<li>内存空间buffer pool过小,导致需要刷脏页<br>mysql中如果内存中有数据,则数据肯定是最新的,如果内存中没有数据,则磁盘中的文件是新的(得经过change buffer merge之后)</li>
+</ul>
+<p>注意还有两种情况也会刷新脏页:</p>
+<ul>
+<li>系统空闲时,刷脏页频率快导致</li>
+<li>正常关机也会刷脏页</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">innodb_io_capacity 该参数定义mysql所在主机的io能力 SSD可设置为20000,机械硬盘为300</span><br><span class="line">innodb_max_dirty_pages_pct控制脏页比例上限</span><br><span class="line">Innodb_buffer_pool_pages_dirty/Innodb_buffer_pool_pages_total计算脏页比例</span><br><span class="line">根据最新写入日志的lsn(log sequence number)和checkpoint相减的值判断checkpoint进度</span><br><span class="line">innodb_flush_neighbors控制是否在刷脏页的时候刷新邻居页,SSD建议关闭</span><br></pre></td></tr></table></figure>
+
+<h2 id="主从延迟"><a href="#主从延迟" class="headerlink" title="主从延迟"></a>主从延迟</h2><ul>
+<li>备库配置差</li>
+<li>备库配置同主库,但压力过大,例如执行了大量的报表查询及备份等工作.可以通过设置一主多从来分摊压力</li>
+<li>大事务,即如果主上边执行10分钟,从上也可能执行10分钟,导致延迟.例如删除大量数据,再例如大表的DDL,会占着表的MDL写锁,导致没法对该表进行读写,导致主从延迟</li>
+<li>从库的并行复制能力</li>
+</ul>
+<h3 id="并行复制"><a href="#并行复制" class="headerlink" title="并行复制"></a>并行复制</h3><ul>
+<li>io thread负责将内容写入relay log,sql thread负责回放</li>
+<li>slave_parallel_workers设置5.6之后并行回放的线程个数<br>基本原则:</li>
+<li>以transaction为基本单位,否则会影响事务的隔离性</li>
+<li>对同一行更新操作的不同事务需要放到同一个worker</li>
+</ul>
+<p>按表分发:</p>
+<ul>
+<li>每个worker有一个hash表,记录db-table:事务个数</li>
+<li>分发时,如果没有任何冲突,直接分配给空闲worker</li>
+<li>如果有多个worker有table的更新,则等待直到只有一个worker更新该表</li>
+<li>分配给该worker</li>
+</ul>
+<p>如果碰到热点表,会退化为单线程模式</p>
+<p>按行分发:</p>
+<ul>
+<li>每个worker同样有hash表,记录db-table:各个唯一键+各个唯一值.有多少唯一值记录多少项</li>
+</ul>
+<p>mysql5.7:<br>slave-parallel-type</p>
+<ul>
+<li>DATABASE 按库并行复制</li>
+<li>LOGICAL_CLOCK 模拟主库的组提交,同时处于commit状态的肯定可以并行</li>
+</ul>
+<p>##主从切换</p>
+<p>找同步位点</p>
+<p>主动跳过一个事务:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">set global sql_slave_skip_counter=1;</span><br><span class="line">start slave;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">slave_skip_errors 跳过1032/1062错误,即插入时唯一键冲突/删除时找不到行</span><br></pre></td></tr></table></figure>
+<p>上述两种方式tricky,并且容易造成错误</p>
+<p>5.6可以开启gtid:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gtid_mode=on</span><br><span class="line">enforce_gtid_consistency=on</span><br></pre></td></tr></table></figure>
+<p>开启gtid模式<br>如果有冲突,跳过冲突的gtid方法:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">set gtid_next=&#x27;aaaaaaaa-cccc-dddd-eeee-ffffffffffff:10&#x27;;</span><br><span class="line">begin;</span><br><span class="line">commit;</span><br><span class="line">set gtid_next=automatic;</span><br><span class="line">start slave;</span><br></pre></td></tr></table></figure>
+<p>该事务aaaaaaaa-cccc-dddd-eeee-ffffffffffff:10就以空事务的状态加入了从的已执行事务集合中</p>
+<p>有了gtid,备库不需要指定位点,由主库根据差集取出备库需要执行的gtid,然后开始主从同步</p>
+<h2 id="解决过期读的问题"><a href="#解决过期读的问题" class="headerlink" title="解决过期读的问题"></a>解决过期读的问题</h2><ul>
+<li>强制走主</li>
+<li>判断sbm,seconds_behind_master,当没有延迟时再去读,但是间隔是s,可能会不精确</li>
+<li>对比位点,确保同步过来的已经全部执行.只能确定已经同步的执行完了,有可能还有未同步的</li>
+<li>对比获取到的gtid_set和回放到的gtid_set,判断是否已经全部执行,只能确定已经同步的执行完了,有可能还有未同步的</li>
+<li>结合semi-sync(主的binlog必须已经传给至少一个从,从回复ack),一主多从不适用.</li>
+<li>上述除了强制走主的方案,如果并发量大,可能会看到位点,sbm,gtid一直不同步的情况<br>终极大法:</li>
+<li>等主库位点<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select master_pos_wait(file, pos[, timeout]);</span><br></pre></td></tr></table></figure>
+如果能够知道某条命令执行后的位点,在从库执行该命令,异常返回null,超过Ns返回-1,已经执行过返回0<br>所以如果&gt;=0,则可以在从库开始查询了,否则放弃或者走主</li>
+</ul>
+<p>5.7.6开始允许执行完后把gtid返回客户端</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"> select wait_for_executed_gtid_set(gtid_set, 1);</span><br><span class="line"> session_track_gtids = OWN_GTID</span><br><span class="line">但得从API中解析出来,具体得看相应的API接口</span><br></pre></td></tr></table></figure>
+<p>超时返回1,执行返回0</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><p><img src="/img/mysql.jpeg" alt="mysql"></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Mysql/" rel="tag"># Mysql</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/04/20/Mysql-isolation-level/" rel="next" title="Mysql 隔离级别、锁、MVCC示例">
+                <i class="fa fa-chevron-left"></i> Mysql 隔离级别、锁、MVCC示例
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/04/22/Mysql-index/" rel="prev" title="Mysql 索引">
+                Mysql 索引 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
 
     <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+          </div>
+          
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redolog%E4%B8%8Ebinlog"><span class="nav-number">2.</span> <span class="nav-text">redolog与binlog</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#redolog"><span class="nav-number">2.1.</span> <span class="nav-text">redolog</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#binlog"><span class="nav-number">2.2.</span> <span class="nav-text">binlog</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redolog%E4%B8%8Ebinlog%E7%9A%84%E5%B7%AE%E5%BC%82"><span class="nav-number">2.3.</span> <span class="nav-text">redolog与binlog的差异</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%A4%E9%98%B6%E6%AE%B5%E6%8F%90%E4%BA%A4"><span class="nav-number">2.4.</span> <span class="nav-text">两阶段提交</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fsync%E7%9A%84%E4%BC%98%E5%8C%96"><span class="nav-number">2.5.</span> <span class="nav-text">fsync的优化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MySQL%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%89%E6%97%B6%E5%80%99%E4%BC%9A%E2%80%9D%E6%8A%96%E2%80%9D%E4%B8%80%E4%B8%8B"><span class="nav-number">3.</span> <span class="nav-text">MySQL为什么有时候会”抖”一下</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BB%E4%BB%8E%E5%BB%B6%E8%BF%9F"><span class="nav-number">4.</span> <span class="nav-text">主从延迟</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B9%B6%E8%A1%8C%E5%A4%8D%E5%88%B6"><span class="nav-number">4.1.</span> <span class="nav-text">并行复制</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E8%BF%87%E6%9C%9F%E8%AF%BB%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">5.</span> <span class="nav-text">解决过期读的问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">6.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,37 +1,788 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!DOCTYPE html>
 
 
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="grpc-go," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="grpc使用protobuf编解码,使用http2传输数据.我们通过一个示例来看下如何编写grpc客户端和服务端代码.注意代码分为两部分,一部分是protobuf生成的stub,一部分是需要用户实际编写的代码.以下分别用protobuf客户端,protobuf服务端以及grpc客户端和grpc服务端指代.  protobuf具体安装和生成protobuf代码细节可以参考链接protobuf定义文">
+<meta property="og:type" content="article">
+<meta property="og:title" content="grpc-go源码解析1-example">
+<meta property="og:url" content="https://erpeng.github.io/2019/07/30/grpc-go-example/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="grpc使用protobuf编解码,使用http2传输数据.我们通过一个示例来看下如何编写grpc客户端和服务端代码.注意代码分为两部分,一部分是protobuf生成的stub,一部分是需要用户实际编写的代码.以下分别用protobuf客户端,protobuf服务端以及grpc客户端和grpc服务端指代.  protobuf具体安装和生成protobuf代码细节可以参考链接protobuf定义文">
+<meta property="og:locale">
+<meta property="article:published_time" content="2019-07-29T16:00:00.000Z">
+<meta property="article:modified_time" content="2019-09-29T09:46:30.772Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="grpc-go">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/07/30/grpc-go-example/"/>
+
+
+
+
+
+  <title>grpc-go源码解析1-example | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/07/30/grpc-go-example/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">grpc-go源码解析1-example</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-07-30T00:00:00+08:00">
+                2019-07-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/07/30/grpc-go-example/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/07/30/grpc-go-example/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>grpc使用protobuf编解码,使用http2传输数据.我们通过一个示例来看下如何编写grpc客户端和服务端代码.注意代码分为两部分,一部分是protobuf生成的stub,一部分是需要用户实际编写的代码.以下分别用protobuf客户端,protobuf服务端以及grpc客户端和grpc服务端指代.</p>
+</blockquote>
+<h2 id="protobuf"><a href="#protobuf" class="headerlink" title="protobuf"></a>protobuf</h2><p>具体安装和生成protobuf代码细节可以参考链接<br>protobuf定义文件内容如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">syntax = &quot;proto3&quot;;</span><br><span class="line"></span><br><span class="line">option java_multiple_files = true;</span><br><span class="line">option java_package = &quot;io.grpc.examples.helloworld&quot;;</span><br><span class="line">option java_outer_classname = &quot;HelloWorldProto&quot;;</span><br><span class="line"></span><br><span class="line">package helloworld;</span><br><span class="line"></span><br><span class="line">// The greeting service definition.</span><br><span class="line">service Greeter &#123;</span><br><span class="line">  // Sends a greeting</span><br><span class="line">  rpc SayHello (HelloRequest) returns (HelloReply) &#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// The request message containing the user&#x27;s name.</span><br><span class="line">message HelloRequest &#123;</span><br><span class="line">  string name = 1;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// The response message containing the greetings</span><br><span class="line">message HelloReply &#123;</span><br><span class="line">  string message = 1;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>比较关键的语法是package-定义包名,service-定义服务名,包+服务的路径下可以定义各种可供rpc调用的函数.上述proto文件的SayHello函数在grpc服务端注册路径为/helloworld.Greeter/SayHello.接着定义函数原型及入参和出参类型结构体,而message定义一个具体的类型结构体.</p>
+<h2 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h2><p>我们看下protobuf客户端代码:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">type GreeterClient interface &#123;</span><br><span class="line">	// Sends a greeting</span><br><span class="line">	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">type greeterClient struct &#123;</span><br><span class="line">	cc *grpc.ClientConn</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func NewGreeterClient(cc *grpc.ClientConn) GreeterClient &#123;</span><br><span class="line">	return &amp;greeterClient&#123;cc&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (c *greeterClient) SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error) &#123;</span><br><span class="line">	out := new(HelloReply)</span><br><span class="line">	err := c.cc.Invoke(ctx, &quot;/helloworld.Greeter/SayHello&quot;, in, out, opts...)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		return nil, err</span><br><span class="line">	&#125;</span><br><span class="line">	return out, nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过protobuf客户端代码可以猜测grpc客户端代码只需首先生成一个grpc.ClientConn结构,然后调用NewGreeeterClient生成一个greeterClient结构,即可调用SayHello方法.SayHello方法最终调用的是grpc.ClientConn结构的invoke方法,调用路径为/helloworld.Greeter/Sayhello,可以猜想到,grpc服务端肯定在这个路径会注册一个钩子函数去执行,并且该钩子函数需要在grpc服务端自己定义.</p>
+<p>protobuf客户端生成的只是一个wrapper,我们完全可以直接按如下方法调用:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cc.Invoke(ctx, &quot;/helloworld.Greeter/SayHello&quot;, in, out, opts...)</span><br></pre></td></tr></table></figure>
+
+<p>看下grpc客户端实际的代码:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line">import (</span><br><span class="line">    ...</span><br><span class="line">	pb &quot;google.golang.org/grpc/examples/helloworld/helloworld&quot;</span><br><span class="line">)</span><br><span class="line">const (</span><br><span class="line">	address     = &quot;localhost:50051&quot;</span><br><span class="line">	defaultName = &quot;world&quot;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">	conn, err := grpc.Dial(address, grpc.WithInsecure())</span><br><span class="line">    ...</span><br><span class="line">	c := pb.NewGreeterClient(conn)</span><br><span class="line">    ...</span><br><span class="line">	ctx, cancel := context.WithTimeout(context.Background(), time.Second)</span><br><span class="line">    ...</span><br><span class="line">	r, err := c.SayHello(ctx, &amp;pb.HelloRequest&#123;Name: name&#125;)</span><br><span class="line">    ...</span><br><span class="line">	log.Printf(&quot;Greeting: %s&quot;, r.Message)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>只保留关键路径,可以看到,grpc.Dial生成一个grpc.ClientConn,其他步骤与上文想法一致</p>
+<h2 id="服务端"><a href="#服务端" class="headerlink" title="服务端"></a>服务端</h2><p>我们看下protobuf服务端代码:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">type GreeterServer interface &#123;</span><br><span class="line">	SayHello(context.Context, *HelloRequest) (*HelloReply, error)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func RegisterGreeterServer(s *grpc.Server, srv GreeterServer) &#123;</span><br><span class="line">	s.RegisterService(&amp;_Greeter_serviceDesc, srv)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func _Greeter_SayHello_Handler(srv interface&#123;&#125;, ctx context.Context, dec func(interface&#123;&#125;) error, interceptor grpc.UnaryServerInterceptor) (interface&#123;&#125;, error) &#123;</span><br><span class="line">	in := new(HelloRequest)</span><br><span class="line">	if err := dec(in); err != nil &#123;</span><br><span class="line">		return nil, err</span><br><span class="line">	&#125;</span><br><span class="line">	if interceptor == nil &#123;</span><br><span class="line">		return srv.(GreeterServer).SayHello(ctx, in)</span><br><span class="line">	&#125;</span><br><span class="line">	info := &amp;grpc.UnaryServerInfo&#123;</span><br><span class="line">		Server:     srv,</span><br><span class="line">		FullMethod: &quot;/helloworld.Greeter/SayHello&quot;,</span><br><span class="line">	&#125;</span><br><span class="line">	handler := func(ctx context.Context, req interface&#123;&#125;) (interface&#123;&#125;, error) &#123;</span><br><span class="line">		return srv.(GreeterServer).SayHello(ctx, req.(*HelloRequest))</span><br><span class="line">	&#125;</span><br><span class="line">	return interceptor(ctx, in, info, handler)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">var _Greeter_serviceDesc = grpc.ServiceDesc&#123;</span><br><span class="line">	ServiceName: &quot;helloworld.Greeter&quot;,</span><br><span class="line">	HandlerType: (*GreeterServer)(nil),</span><br><span class="line">	Methods: []grpc.MethodDesc&#123;</span><br><span class="line">		&#123;</span><br><span class="line">			MethodName: &quot;SayHello&quot;,</span><br><span class="line">			Handler:    _Greeter_SayHello_Handler,</span><br><span class="line">		&#125;,</span><br><span class="line">	&#125;,</span><br><span class="line">	Streams:  []grpc.StreamDesc&#123;&#125;,</span><br><span class="line">	Metadata: &quot;helloworld.proto&quot;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过protobuf服务端可以猜想grpc服务端关键结构体有grpc.ServiceDesc,grpc.MethodDesc,grpcStreamDesc.<br>首先需要grpc服务端生成一个grpc.Server指针,并且实现GreeterServer接口(即实现SayHello方法),然后调用RegisterGreeterServer即可将其注册到grpc服务端.<br>我们看到grpc.ServiceDesc中的Methods字段保存的即为方法SayHello和具体的钩子函数,回调钩子函数为_Greeter_SayHello_Handler,该函数也是protobuf服务端代码,其关键步骤如下:</p>
+<ul>
+<li>使用dec解析输入</li>
+<li>如果interceptor为空,即不存在拦截器,则直接调用grpc服务端GreeterServer的SayHello方法并且返回</li>
+<li>否则返回interceptor(ctx, in, info, handler),interceptor为函数,handler为grpc服务端GreeterServer的SayHello方法,可以猜测到interceptor函数先将输入处理完后最后调用handler处理</li>
+</ul>
+<p>grpc服务端实际代码如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line">import (</span><br><span class="line">    ...</span><br><span class="line">	pb &quot;google.golang.org/grpc/examples/helloworld/helloworld&quot;</span><br><span class="line">)</span><br><span class="line">const (</span><br><span class="line">	port = &quot;:50051&quot;</span><br><span class="line">)</span><br><span class="line">type server struct&#123;&#125;</span><br><span class="line"></span><br><span class="line">func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) &#123;</span><br><span class="line">	log.Printf(&quot;Received: %v&quot;, in.Name)</span><br><span class="line">	return &amp;pb.HelloReply&#123;Message: &quot;Hello &quot; + in.Name&#125;, nil</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">	lis, err := net.Listen(&quot;tcp&quot;, port)</span><br><span class="line">	if err != nil &#123;</span><br><span class="line">		log.Fatalf(&quot;failed to listen: %v&quot;, err)</span><br><span class="line">	&#125;</span><br><span class="line">	s := grpc.NewServer()//生成一个grpc.Server指针</span><br><span class="line">	pb.RegisterGreeterServer(s, &amp;server&#123;&#125;)//注册一个GreeterServer,server结构体实现了GreeterServer接口</span><br><span class="line">	if err := s.Serve(lis); err != nil &#123; //调用grpc.Server的Serve函数</span><br><span class="line">		log.Fatalf(&quot;failed to serve: %v&quot;, err)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>同理,grpc服务端生成一个grpc.Server并且注册之后,调用Serve函数,并且传入一个Listener,即完成了该代码逻辑.</p>
+<h2 id="后记"><a href="#后记" class="headerlink" title="后记"></a>后记</h2><p>接下来会首先分析grpc源码中设计客户端的grpc.ClientConn结构体和grpc.Dial()函数生成该结构体的过程以及关键的CientConn的invoke()函数如何发起一个请求</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grpc.Dial()</span><br><span class="line">ClientConn:</span><br><span class="line">    invoke()</span><br></pre></td></tr></table></figure>
+<p>服务端grpc.Server结构体,grpc.ServiceDesc,grpc.MethodDesc,grpc.StreamDesc以及grpc.NewServer()生成一个Server结构体,Server结构体的RegisterService()函数如何注册一个服务,以及Serve()函数如何提供服务(接收请求,解析请求,通过注册服务的回调函数处理请求,返回相应).</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grpc.NewServer()</span><br><span class="line">Server:</span><br><span class="line">    RegisterService()</span><br><span class="line">    Serve()</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/grpc/grpc-go/blob/master/examples/README.md">https://github.com/grpc/grpc-go/blob/master/examples/README.md</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/grpc-go/" rel="tag"># grpc-go</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/07/22/redis-defragmentation/" rel="next" title="Redis 内存碎片">
+                <i class="fa fa-chevron-left"></i> Redis 内存碎片
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/07/30/grpc-go-client/" rel="prev" title="grpc-go源码解析2-client">
+                grpc-go源码解析2-client <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
 
     <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+          </div>
+          
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#protobuf"><span class="nav-number">1.</span> <span class="nav-text">protobuf</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="nav-number">2.</span> <span class="nav-text">客户端</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%AB%AF"><span class="nav-number">3.</span> <span class="nav-text">服务端</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%8E%E8%AE%B0"><span class="nav-number">4.</span> <span class="nav-text">后记</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">5.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
