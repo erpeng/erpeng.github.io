@@ -1,37 +1,817 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!DOCTYPE html>
 
 
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Message Queue,GO," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Introduction上一篇文章通过spec对mqtt有了基本了解,接着通过一个mqtt go客户端的代码,看看具体的工程实现细节.具体代码参考链接 代码概览首先看看代码结构: 1234567891011121314151617181920212223242526272829303132333435ZhangShihua:paho.mqtt.golang zhangshihua$ find .">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MQTT GO客户端实现">
+<meta property="og:url" content="https://erpeng.github.io/2021/01/06/mqtt-client/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="Introduction上一篇文章通过spec对mqtt有了基本了解,接着通过一个mqtt go客户端的代码,看看具体的工程实现细节.具体代码参考链接 代码概览首先看看代码结构: 1234567891011121314151617181920212223242526272829303132333435ZhangShihua:paho.mqtt.golang zhangshihua$ find .">
+<meta property="og:locale">
+<meta property="article:published_time" content="2021-01-05T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-01-06T12:37:37.067Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="Message Queue">
+<meta property="article:tag" content="GO">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2021/01/06/mqtt-client/"/>
+
+
+
+
+
+  <title>MQTT GO客户端实现 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2021/01/06/mqtt-client/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">MQTT GO客户端实现</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-01-06T00:00:00+08:00">
+                2021-01-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2021/01/06/mqtt-client/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2021/01/06/mqtt-client/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>上一篇文章通过spec对mqtt有了基本了解,接着通过一个mqtt go客户端的代码,看看具体的工程实现细节.具体代码参考链接</p>
+<h2 id="代码概览"><a href="#代码概览" class="headerlink" title="代码概览"></a>代码概览</h2><p>首先看看代码结构:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">ZhangShihua:paho.mqtt.golang zhangshihua$ find . -name &quot;*.go&quot;|grep -v &#x27;test&#x27;|grep -v &#x27;cmd&#x27; | xargs wc -l |sort -nr</span><br><span class="line">    4864 total</span><br><span class="line">    1055 ./client.go</span><br><span class="line">     464 ./net.go</span><br><span class="line">     383 ./options.go</span><br><span class="line">     346 ./packets/packets.go</span><br><span class="line">     257 ./filestore.go</span><br><span class="line">     200 ./token.go</span><br><span class="line">     182 ./router.go</span><br><span class="line">     176 ./messageids.go</span><br><span class="line">     167 ./options_reader.go</span><br><span class="line">     151 ./packets/connect.go</span><br><span class="line">     138 ./memstore.go</span><br><span class="line">     136 ./store.go</span><br><span class="line">     127 ./message.go</span><br><span class="line">     109 ./websocket.go</span><br><span class="line">      91 ./netconn.go</span><br><span class="line">      86 ./topic.go</span><br><span class="line">      83 ./packets/publish.go</span><br><span class="line">      74 ./ping.go</span><br><span class="line">      69 ./packets/subscribe.go</span><br><span class="line">      57 ./packets/suback.go</span><br><span class="line">      56 ./packets/unsubscribe.go</span><br><span class="line">      52 ./packets/connack.go</span><br><span class="line">      42 ./packets/unsuback.go</span><br><span class="line">      42 ./packets/pubrel.go</span><br><span class="line">      42 ./packets/pubrec.go</span><br><span class="line">      42 ./packets/pubcomp.go</span><br><span class="line">      42 ./packets/puback.go</span><br><span class="line">      40 ./trace.go</span><br><span class="line">      34 ./packets/pingresp.go</span><br><span class="line">      34 ./packets/pingreq.go</span><br><span class="line">      34 ./packets/disconnect.go</span><br><span class="line">      32 ./components.go</span><br><span class="line">      21 ./oops.go</span><br></pre></td></tr></table></figure>
+<p>直观上思考,首先必须有网络连接层,处理TCP/WS/WSS/TLS之类的连接细节,接着需要具体的mqtt 14种报文解析,QoS1和2级别需要存储消息,因此也需要一个存储层.</p>
+<ul>
+<li>网络连接层:netconn.go,websocket.go,net.go</li>
+<li>报文解析:packet目录下是具体的报文编解码代码</li>
+<li>存储层:store.go,memstore.go,filestore.go<br>其他代码数最多的client.go对外提供接口,token.go处理返回值,router.go通过topic匹配去寻找对应的handler,用来处理接收到的publish消息</li>
+</ul>
+<h2 id="分层解析"><a href="#分层解析" class="headerlink" title="分层解析"></a>分层解析</h2><p>下边逐层解析相应的代码</p>
+<h3 id="网络层"><a href="#网络层" class="headerlink" title="网络层"></a>网络层</h3><p>websocket.go暴露一个新建websocket(NewWebsocket)函数,之后可以通过返回的连接进行读写<br>netconn.go是提供一个工厂方法,通过url schema判断返回何种类型的连接,schema可以为:</p>
+<ul>
+<li>ws/wss</li>
+<li>mqtt/tcp</li>
+<li>unix</li>
+<li>ssl/tls/mqtts/mqtt+ssl/tcps</li>
+</ul>
+<p>net.go是在连接上层具体处理MQTT进出报文的逻辑</p>
+<ul>
+<li>ConnectMQTT函数:在连接层之上开始发送CONNECT报文并且接收CONNACK报文.CONNECT可变头部（3.1.1版本)前6字节为:0x0004(2字节长度),MQTT(4字节协议名称),第7字节为protocol level,该客户端库中会处理如下协议:<ul>
+<li>3.1 protocol level为3,protocol name 为 MQIsdp</li>
+<li>3.1b protocol level为0x83,protocol name 为 MQIsdp</li>
+<li>3.1.1b protocol level为0x84,protocol name 为 MQTT</li>
+<li>3.1.1 protocol level为4,protocol name 为 MQTT<br>CONNACK第一字节最低位返回session是否存在,第二字节返回连接的return code</li>
+</ul>
+</li>
+<li>startIncomingComms函数:处理接收到的包和存储中获取的包,起单独的goroutine进行处理,返回一个管道,管道中包括需要进一步处理的包.处理逻辑为:<ul>
+<li>通过读取报文的4-7bit决定包类型,并且解析为相应的包</li>
+<li>判断是否需要持久化包并且更新最后收到包的时间</li>
+<li>根据包类型决定下一步的处理逻辑,例如如果收到了publish包需要传递给应用层,收到了pubrec包则需要回复pubrel包,收到了pubrel包则需要回复pubcomp包.</li>
+</ul>
+</li>
+<li>startOutgoingComms函数:处理需要发送的包<ul>
+<li>发送的包有两个来源,一是本身发出的,一种是收到包后需要回复的包,例如收到一个publish并且qos为1,则需要回复一个puback包</li>
+<li>发送包之后更新最后发送包的时间戳</li>
+</ul>
+</li>
+</ul>
+<h3 id="报文解析"><a href="#报文解析" class="headerlink" title="报文解析"></a>报文解析</h3><p>package.go定义了报文的接口,报文类型以及编解码,接口定义如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">type ControlPacket interface &#123;</span><br><span class="line">	Write(io.Writer) error</span><br><span class="line">	Unpack(io.Reader) error</span><br><span class="line">	String() string</span><br><span class="line">	Details() Details</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>每种类型的报文自定义自己的Write函数-组装报文并且发送,Unpack函数-解析收到的报文<br>例如puback。go中对puback报文的解析.固定头部第二字节即RemainLength是2,表明可变头部加payload共两字节,可变头部两字节为client Identifier,payload为空,代码如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">func (pa *PubackPacket) Write(w io.Writer) error &#123;</span><br><span class="line">	var err error</span><br><span class="line">	pa.FixedHeader.RemainingLength = 2</span><br><span class="line">	packet := pa.FixedHeader.pack()</span><br><span class="line">	packet.Write(encodeUint16(pa.MessageID))</span><br><span class="line">	_, err = packet.WriteTo(w)</span><br><span class="line"></span><br><span class="line">	return err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>代码逻辑为将固定头部打包然后将client Idenfier编码为2字节,写入即可<br>固定头部pack方法如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">func (fh *FixedHeader) pack() bytes.Buffer &#123;</span><br><span class="line">	var header bytes.Buffer</span><br><span class="line">	header.WriteByte(fh.MessageType&lt;&lt;4 | boolToByte(fh.Dup)&lt;&lt;3 | fh.Qos&lt;&lt;1 | boolToByte(fh.Retain))</span><br><span class="line">	header.Write(encodeLength(fh.RemainingLength))</span><br><span class="line">	return header</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>并不是所有报文的固定头部都有dup以及qos和retain字段,此处代码会根据实际报文情况,选择性赋值给这三个字段(除了publish报文其他的赋值不代表这三个字段的真实含义)</p>
+<p>puback的Unpack代码如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">func (pa *PubackPacket) Unpack(b io.Reader) error &#123;</span><br><span class="line">	var err error</span><br><span class="line">	pa.MessageID, err = decodeUint16(b)</span><br><span class="line"></span><br><span class="line">	return err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>解析出client identifier即可</p>
+<h2 id="存储层"><a href="#存储层" class="headerlink" title="存储层"></a>存储层</h2><p>store.go定义存储接口,如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">type Store interface &#123;</span><br><span class="line">	Open()</span><br><span class="line">	Put(key string, message packets.ControlPacket)</span><br><span class="line">	Get(key string) packets.ControlPacket</span><br><span class="line">	All() []string</span><br><span class="line">	Del(key string)</span><br><span class="line">	Close()</span><br><span class="line">	Reset()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>filestore.go以及memstore.go分别实现文件存储以及内存存储格式.<br>store.go中比较关键的是QoS为1和2时需要将相应的报文进行保存,方法参考persistOutbound以及persistInbound,这两个方法中会进行消息的保存和删除操作</p>
+<h2 id="处理响应"><a href="#处理响应" class="headerlink" title="处理响应"></a>处理响应</h2><p>token.go用来处理响应包,客户端调用publish,subcribe之后都会返回一个token.因为publish并且QoS为1或者2时broker会回复puback或者pubrec包,subscribe之后会回复suback包.网络层有响应包之后会修改token状态,从而达到通知应用层的目的</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">type Token interface &#123;</span><br><span class="line">	Wait() bool</span><br><span class="line"></span><br><span class="line">	WaitTimeout(time.Duration) bool</span><br><span class="line">	Done() &lt;-chan struct&#123;&#125;</span><br><span class="line"></span><br><span class="line">	Error() error</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">type TokenErrorSetter interface &#123;</span><br><span class="line">	setError(error)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">type tokenCompletor interface &#123;</span><br><span class="line">	Token</span><br><span class="line">	TokenErrorSetter</span><br><span class="line">	flowComplete()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>接口和实现都比较简单,不再赘述</p>
+<h2 id="接收publish包"><a href="#接收publish包" class="headerlink" title="接收publish包"></a>接收publish包</h2><p>订阅之后需要根据topic调用相应的应用层处理,该代码位于router.go中.处理订阅消息的方法为matchAndDispatch,该文件中还包括了注册topic以及相应处理器,删除topic等一系列操作.底层数据结构为一个双向链表,每次处理都会全部遍历,因此topic不宜过多</p>
+<h2 id="后记"><a href="#后记" class="headerlink" title="后记"></a>后记</h2><p>整体代码结构比较清晰,每个文件中的类型基本都是interface,可测试性好并且易于扩展.有两处实现需要注意:</p>
+<ul>
+<li>client idenfier同时只能有65535个,会释放和重复使用</li>
+<li>topic为双向链表,订阅之后每次都需要全部遍历</li>
+<li>报文编码默认固定头部都会有dup,qos,retain字段,这样写起来比较统一,但实际报文并不是全部都有此类字段,有些易混淆</li>
+</ul>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/eclipse/paho.mqtt.golang">https://github.com/eclipse/paho.mqtt.golang</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Message-Queue/" rel="tag"># Message Queue</a>
+          
+            <a href="/tags/GO/" rel="tag"># GO</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/01/04/mqtt/" rel="next" title="MQTT学习笔记">
+                <i class="fa fa-chevron-left"></i> MQTT学习笔记
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
 
     <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+          </div>
+          
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Introduction"><span class="nav-number">1.</span> <span class="nav-text">Introduction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E6%A6%82%E8%A7%88"><span class="nav-number">2.</span> <span class="nav-text">代码概览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E5%B1%82%E8%A7%A3%E6%9E%90"><span class="nav-number">3.</span> <span class="nav-text">分层解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BD%91%E7%BB%9C%E5%B1%82"><span class="nav-number">3.1.</span> <span class="nav-text">网络层</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8A%A5%E6%96%87%E8%A7%A3%E6%9E%90"><span class="nav-number">3.2.</span> <span class="nav-text">报文解析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AD%98%E5%82%A8%E5%B1%82"><span class="nav-number">4.</span> <span class="nav-text">存储层</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E5%93%8D%E5%BA%94"><span class="nav-number">5.</span> <span class="nav-text">处理响应</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%A5%E6%94%B6publish%E5%8C%85"><span class="nav-number">6.</span> <span class="nav-text">接收publish包</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%8E%E8%AE%B0"><span class="nav-number">7.</span> <span class="nav-text">后记</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">8.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,37 +1,920 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!DOCTYPE html>
 
 
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Sqlite," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="这个文章序列关注Sqlite的原子性实现.首先翻译一篇官方文章,介绍Sqlite的 rollback journal,然后结合一些问题通过源码分析一下具体实现.后续几篇关注Sqlite3.7.0之后的另一种保证原子性的实现 WAL(write ahead log).注意Sqlite以静态或者动态库的形式提供给程序调用,并不是C&#x2F;S模式.另外,Sqlite每个库都保存在一个单独的文件之中.通过at">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Sqlite如何实现ACID中的原子性">
+<meta property="og:url" content="https://erpeng.github.io/2019/04/13/Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="这个文章序列关注Sqlite的原子性实现.首先翻译一篇官方文章,介绍Sqlite的 rollback journal,然后结合一些问题通过源码分析一下具体实现.后续几篇关注Sqlite3.7.0之后的另一种保证原子性的实现 WAL(write ahead log).注意Sqlite以静态或者动态库的形式提供给程序调用,并不是C&#x2F;S模式.另外,Sqlite每个库都保存在一个单独的文件之中.通过at">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/s0.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s1.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s2.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s3.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s4.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s5.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s6.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s7.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s8.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s9.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s10.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/s11.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sr0.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sr1.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sr2.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sr3.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sr4.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sr5.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sm0.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sm1.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sm2.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sm3.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sm4.gif">
+<meta property="og:image" content="https://erpeng.github.io/img/sm5.gif">
+<meta property="article:published_time" content="2019-04-13T01:42:00.000Z">
+<meta property="article:modified_time" content="2019-09-29T09:46:30.769Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="Sqlite">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/s0.gif">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/04/13/Sqlite如何实现ACID中的原子性/"/>
+
+
+
+
+
+  <title>Sqlite如何实现ACID中的原子性 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/04/13/Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Sqlite如何实现ACID中的原子性</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-04-13T09:42:00+08:00">
+                2019-04-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/04/13/Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/04/13/Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>这个文章序列关注Sqlite的原子性实现.首先翻译一篇官方文章,介绍Sqlite的 rollback journal,然后结合一些问题通过源码分析一下具体实现.后续几篇关注Sqlite3.7.0之后的另一种保证原子性的实现 WAL(write ahead log).<br>注意Sqlite以静态或者动态库的形式提供给程序调用,并不是C/S模式.另外,Sqlite每个库都保存在一个单独的文件之中.通过attch命令能够将其他文件中的库引入.</p>
+</blockquote>
+<h2 id="Sqlite如何实现ACID中的原子性"><a href="#Sqlite如何实现ACID中的原子性" class="headerlink" title="Sqlite如何实现ACID中的原子性"></a>Sqlite如何实现ACID中的原子性</h2><p>原文链接:<a target="_blank" rel="noopener" href="https://www.sqlite.org/atomiccommit.html">https://www.sqlite.org/atomiccommit.html</a><br>翻译中有些无关的省略了.具体信息可以参看原文</p>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>关系型数据库需要实现ACID,其中A-Atomic commit,即单个事务中的语句要么全部执行要么一个都不执行.如果在事务的执行过程中操作系统crash或者掉电,事务仍旧能够保证原子性.本篇文章只适用于Sqlite配置为rollback mode的时候.(还有一种保证原子性的模式为开启wal-write ahead log,后文另述)</p>
+<h3 id="Sqlite实现中对硬件的一些假设"><a href="#Sqlite实现中对硬件的一些假设" class="headerlink" title="Sqlite实现中对硬件的一些假设"></a>Sqlite实现中对硬件的一些假设</h3><p>磁盘以sector为单位进行写操作.如果要修改小于一个sector的区域,也得首先把包括待修改区域的整个sector读取出来,修改完毕后再将整个sector写回去.</p>
+<p>传统的机械硬盘读和写都是以一个sector为单位,在ssd中,读的单位要比写单位要小很多.Sqlite只关注最小的写单位,所以本文中sector都是指最小的写单位.</p>
+<p>Sqlite 3.3.14之前默认一个sector的大小为512bytes…</p>
+<p>Sqlite假设一个sector的写入并不是原子性的,从3.5.0版本开始,sqlite实现了一个新的接口VFS(virtual file system),VFS用来和底层的文件系统交互.VFS接口中有一个方法xDeviceCharacteristics,通过该方法可以获取到底层sector的写入是否是原子性的.如果是,则 <strong>sqlite能够利用该特性做一些写入的优化</strong></p>
+<p>Sqlite假设一个写请求并不会直接落盘而是被操作系统先缓存起来.所以在一些节点需要执行flush或者fsync将数据真正刷新到磁盘.</p>
+<p>Sqlite假设一个文件写入时先更新文件大小然后写入具体内容,<strong>因此Sqlite做了一些额外的工作去保证在更新文件大小和写入文件内容之间如果发生掉电的话不会导致数据库的损坏</strong>.VFS中的xDeviceCharacteristics函数也能够获取到文件系统是否会首先写入内容然后更新大小（通过SQLITE_IOCAP_SAFE_APPEND这个属性）,如果具有该属性,Sqlite就不需要做额外的一些保护措施,减少磁盘I/O.</p>
+<p><strong>Sqlite假设文件的删除操作是原子性的,即如果删除过程中发生了掉电,机器恢复后要么完全看不到该文件,要么文件是完整的,不会出现删除了部分的情况(注意只是用户视角,即用户进程询问操作系统一个文件是否存在时,操作系统只会给出yes or no,而不会有部分存在的回复)</strong></p>
+<p>Sqlite不会在数据文件中增加冗余信息去校验文件是否损坏.</p>
+<p>Sqlite假设操作系统写入一个范围时不会因为掉电或os crash而改变该范围之外的数据.该功能称为 powersafe overwrite.</p>
+<h3 id="单文件的提交"><a href="#单文件的提交" class="headerlink" title="单文件的提交"></a>单文件的提交</h3><p>首先全局观看sqlite在单文件状态下的原子性保证.后文讨论多文件状态下的原子性保证.</p>
+<h4 id="初始状态"><a href="#初始状态" class="headerlink" title="初始状态"></a>初始状态</h4><p>左边是用户进程的内存空间,中间是操作系统缓存,右边是磁盘存储.每个小框代表一个sector,蓝颜色的sector表明存储的是原始数据.</p>
+<p><img src="/img/s0.gif" alt="图0"></p>
+<h4 id="获取一个读锁"><a href="#获取一个读锁" class="headerlink" title="获取一个读锁"></a>获取一个读锁</h4><p>在写入数据库之前,首先会读取数据.即使是插入数据也得先读取<strong>sqlite_master</strong>获取表的schema和决定将数据存储于哪个位置.</p>
+<p>首先获取一个共享锁,一个数据库文件可以同时有多个共享锁,但是当存在共享锁时,其他连接获取不到写锁.</p>
+<p>注意共享锁存在于操作系统的缓存中,而非磁盘上.因此当操作系统crash或者掉电或者创建共享锁的进程退出时锁会自动释放</p>
+<p><img src="/img/s1.gif" alt="图1"></p>
+<h4 id="从数据库文件读取信息"><a href="#从数据库文件读取信息" class="headerlink" title="从数据库文件读取信息"></a>从数据库文件读取信息</h4><p>获得共享锁后,首先从磁盘读取数据到操作系统的缓存,然后从操作系统缓存到用户空间内存中,</p>
+<p>通常只有部分pages会读取到,本例中我们共有8个page,但只读取了3个.真实场景中可能会有成千上万个pages</p>
+<p><img src="/img/s2.gif" alt="图2"></p>
+<h4 id="获取一个reserved-lock"><a href="#获取一个reserved-lock" class="headerlink" title="获取一个reserved lock"></a>获取一个reserved lock</h4><p>在写入之前首先获取一个reserved lock,注意此时其他连接仍然能够获取shared lock,但不能进一步获取reserved lock,即reserved lock在一个数据库文件中只能有一个存在.</p>
+<p>这个锁存在的意义在于说明有进程即将写入一个数据库文件,但是还没有开始写入.此时其他进程如果也尝试写入的话会失败(因为获取不到reserved lock)</p>
+<p><img src="/img/s3.gif" alt="图3"></p>
+<h4 id="创建rollback-journal-file"><a href="#创建rollback-journal-file" class="headerlink" title="创建rollback journal file"></a>创建rollback journal file</h4><p>在修改数据库文件之前,Sqlite首先创建一个独立的rollback journal file,并且将要修改的pages写入rollback journal file.(<strong>注意是以page为单位写入</strong>)</p>
+<p>rollback journal file中绿色的部分是header,header中会包括数据库文件的原始大小(<strong>即包括多少个page</strong>).每一个page保存到rollback journal中时前边四字节会保存该page的page number.</p>
+<p><img src="/img/s4.gif" alt="图4"></p>
+<p>图4中有两个地方需要注意:</p>
+<ul>
+<li>rollback journal创建之后并没有实际落盘,只是保存在操作系统的缓存中</li>
+<li>rollback journal以page为单位,但每个page前四字节会有一个page number的记录,后四字节有一个checksum</li>
+</ul>
+<h4 id="在用户空间修改数据库文件"><a href="#在用户空间修改数据库文件" class="headerlink" title="在用户空间修改数据库文件"></a>在用户空间修改数据库文件</h4><p><img src="/img/s5.gif" alt="图5"></p>
+<p>修改用户进程空间内的数据库文件,注意不同的用户进程有自己的私有内存空间,因此此时的修改并不影响其他进程的读取操作</p>
+<h4 id="将rollback-journal落盘"><a href="#将rollback-journal落盘" class="headerlink" title="将rollback journal落盘"></a>将rollback journal落盘</h4><p>将rollback journal刷新到磁盘,该步骤是保持原子性很关键的一步,保证即使掉电或者操作系统crash,Sqlite也能恢复到原来的状态.</p>
+<p>(<strong>进行到该步也能看出reserved lock的作用,这种锁是一个中间状态,既能为即将写入做准备,又不影响其他进程的读取操作,提高并行度</strong>)<br><img src="/img/s6.gif" alt="图6"></p>
+<p>该步需要刷两次盘,第一次将rollback journal的内容刷到磁盘,第二次在header中记录第一步中刷到磁盘的page个数,然后将header刷盘</p>
+<h4 id="获取排他锁"><a href="#获取排他锁" class="headerlink" title="获取排他锁"></a>获取排他锁</h4><p><img src="/img/s7.gif" alt="图7"><br>在实际写入数据库文件之前,需要获取一个排他锁.获取过程分两步</p>
+<ul>
+<li>获取一个pending lock</li>
+<li>将pending lock升级为排他锁</li>
+</ul>
+<p>获取到pending lock之后,在数据库文件上已经获取到共享锁的进程可以继续读取,但不允许其他进程继续获取共享锁.该锁存在的意义在于防止write starvation(即有大量的读取连接时,一直有新的共享锁产生,导致获取不到排他锁).当所有已经存在的共享锁都释放后,此时该pending lock即可以升级为排他锁</p>
+<h4 id="写入数据库文件"><a href="#写入数据库文件" class="headerlink" title="写入数据库文件"></a>写入数据库文件</h4><p><img src="/img/s8.gif" alt="图8"></p>
+<p>获取到排他锁后,说明已经没有其他进程在读取该数据库文件.此时可以安全的写入数据库文件.注意也只是写入操作系统的缓存中,并没有落盘 </p>
+<h4 id="数据库文件刷盘"><a href="#数据库文件刷盘" class="headerlink" title="数据库文件刷盘"></a>数据库文件刷盘</h4><p><img src="/img/s9.gif" alt="图9"></p>
+<p>此时将数据库文件刷新到磁盘.</p>
+<h4 id="删除rollback-journal"><a href="#删除rollback-journal" class="headerlink" title="删除rollback journal"></a>删除rollback journal</h4><p><img src="/img/s10.gif" alt="图10"></p>
+<p>因为数据库文件已经安全落盘,此时可以删除掉rollback journal.若删除之前系统crash或者掉电,则重启后会恢复到事务开始前的状态,如果删除之后系统crash或者掉电,因为数据库文件已经落盘,相当于事务已经执行完成.(<strong>那么会不会在删除一半时系统crash或者掉电呢?注意上文中关于硬件的一些假设,删除操作必须是原子性的,即不会发生这种情况</strong>)</p>
+<p>因为删除一个文件也是一个耗时的操作,因此Sqlite提供了两种方式减少删除过程的耗时.</p>
+<ul>
+<li>将一个文件truncate为0</li>
+<li>将journal file header清0.清0操作并不是原子性的,但只要header中有一个byte被清0,该文件就会被识别为无效的格式</li>
+</ul>
+<h4 id="释放锁"><a href="#释放锁" class="headerlink" title="释放锁"></a>释放锁</h4><p><img src="/img/s11.gif" alt="图11"></p>
+<p>此时可以释放掉排他锁.</p>
+<p>注意图11中的用户空间缓存也已经被清除.但新版本的Sqlite并不会清除用户空间缓存,以免下一个事务开启式需要重新读取该数据.但在复用该缓存信息时需要首先获取一个共享锁然后检测是否在当前事务开启之前有其他事务已经修改过数据库文件.如果已经修改过则不能复用.检测修改的逻辑也很简单,数据库文件的第一个页中保存了一个计数器,通过比较该计数器即可知道是否发生过修改</p>
+<h3 id="回滚"><a href="#回滚" class="headerlink" title="回滚"></a>回滚</h3><h4 id="出错时"><a href="#出错时" class="headerlink" title="出错时"></a>出错时</h4><p><img src="/img/sr0.gif" alt="图12"></p>
+<p>假设将数据库文件刷盘时掉电,会出现图12所示的情况.我们本来需要修改三个page,但这时只修改成功一个page,另一个page只写了一部分,而第三部分还没开始写</p>
+<p>注意此时rollback journal已经安全落盘但还没删除</p>
+<h4 id="hot-rollback-journal"><a href="#hot-rollback-journal" class="headerlink" title="hot rollback journal"></a>hot rollback journal</h4><p><img src="/img/sr1.gif" alt="图13"></p>
+<p>掉电或操作系统crash恢复后,Sqlite会首先获取一个共享锁,然后检测是否有hot rollback journal存在.注意hot rollback journal只有在一个事务没有提交完成时存在.那么如何检测是否是一个hot rollback journal呢,我们通过检测如下几点来决定:</p>
+<ul>
+<li>rollback journal file存在</li>
+<li>rollback journal file不为空</li>
+<li>rollback journal file header格式正确,即没有被清0</li>
+<li>rollback journal file 指定位置没有master journal file的名称,或者如果有一个master journal的名称并且这个master journal也存在(后文叙述,涉及到多文件的事务)</li>
+</ul>
+<p>一个hot journal的存在说明数据库处于一个不一致的状态.在读取之前需要先进行修复</p>
+<h4 id="获取排他锁-1"><a href="#获取排他锁-1" class="headerlink" title="获取排他锁"></a>获取排他锁</h4><p><img src="/img/sr2.gif" alt="图14"></p>
+<p>进行数据库恢复之前先获取一个排他锁.防止多个进程同时修复一个数据库文件.</p>
+<p>(<strong>注意此时不需要先获取reserved lock或者pending lock,此时需要立刻进行修复,不需要考虑其他进程的读取.但假设此时有其他进程持有shared lock,会直接获取到排他锁还是会等待shared lock失效?猜测应该为前者</strong>)</p>
+<h4 id="回滚-1"><a href="#回滚-1" class="headerlink" title="回滚"></a>回滚</h4><p><img src="/img/sr3.gif" alt="图15"><br>获取到排他锁后可以开始执行恢复.分两步:</p>
+<ul>
+<li>将rollback journal中的相应page写回到database file</li>
+<li>rollback journal中有记录database file的原始大小,将database file truncate 到原始大小.</li>
+</ul>
+<p>此时数据库内容和大小都会恢复到原始状态</p>
+<h4 id="删除hot-journal"><a href="#删除hot-journal" class="headerlink" title="删除hot journal"></a>删除hot journal</h4><p><img src="/img/sr4.gif" alt="图16"></p>
+<p>当数据库文件恢复并且落盘后,可以清除掉hot journal</p>
+<h4 id="继续读取"><a href="#继续读取" class="headerlink" title="继续读取"></a>继续读取</h4><p><img src="/img/sr5.gif" alt="图17"></p>
+<p>将排他锁降级为共享锁.此时崩溃的事务好像没有发生过一样</p>
+<h3 id="多文件事务"><a href="#多文件事务" class="headerlink" title="多文件事务"></a>多文件事务</h3><p>Sqlite允许一个数据库连接中通过attach database命令同时操作多个数据库文件.当多文件在一个事务中修改时,Sqlite保证其原子性.即要么所有文件中都更新成功,要么所有文件都不更新.</p>
+<h4 id="每个文件都有单独的rollback-journal"><a href="#每个文件都有单独的rollback-journal" class="headerlink" title="每个文件都有单独的rollback journal"></a>每个文件都有单独的rollback journal</h4><p><img src="/img/sm0.gif" alt="图18"></p>
+<p>图中每个文件有单独的reserverd lock和rollback journal,类似单文件情形.但此时rollback journal 并没有刷盘,数据库文件也没有更新 </p>
+<h4 id="master-journal-file"><a href="#master-journal-file" class="headerlink" title="master journal file"></a>master journal file</h4><p><img src="/img/sm1.gif" alt="图19"></p>
+<p>下一步需要创建一个master journal file.文件名称仍然是使用sqlite3_open打开的原始数据库文件名称,但会增加一个-mjHHHHHHHH的后缀,HHHHHHHH是一个随机的32bit十六进制数字.每个master journal的的随机后缀都不相同</p>
+<p>master journal中并不保证数据库文件的原始内容,保存的是每一个rollback journal的完整路径和名称</p>
+<p>master journal创建完成后需要直接刷盘(<strong>在Unix系统中,包括该master journal的目录也需要刷盘</strong>)</p>
+<p>master journal的存在是为了保证多文件事务的原子性.但如果Sqlite中设置了pragma synchronous=off 或者 pragma mode=memory,则并不会创建master journal.当然在此配置下也不能保证完整性</p>
+<h4 id="更新rollback-journal的header"><a href="#更新rollback-journal的header" class="headerlink" title="更新rollback journal的header"></a>更新rollback journal的header</h4><p><img src="/img/sm2.gif" alt="图20"></p>
+<p>更新每一个rollback journal的header,将master journal的完整路径及名称写入rollback journal的header（单文件事务中该字段为空）.在更新header之前和之后都需要将rollback journal进行刷盘(<strong>此处类似单文件事务中刷新纪录之后再刷新纪录的计数,Sqlite需要确保在header写入成功之前content已经写入成功</strong>).</p>
+<h4 id="更新数据库文件"><a href="#更新数据库文件" class="headerlink" title="更新数据库文件"></a>更新数据库文件</h4><p><img src="/img/sm3.gif" alt="图21"></p>
+<p>在每个数据库文件都获取到排他锁之后更新数据库文件并且刷盘</p>
+<h4 id="删除master-journal-file"><a href="#删除master-journal-file" class="headerlink" title="删除master journal file"></a>删除master journal file</h4><p><img src="/img/sm4.gif" alt="图22"></p>
+<p>此时可以删除master journal file.如果此时发生了掉电或者操作系统crash,根据之前hot journal的认定规则,此时也不会进行回滚,虽然仍然存在各个数据库文件的rollback journal.</p>
+<h4 id="清除rollback-journal-file"><a href="#清除rollback-journal-file" class="headerlink" title="清除rollback journal file"></a>清除rollback journal file</h4><p><img src="/img/sm5.gif" alt="图23"><br>删除rollback journal并且释放排他锁.</p>
+<h3 id="其他commit时的细节"><a href="#其他commit时的细节" class="headerlink" title="其他commit时的细节"></a>其他commit时的细节</h3><h4 id="page和sector"><a href="#page和sector" class="headerlink" title="page和sector"></a>page和sector</h4><p>Sqlite写入rollback journal时必须是按sector大小的整数倍写入.sector在大部分情况下为512bytes,page为4096bytes,此时按page写入没有什么问题.<br>但是如果sector为4096bytes,而page为512bytes,此时即使只修改一个page,也会将该page属于的sector整个写入rollback journal.</p>
+<h4 id="处理journal中的垃圾内容"><a href="#处理journal中的垃圾内容" class="headerlink" title="处理journal中的垃圾内容"></a>处理journal中的垃圾内容</h4><p>前文中提到过Sqlite的一些硬件假设,其中一条为文件首先扩充大小然后将真正的内容写入.如果文件扩充大小之后,写入真正内容之前发生了掉电,此时journal中会包含一些垃圾信息,此时rollback会将垃圾信息也写入数据库文件,从而发生错误.</p>
+<p>为此Sqlite做了一些保护性措施,其一为在rollback journal的header中记录该rollback journal包括的page的个数,并且初始化为0.只有当真正的内容刷盘之后,会将header中的记录个数更新并且刷盘.注意header不论大小都会占用一个sector的大小,因此可以独立刷新,不影响journal的内容.</p>
+<p>Sqlite默认是如下配置</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PRAGMA synchronous=FULL;</span><br></pre></td></tr></table></figure>
+<p>如果修改该配置的值为NORMAL以下,则Sqlite对journal的刷盘流程修改为只刷新一次.如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">write content -&gt; write header -&gt;flush</span><br></pre></td></tr></table></figure>
+<p>虽然header的写入仍然在content之后,但不保证操作系统实际刷新时可能会先刷新header,再刷新content.因此sqlite在每个rollback journal content的page内容之后附加了4字节的checksum.即rollback journal的格式如下</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">| header | pgno|page content|checksum|pano|page content|checksum|</span><br></pre></td></tr></table></figure>
+<p>rollback时会检查每个page content的checksum是否正确,如果不正确则放弃该次rollback.</p>
+<h4 id="cache-spill"><a href="#cache-spill" class="headerlink" title="cache spill"></a>cache spill</h4><p>当大量的更新导致用户空间的缓存不足以保存所有需要更新的page时会有cache spill的情况发生.<br>cache spill首先刷新journal file到磁盘,然后获取一个排他锁, 然后写入数据库更新.此时因为更新还没有全部完成,需要在追加一个header到journal file,循环执行如上三个步骤(第二步获取排他锁因为已经完成,实际上不需要再次获取),直到所有更新完成.因为cache spill会增加占用排他锁的时间并且会有更多的io,会严重影响性能.因此应该尽量避免cache spill</p>
+<h3 id="优化措施"><a href="#优化措施" class="headerlink" title="优化措施"></a>优化措施</h3><p>Sqlite耗时大部分在io上, 因此本节主要考虑如何在保证原子性的前提下能够降低io</p>
+<h4 id="事务之间的缓存保存"><a href="#事务之间的缓存保存" class="headerlink" title="事务之间的缓存保存"></a>事务之间的缓存保存</h4><p>上文也提到过,在数据库文件的database file第一个page的24-27字节有一个counter字段,每次数据库发生更改之后都会更新该字段.因此sqlite在一个事务执行完成需要释放锁时,会首先获取该字段的值,当下一个事务获取锁之后会比较之前缓存的counter值和当前的counter值,据此决定是否可以复用该缓存</p>
+<h4 id="排他性访问模式"><a href="#排他性访问模式" class="headerlink" title="排他性访问模式"></a>排他性访问模式</h4><p>适合于单进程访问的情况,不详述</p>
+<h4 id="freelist-page不写入journal"><a href="#freelist-page不写入journal" class="headerlink" title="freelist page不写入journal"></a>freelist page不写入journal</h4><p>当Sqlite删除一些数据后,只保存删除信息的page会放入freelist.后续的写入会首先从freelist中获取可用的page而不用增加数据库文件的大小</p>
+<p>Sqlite中的freelist有两种类型,trunk page和leaf page.leaf page不包含任何有用的信息.因此如果Sqlite的修改涉及到leaf page,leaf page不需要写入journal(因为leaf page中没有任何有用信息).该步能够降低io</p>
+<h4 id="单页修改以及原子性的sector写入"><a href="#单页修改以及原子性的sector写入" class="headerlink" title="单页修改以及原子性的sector写入"></a>单页修改以及原子性的sector写入</h4><p>如果一个磁盘支持ector的原子性写入并且page大小等于sector,并且一次修改只涉及到一个page.那么此时会直接写database file而不用journal.</p>
+<h4 id="safe-append"><a href="#safe-append" class="headerlink" title="safe append"></a>safe append</h4><p>如果一个磁盘支持safe append,那么journal file的header部分写入的page records数量永远为-1,不需要二次刷盘.实际记录由journal的size大小计算得出.并且发生cache spill时也不需要在与原来的journal后边追加header.直接追加content即可</p>
+<h4 id="持久化rollback-journal"><a href="#持久化rollback-journal" class="headerlink" title="持久化rollback journal"></a>持久化rollback journal</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PRAGMA journal_mode=PERSIST;</span><br></pre></td></tr></table></figure>
+<p>当配置此项之后,commit事务时不删除journal file,而是将journal file的header清0.该方法会节省如下几步:</p>
+<ul>
+<li>不需要更新inode中的journal file文件大小</li>
+<li>不需要处理释放后的磁盘空间</li>
+<li>下一个事务可以直接覆盖该journal file而不是创建或者追加文件内容,覆盖会比追加更快</li>
+<li>不需要更新包括该文件的目录信息</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PRAGMA journal_mode=TRUNCATE;</span><br></pre></td></tr></table></figure>
+<p>该模式会将一个文件大小truncate为0.由于不需要更新文件所属目录信息,因此truncate比delete要快.<br>但truncate比persist模式还是会慢,因为覆盖文件要比追加文件快.</p>
+<h3 id="测试Sqlite的原子性"><a href="#测试Sqlite的原子性" class="headerlink" title="测试Sqlite的原子性"></a>测试Sqlite的原子性</h3><p>因为Sqlite开发者使用了大量的自动化的密集的’crash tests’模拟Sqlite在掉电或者系统crash时后的恢复情况,所以对Sqlite的可靠性很有信心.</p>
+<p>Sqlite的’crash tests’使用一个修改过的vfs模拟系统crash或者掉电后的文件系统损坏.例如sector只写了一部分,写操作未完成导致pages中有垃圾信息,写操作乱序等等不同的节点.通过模拟不同的场景一遍遍测试Sqlite事务,验证其最终是否能够保持原子性.</p>
+<p>‘crash tests’已经发现了许多Sqlite恢复机制中的微妙的bug(都已经修复),这些bug光靠代码分析和审查是很难发现的.(总之是Sqlite开发者对Sqlite的原子性保证很有信心)</p>
+<h3 id="可能发生问题的一些情况"><a href="#可能发生问题的一些情况" class="headerlink" title="可能发生问题的一些情况"></a>可能发生问题的一些情况</h3><h4 id="锁的实现"><a href="#锁的实现" class="headerlink" title="锁的实现"></a>锁的实现</h4><p>Sqlite使用文件系统锁去保证同时只有一个进程或者连接操作数据库文件.文件系统锁在VFS层实现并且不同的操作系统有不同的实现方法.如果文件系统锁实现的有问题导致同时有多个进程或连接修改同一个数据库文件就会发生严重的损坏.</p>
+<p>….(举例说明NFS这种网络文件系统就可能会导致发生损坏)</p>
+<h4 id="刷盘的实现"><a href="#刷盘的实现" class="headerlink" title="刷盘的实现"></a>刷盘的实现</h4><p>Sqlite在Unix使用fsync,windows使用FlushFileBuffers去刷盘,但是这两个函数在许多系统上可能并不可靠.例如我们收到反馈说Windows可以使用注册表禁用禁用掉FlushFileBuffers,一些老的Linux版本的fsync在有些文件系统下不执行任何操作.即使fsync和FlushFileBuffers能够正常工作,一些IDE磁盘执行之后也只是把数据保存在控制器缓存中而不是真正落盘.</p>
+<p>….(Mac相关的配置…)</p>
+<h4 id="文件删除操作不保证原子性"><a href="#文件删除操作不保证原子性" class="headerlink" title="文件删除操作不保证原子性"></a>文件删除操作不保证原子性</h4><p>文件删除操作从应用视角看需要保持原子性,即删除部分数据后掉电的话应用要么完全看不到该文件要么需要看到一个完整的文件,不能只看到删了部分的文件(rollback journal如果只删了一半,会执行恢复操作,但是因为journal已经不完整了,恢复的数据也会不完整)</p>
+<h4 id="文件中有垃圾数据"><a href="#文件中有垃圾数据" class="headerlink" title="文件中有垃圾数据"></a>文件中有垃圾数据</h4><p>Sqlite的数据库文件就是一个普通的磁盘文件,如果文件中被其他进程写入垃圾数据,或者其他原因导致垃圾数据产生,会导致数据库文件不可用</p>
+<h4 id="删除或者重命名一个journal-file"><a href="#删除或者重命名一个journal-file" class="headerlink" title="删除或者重命名一个journal file"></a>删除或者重命名一个journal file</h4><p>journal file和数据库文件的命名有一定的关系,如果数据库文件或者journal file的名字被修改了,会导致没法roll back.</p>
+<p>(举了一些可能的例子….)<br>Sqlite将journal file刷盘的同时也会刷新journal file所在的目录,以免修改名称然后掉电导致重启后找不到该文件…</p>
+<h3 id="未来的一些方向和结论"><a href="#未来的一些方向和结论" class="headerlink" title="未来的一些方向和结论"></a>未来的一些方向和结论</h3><p>虽然Sqlite保证原子性的这个机制bug越来越少,但最好还是保持警惕,发现问题后Sqlite开发者会尽快修改.</p>
+<p>Sqlite开发者也在尽量优化提交过程.现在Sqlite都会对操作系统的VFS实现做一些悲观的假设,然后从Sqlite层面去保证正确性.例如现今许多现代的操作系统都能保证safe append和原子性的sector write,但这些功能必须很确定之后, 我们才会从Sqlite层面减少对这些功能做的一些正确性保证.</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Sqlite/" rel="tag"># Sqlite</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/02/13/Redis%E4%B8%AD%E6%9F%A5%E6%89%BE%E5%A4%A7key/" rel="next" title="Redis中查找大key">
+                <i class="fa fa-chevron-left"></i> Redis中查找大key
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/04/15/Redis%E7%9A%84%E4%B8%80%E4%B8%AA%E5%8E%86%E5%8F%B2bug%E5%8F%8A%E5%85%B6%E5%90%8E%E7%BB%AD%E6%94%B9%E8%BF%9B/" rel="prev" title="Redis的一个历史bug及其后续改进">
+                Redis的一个历史bug及其后续改进 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
 
     <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+          </div>
+          
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7"><span class="nav-number">1.</span> <span class="nav-text">Sqlite如何实现ACID中的原子性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AE%80%E4%BB%8B"><span class="nav-number">1.1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Sqlite%E5%AE%9E%E7%8E%B0%E4%B8%AD%E5%AF%B9%E7%A1%AC%E4%BB%B6%E7%9A%84%E4%B8%80%E4%BA%9B%E5%81%87%E8%AE%BE"><span class="nav-number">1.2.</span> <span class="nav-text">Sqlite实现中对硬件的一些假设</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%95%E6%96%87%E4%BB%B6%E7%9A%84%E6%8F%90%E4%BA%A4"><span class="nav-number">1.3.</span> <span class="nav-text">单文件的提交</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E7%8A%B6%E6%80%81"><span class="nav-number">1.3.1.</span> <span class="nav-text">初始状态</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E4%B8%80%E4%B8%AA%E8%AF%BB%E9%94%81"><span class="nav-number">1.3.2.</span> <span class="nav-text">获取一个读锁</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%8E%E6%95%B0%E6%8D%AE%E5%BA%93%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96%E4%BF%A1%E6%81%AF"><span class="nav-number">1.3.3.</span> <span class="nav-text">从数据库文件读取信息</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E4%B8%80%E4%B8%AAreserved-lock"><span class="nav-number">1.3.4.</span> <span class="nav-text">获取一个reserved lock</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9B%E5%BB%BArollback-journal-file"><span class="nav-number">1.3.5.</span> <span class="nav-text">创建rollback journal file</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9C%A8%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%BA%93%E6%96%87%E4%BB%B6"><span class="nav-number">1.3.6.</span> <span class="nav-text">在用户空间修改数据库文件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%B0%86rollback-journal%E8%90%BD%E7%9B%98"><span class="nav-number">1.3.7.</span> <span class="nav-text">将rollback journal落盘</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E6%8E%92%E4%BB%96%E9%94%81"><span class="nav-number">1.3.8.</span> <span class="nav-text">获取排他锁</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%99%E5%85%A5%E6%95%B0%E6%8D%AE%E5%BA%93%E6%96%87%E4%BB%B6"><span class="nav-number">1.3.9.</span> <span class="nav-text">写入数据库文件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E6%96%87%E4%BB%B6%E5%88%B7%E7%9B%98"><span class="nav-number">1.3.10.</span> <span class="nav-text">数据库文件刷盘</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%A0%E9%99%A4rollback-journal"><span class="nav-number">1.3.11.</span> <span class="nav-text">删除rollback journal</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%87%8A%E6%94%BE%E9%94%81"><span class="nav-number">1.3.12.</span> <span class="nav-text">释放锁</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9B%9E%E6%BB%9A"><span class="nav-number">1.4.</span> <span class="nav-text">回滚</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BA%E9%94%99%E6%97%B6"><span class="nav-number">1.4.1.</span> <span class="nav-text">出错时</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#hot-rollback-journal"><span class="nav-number">1.4.2.</span> <span class="nav-text">hot rollback journal</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E6%8E%92%E4%BB%96%E9%94%81-1"><span class="nav-number">1.4.3.</span> <span class="nav-text">获取排他锁</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%9E%E6%BB%9A-1"><span class="nav-number">1.4.4.</span> <span class="nav-text">回滚</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%A0%E9%99%A4hot-journal"><span class="nav-number">1.4.5.</span> <span class="nav-text">删除hot journal</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%BB%A7%E7%BB%AD%E8%AF%BB%E5%8F%96"><span class="nav-number">1.4.6.</span> <span class="nav-text">继续读取</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E6%96%87%E4%BB%B6%E4%BA%8B%E5%8A%A1"><span class="nav-number">1.5.</span> <span class="nav-text">多文件事务</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%AF%8F%E4%B8%AA%E6%96%87%E4%BB%B6%E9%83%BD%E6%9C%89%E5%8D%95%E7%8B%AC%E7%9A%84rollback-journal"><span class="nav-number">1.5.1.</span> <span class="nav-text">每个文件都有单独的rollback journal</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#master-journal-file"><span class="nav-number">1.5.2.</span> <span class="nav-text">master journal file</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0rollback-journal%E7%9A%84header"><span class="nav-number">1.5.3.</span> <span class="nav-text">更新rollback journal的header</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%BA%93%E6%96%87%E4%BB%B6"><span class="nav-number">1.5.4.</span> <span class="nav-text">更新数据库文件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%A0%E9%99%A4master-journal-file"><span class="nav-number">1.5.5.</span> <span class="nav-text">删除master journal file</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%B8%85%E9%99%A4rollback-journal-file"><span class="nav-number">1.5.6.</span> <span class="nav-text">清除rollback journal file</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E4%BB%96commit%E6%97%B6%E7%9A%84%E7%BB%86%E8%8A%82"><span class="nav-number">1.6.</span> <span class="nav-text">其他commit时的细节</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#page%E5%92%8Csector"><span class="nav-number">1.6.1.</span> <span class="nav-text">page和sector</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%84%E7%90%86journal%E4%B8%AD%E7%9A%84%E5%9E%83%E5%9C%BE%E5%86%85%E5%AE%B9"><span class="nav-number">1.6.2.</span> <span class="nav-text">处理journal中的垃圾内容</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#cache-spill"><span class="nav-number">1.6.3.</span> <span class="nav-text">cache spill</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BC%98%E5%8C%96%E6%8E%AA%E6%96%BD"><span class="nav-number">1.7.</span> <span class="nav-text">优化措施</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E4%B9%8B%E9%97%B4%E7%9A%84%E7%BC%93%E5%AD%98%E4%BF%9D%E5%AD%98"><span class="nav-number">1.7.1.</span> <span class="nav-text">事务之间的缓存保存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8E%92%E4%BB%96%E6%80%A7%E8%AE%BF%E9%97%AE%E6%A8%A1%E5%BC%8F"><span class="nav-number">1.7.2.</span> <span class="nav-text">排他性访问模式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#freelist-page%E4%B8%8D%E5%86%99%E5%85%A5journal"><span class="nav-number">1.7.3.</span> <span class="nav-text">freelist page不写入journal</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8D%95%E9%A1%B5%E4%BF%AE%E6%94%B9%E4%BB%A5%E5%8F%8A%E5%8E%9F%E5%AD%90%E6%80%A7%E7%9A%84sector%E5%86%99%E5%85%A5"><span class="nav-number">1.7.4.</span> <span class="nav-text">单页修改以及原子性的sector写入</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#safe-append"><span class="nav-number">1.7.5.</span> <span class="nav-text">safe append</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8C%81%E4%B9%85%E5%8C%96rollback-journal"><span class="nav-number">1.7.6.</span> <span class="nav-text">持久化rollback journal</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95Sqlite%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7"><span class="nav-number">1.8.</span> <span class="nav-text">测试Sqlite的原子性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%AF%E8%83%BD%E5%8F%91%E7%94%9F%E9%97%AE%E9%A2%98%E7%9A%84%E4%B8%80%E4%BA%9B%E6%83%85%E5%86%B5"><span class="nav-number">1.9.</span> <span class="nav-text">可能发生问题的一些情况</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%94%81%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.9.1.</span> <span class="nav-text">锁的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%B7%E7%9B%98%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.9.2.</span> <span class="nav-text">刷盘的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E5%88%A0%E9%99%A4%E6%93%8D%E4%BD%9C%E4%B8%8D%E4%BF%9D%E8%AF%81%E5%8E%9F%E5%AD%90%E6%80%A7"><span class="nav-number">1.9.3.</span> <span class="nav-text">文件删除操作不保证原子性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E4%B8%AD%E6%9C%89%E5%9E%83%E5%9C%BE%E6%95%B0%E6%8D%AE"><span class="nav-number">1.9.4.</span> <span class="nav-text">文件中有垃圾数据</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E6%88%96%E8%80%85%E9%87%8D%E5%91%BD%E5%90%8D%E4%B8%80%E4%B8%AAjournal-file"><span class="nav-number">1.9.5.</span> <span class="nav-text">删除或者重命名一个journal file</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%AA%E6%9D%A5%E7%9A%84%E4%B8%80%E4%BA%9B%E6%96%B9%E5%90%91%E5%92%8C%E7%BB%93%E8%AE%BA"><span class="nav-number">1.10.</span> <span class="nav-text">未来的一些方向和结论</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

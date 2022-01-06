@@ -1,37 +1,864 @@
-{% extends '_layout.swig' %}
-{% import '_macro/post.swig' as post_template %}
-{% import '_macro/sidebar.swig' as sidebar_template %}
+<!DOCTYPE html>
 
 
-{% block title %}{{ page.title }} | {{ config.title }}{% endblock %}
 
-{% block page_class %}page-post-detail{% endblock %}
+  
 
 
-{% block content %}
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Redis,CRDT," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="CRDTCAP理论证明三者之间不可能同时完全满足,如果分布式数据库必须满足P-分区容忍性,CA只能占其一.A是可用性,C是一致性.CRDT(Conflict-Free Replicated Data Type)能根据一定的规则自动合并,解决冲突,达到最终一致的状态.即可以满足AP,但会保证最终是一致的.参考链接1有详细的CRDT介绍,链接2是Redis lab基于CRDT实现的分布式数据库系统,链">
+<meta property="og:type" content="article">
+<meta property="og:title" content="基于Redis与CRDT的分布式数据库">
+<meta property="og:url" content="https://erpeng.github.io/2019/12/04/redis-crdt/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="CRDTCAP理论证明三者之间不可能同时完全满足,如果分布式数据库必须满足P-分区容忍性,CA只能占其一.A是可用性,C是一致性.CRDT(Conflict-Free Replicated Data Type)能根据一定的规则自动合并,解决冲突,达到最终一致的状态.即可以满足AP,但会保证最终是一致的.参考链接1有详细的CRDT介绍,链接2是Redis lab基于CRDT实现的分布式数据库系统,链">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/Roshi.png">
+<meta property="article:published_time" content="2019-12-03T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-01-13T02:55:38.379Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="Redis">
+<meta property="article:tag" content="CRDT">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/Roshi.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/12/04/redis-crdt/"/>
+
+
+
+
+
+  <title>基于Redis与CRDT的分布式数据库 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
 
   <div id="posts" class="posts-expand">
-    {{ post_template.render(page) }}
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/12/04/redis-crdt/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">基于Redis与CRDT的分布式数据库</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-12-04T00:00:00+08:00">
+                2019-12-04
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/12/04/redis-crdt/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/12/04/redis-crdt/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="CRDT"><a href="#CRDT" class="headerlink" title="CRDT"></a>CRDT</h2><p>CAP理论证明三者之间不可能同时完全满足,如果分布式数据库必须满足P-分区容忍性,CA只能占其一.A是可用性,C是一致性.<br>CRDT(Conflict-Free Replicated Data Type)能根据一定的规则自动合并,解决冲突,达到最终一致的状态.即可以满足AP,但会保证最终是一致的.<br>参考链接1有详细的CRDT介绍,链接2是Redis lab基于CRDT实现的分布式数据库系统,链接3介绍Roshi,也是一个基于CRDT的开源分布式数据库,本文重点关注Roshi</p>
+<h2 id="Roshi起源"><a href="#Roshi起源" class="headerlink" title="Roshi起源"></a>Roshi起源</h2><p>SoundCloud公司(类似于喜马拉雅),会有大V和粉丝人群,如果一个大V发布一条音频,那么有如下两种方式发布给粉丝:</p>
+<ul>
+<li>Fan out on write:每个粉丝有一个收件箱,将该信息放入所有粉丝的收件箱.很明显,这样有利于粉丝的读取,但是会有大量的写和冗余数据.</li>
+<li>Fan in on read:将信息放入大V的发件箱,当粉丝查看的时候从所有该用户关注的大V信箱拉取信息并且合并展示.这种方法不利于读取,如果有大量的关注,那么得从大量的发件箱去拉取数据.但是由于数据冗余很小,可以考虑将数据放入内存,例如Redis.那么Redis如何实现为一个分布式数据库就提上了日程</li>
+</ul>
+<h2 id="Roshi实现"><a href="#Roshi实现" class="headerlink" title="Roshi实现"></a>Roshi实现</h2><p>Roshi,一个分布式时间序列的数据库.底层使用Redis ZSET存储数据(模拟每个人的发件箱).整体架构如下:</p>
+<p><img src="/img/Roshi.png" alt="Roshi"></p>
+<ul>
+<li>Pool:基于key的sharding</li>
+<li>cluster:实现Insert/Select/Delete API</li>
+<li>farm:Writes发往所有的clusters,可以配置quorum,大于等于该quorum返回成功.Read有不同的策略,生产上使用的读策略最好允许read-repair(下文介绍)</li>
+<li>roshi-server:给farm提供rest http 接口.无状态并且兼容12-factor</li>
+<li>roshi-walker:扫键以便触发read repairs</li>
+</ul>
+<h3 id="API"><a href="#API" class="headerlink" title="API"></a>API</h3><ul>
+<li>Insert(key, timestamp, value)</li>
+<li>Delete(key, timestamp, value)</li>
+<li>Select(key, offset, limit) []TimestampValue</li>
+</ul>
+<p>select的offset,limit用于分页获取</p>
+<h3 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h3><p>CRDT需要满足交换律、结合律以及幂等性,Roshi实现的是LWW-element-set,即 Last Writer Wins element set.满足以下两个条件:</p>
+<ul>
+<li>如果一个元素最近一次操作是add,那么它肯定在集合中</li>
+<li>如果一个元素最近一次操作是remove,那么它肯定不在集合中</li>
+</ul>
+<p>具体实现原理为:集合痛殴两个集合A和R表示,A为add set,R为remove set,增加元素时增加一个tuple例如(e,timestamp)到A中,删除一个元素时增加一个tuple例如(e,timestamp2)到R中.那么检查一个元素e是否在集合S中,即需要查看e是否在A中,并且在R中没有大于A中时间戳的e存在</p>
+<p>Roshi中操作如下,三列分别代表原始状态,操作,最终状态</p>
+<table>
+<thead>
+<tr>
+<th>Original state</th>
+<th>Operation</th>
+<th>Resulting state</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A(a,1) R()</td>
+<td>add(a,0)</td>
+<td>A(a,1) R()</td>
+</tr>
+<tr>
+<td>A(a,1) R()</td>
+<td>add(a,1)</td>
+<td>A(a,1) R()</td>
+</tr>
+<tr>
+<td>A(a,1) R()</td>
+<td>add(a,2)</td>
+<td>A(a,2) R()</td>
+</tr>
+<tr>
+<td>A(a,1) R()</td>
+<td>remove(a,0)</td>
+<td>A(a,1) R()</td>
+</tr>
+<tr>
+<td>A(a,1) R()</td>
+<td>remove(a,1)</td>
+<td>A(a,1) R()</td>
+</tr>
+<tr>
+<td>A(a,1) R()</td>
+<td>remove(a,2)</td>
+<td>A() R(a,2)</td>
+</tr>
+<tr>
+<td>A() R(a,1)</td>
+<td>add(a,0)</td>
+<td>A() R(a,1)</td>
+</tr>
+<tr>
+<td>A() R(a,1)</td>
+<td>add(a,1)</td>
+<td>A() R(a,1)</td>
+</tr>
+<tr>
+<td>A() R(a,1)</td>
+<td>add(a,2)</td>
+<td>A(a,2) R()</td>
+</tr>
+<tr>
+<td>A() R(a,1)</td>
+<td>remove(a,0)</td>
+<td>A() R(a,1)</td>
+</tr>
+<tr>
+<td>A() R(a,1)</td>
+<td>remove(a,1)</td>
+<td>A() R(a,1)</td>
+</tr>
+<tr>
+<td>A() R(a,1)</td>
+<td>remove(a,2)</td>
+<td>A() R(a,2)</td>
+</tr>
+</tbody></table>
+<h2 id="其他实现"><a href="#其他实现" class="headerlink" title="其他实现"></a>其他实现</h2><p>Redis lab的商业版实现包括了更多的类型,包括register(string),counter等等.并且实现CRDT的方式也略有不同.详情可参考后文链接.</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://juejin.im/entry/5b922d336fb9a05ce7513cff">https://juejin.im/entry/5b922d336fb9a05ce7513cff</a></li>
+<li><a target="_blank" rel="noopener" href="https://redislabs.com/redis-enterprise/technology/active-active-geo-distribution/">https://redislabs.com/redis-enterprise/technology/active-active-geo-distribution/</a></li>
+<li><a target="_blank" rel="noopener" href="https://developers.soundcloud.com/blog/roshi-a-crdt-system-for-timestamped-events">https://developers.soundcloud.com/blog/roshi-a-crdt-system-for-timestamped-events</a></li>
+<li><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/CAP_theorem">https://en.wikipedia.org/wiki/CAP_theorem</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/soundcloud/roshi">https://github.com/soundcloud/roshi</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Redis/" rel="tag"># Redis</a>
+          
+            <a href="/tags/CRDT/" rel="tag"># CRDT</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/11/24/lua-c-api2/" rel="next" title="c和lua-2">
+                <i class="fa fa-chevron-left"></i> c和lua-2
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/01/16/go-gin/" rel="prev" title="gin框架分析">
+                gin框架分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
 
     <div class="post-spread">
-      {% if theme.jiathis %}
-        {% include '_partials/share/jiathis.swig' %}
-      {% elseif theme.baidushare %}
-        {% include '_partials/share/baidushare.swig' %}
-      {% elseif theme.add_this_id %}
-        {% include '_partials/share/add-this.swig' %}
-      {% elseif theme.duoshuo_shortname and theme.duoshuo_share %}
-        {% include '_partials/share/duoshuo_share.swig' %}
-      {% endif %}
+      
     </div>
   </div>
 
-{% endblock %}
 
-{% block sidebar %}
-  {{ sidebar_template.render(true) }}
-{% endblock %}
+          </div>
+          
 
-{% block script_extra %}
-  {% include '_scripts/pages/post-details.swig' %}
-{% endblock %}
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#CRDT"><span class="nav-number">1.</span> <span class="nav-text">CRDT</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Roshi%E8%B5%B7%E6%BA%90"><span class="nav-number">2.</span> <span class="nav-text">Roshi起源</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Roshi%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">Roshi实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#API"><span class="nav-number">3.1.</span> <span class="nav-text">API</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">3.2.</span> <span class="nav-text">数据结构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E5%AE%9E%E7%8E%B0"><span class="nav-number">4.</span> <span class="nav-text">其他实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">5.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
