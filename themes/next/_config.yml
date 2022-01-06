@@ -384,8 +384,8 @@ valine:
   notify: false # mail notifier , https://github.com/xCss/Valine/wiki
   verify: false # Verification code
   placeholder: 请在此输入您的留言 # 默认留言框内的文字
-  avatar: mm # gravatar style
-  guest_info: nick,mail,link # custom comment header
+  avatar: identicon # gravatar style
+  guest_info: mail # custom comment header
   pageSize: 10 # pagination size
 
 
