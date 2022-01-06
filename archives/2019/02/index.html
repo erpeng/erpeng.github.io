@@ -577,7 +577,7 @@
   
   <script type="text/javascript">
     var GUEST = ['nick','mail','link'];
-    var guest = 'nick,mail,link';
+    var guest = 'mail';
     guest = guest.split(',').filter(item=>{
       return GUEST.indexOf(item)>-1;
     });
@@ -588,7 +588,7 @@
         appId: 'fGrp5ezQvYAyfB3iLgaod86F-gzGzoHsz',
         appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
         placeholder: '请在此输入您的留言',
-        avatar:'mm',
+        avatar:'identicon',
         guest_info:guest,
         pageSize:'10' || 10,
     });
