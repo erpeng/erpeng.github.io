@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="go,c++,c,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="go如何调用c和c++.主要参考:https://chai2010.cn/advanced-go-programming-book/ch2-cgo/readme.html  语法1234567891011121314package rand/*#include &amp;lt;stdlib.h&amp;gt;*/import &amp;quot;C&amp;quot;func Random() int &amp;#123;    re">
+<meta name="keywords" content="go,c++,c">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cgo使用笔记">
+<meta property="og:url" content="https://erpeng.github.io/2019/09/29/cgo/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="go如何调用c和c++.主要参考:https://chai2010.cn/advanced-go-programming-book/ch2-cgo/readme.html  语法1234567891011121314package rand/*#include &amp;lt;stdlib.h&amp;gt;*/import &amp;quot;C&amp;quot;func Random() int &amp;#123;    re">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-09-29T09:46:47.360Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="cgo使用笔记">
+<meta name="twitter:description" content="go如何调用c和c++.主要参考:https://chai2010.cn/advanced-go-programming-book/ch2-cgo/readme.html  语法1234567891011121314package rand/*#include &amp;lt;stdlib.h&amp;gt;*/import &amp;quot;C&amp;quot;func Random() int &amp;#123;    re">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/09/29/cgo/">
+
+
+
+
+
+  <title>cgo使用笔记 | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/09/29/cgo/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">cgo使用笔记</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-09-29T00:00:00+08:00">
+                2019-09-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/09/29/cgo/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/09/29/cgo/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>go如何调用c和c++.主要参考:<a href="https://chai2010.cn/advanced-go-programming-book/ch2-cgo/readme.html" target="_blank" rel="noopener">https://chai2010.cn/advanced-go-programming-book/ch2-cgo/readme.html</a></p>
+</blockquote>
+<h2 id="语法"><a href="#语法" class="headerlink" title="语法"></a>语法</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">package rand</span><br><span class="line"></span><br><span class="line">/*</span><br><span class="line">#include &lt;stdlib.h&gt;</span><br><span class="line">*/</span><br><span class="line">import &quot;C&quot;</span><br><span class="line"></span><br><span class="line">func Random() int &#123;</span><br><span class="line">    return int(C.random())</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func Seed(i int) &#123;</span><br><span class="line">    C.srandom(C.uint(i))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>几个关键点:</p>
+<ul>
+<li>import “C” C是一个伪包,代表C代码部分的命名空间.</li>
+<li><p>注释部分的include &lt;stdlib.h&gt;编译c代码部分时会作为文件头,此部分可以为任意的c代码.注释类型的还有 #cgo指令,可以指定编译链接的一些选项.例如:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// #cgo CFLAGS: -DPNG_DEBUG=1 -I./include</span><br><span class="line">// #cgo LDFLAGS: -L/usr/local/lib -lpng</span><br><span class="line">// #include &lt;png.h&gt;</span><br><span class="line">import &quot;C&quot;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>注意Random部分需要将返回值从C.random()的long类型转换为go可以使用的int类型 </p>
+</li>
+</ul>
+<h2 id="调用c"><a href="#调用c" class="headerlink" title="调用c++"></a>调用c++</h2><p>hello.h<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">// hello.h</span><br><span class="line">void SayHello(const char* s);</span><br></pre></td></tr></table></figure></p>
+<p>hello.cpp<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;iostream&gt;</span><br><span class="line"></span><br><span class="line">extern &quot;C&quot; &#123;</span><br><span class="line">    #include &quot;hello.h&quot;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void SayHello(const char* s) &#123;</span><br><span class="line">    std::cout &lt;&lt; &quot;From C++:&quot;;</span><br><span class="line">    std::cout &lt;&lt; s;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>hello.go<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">// hello.go</span><br><span class="line">package main</span><br><span class="line"></span><br><span class="line">//#include &lt;hello.h&gt;</span><br><span class="line">import &quot;C&quot;</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">    C.SayHello(C.CString(&quot;Hello, World\n&quot;))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>运行:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@zhangshihua003 e2]# go build .</span><br><span class="line">[root@zhangshihua003 e2]# ls</span><br><span class="line">e2  hello.cpp  hello.go  hello.h</span><br><span class="line">[root@zhangshihua003 e2]# ./e2</span><br><span class="line">From C++:Hello, World</span><br></pre></td></tr></table></figure></p>
+<h2 id="类型转换"><a href="#类型转换" class="headerlink" title="类型转换"></a>类型转换</h2><p>参考<a href="https://chai2010.cn/advanced-go-programming-book/ch2-cgo/ch2-03-cgo-types.html" target="_blank" rel="noopener">https://chai2010.cn/advanced-go-programming-book/ch2-cgo/ch2-03-cgo-types.html</a><br>即c语言空间和go语言空间的类型转换</p>
+<h2 id="C调用Go函数"><a href="#C调用Go函数" class="headerlink" title="C调用Go函数"></a>C调用Go函数</h2><p>设想一种情况,c函数中的参数为一个回调函数.如果该函数使用go语言编写,那么显然cgo需要支持c语言调用go函数</p>
+<p>hello.h<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">// hello.h</span><br><span class="line">void SayHello(const char* s);</span><br></pre></td></tr></table></figure></p>
+<p>hello.go<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">import &quot;C&quot;</span><br><span class="line"></span><br><span class="line">import &quot;fmt&quot;</span><br><span class="line"></span><br><span class="line">//export SayHello</span><br><span class="line">func SayHello(s *C.char) &#123;</span><br><span class="line">    fmt.Print(&quot;From Go:&quot;+C.GoString(s))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>注意//export SayHello该条语句,会导出一个go函数SayHello</p>
+<p>hello1.go<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">//#include &lt;hello.h&gt;</span><br><span class="line">import &quot;C&quot;</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">    C.SayHello(C.CString(&quot;Hello, World\n&quot;))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>运行:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@zhangshihua003 e3]# ls</span><br><span class="line">e3  hello.go  hello.h  hello1.go</span><br><span class="line">[root@zhangshihua003 e3]# ./e3</span><br><span class="line">From Go:Hello, World</span><br></pre></td></tr></table></figure>
+<h2 id="go调用动态库"><a href="#go调用动态库" class="headerlink" title="go调用动态库"></a>go调用动态库</h2><p>hello.h<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">// hello.h</span><br><span class="line">void SayHello(const char* s);</span><br></pre></td></tr></table></figure></p>
+<p>hello.c<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">// hello.c</span><br><span class="line"></span><br><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &quot;hello.h&quot;</span><br><span class="line"></span><br><span class="line">void SayHello(const char* s) &#123;</span><br><span class="line">    printf(&quot;From C:&quot;);</span><br><span class="line">    puts(s);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>生成动态库<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -shared -o libhello.so -fPIC hello.c</span><br></pre></td></tr></table></figure></p>
+<p>调用动态库<br>hello.go<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">// #cgo CFLAGS: -I.</span><br><span class="line">// #cgo LDFLAGS: -L$&#123;SRCDIR&#125; -lhello</span><br><span class="line">// #include &quot;hello.h&quot;</span><br><span class="line">import &quot;C&quot;</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">    C.SayHello(C.CString(&quot;Hello, World\n&quot;))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>执行:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@zhangshihua003 e5]# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.</span><br><span class="line">[root@zhangshihua003 e5]# go build .</span><br><span class="line">[root@zhangshihua003 e5]# ./e5</span><br><span class="line">From C:Hello, World</span><br></pre></td></tr></table></figure></p>
+<h2 id="参考连接"><a href="#参考连接" class="headerlink" title="参考连接"></a>参考连接</h2><ul>
+<li><a href="https://chai2010.cn/advanced-go-programming-book/ch2-cgo/ch2-01-hello-cgo.html" target="_blank" rel="noopener">https://chai2010.cn/advanced-go-programming-book/ch2-cgo/ch2-01-hello-cgo.html</a></li>
+<li><a href="https://golang.org/cmd/cgo/" target="_blank" rel="noopener">https://golang.org/cmd/cgo/</a></li>
+<li><a href="https://blog.golang.org/c-go-cgo" target="_blank" rel="noopener">https://blog.golang.org/c-go-cgo</a></li>
+<li><a href="https://golang.org/src/runtime/cgocall.go" target="_blank" rel="noopener">https://golang.org/src/runtime/cgocall.go</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/go/" rel="tag"># go</a>
+          
+            <a href="/tags/c/" rel="tag"># c++</a>
+          
+            <a href="/tags/c/" rel="tag"># c</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/09/21/Go-graceful-restart/" rel="next" title="GO程序平滑升级">
+                <i class="fa fa-chevron-left"></i> GO程序平滑升级
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/10/11/swig/" rel="prev" title="swig使用-go调用c++">
+                swig使用-go调用c++ <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#语法"><span class="nav-number">1.</span> <span class="nav-text">语法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#调用c"><span class="nav-number">2.</span> <span class="nav-text">调用c++</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#类型转换"><span class="nav-number">3.</span> <span class="nav-text">类型转换</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#C调用Go函数"><span class="nav-number">4.</span> <span class="nav-text">C调用Go函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#go调用动态库"><span class="nav-number">5.</span> <span class="nav-text">go调用动态库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考连接"><span class="nav-number">6.</span> <span class="nav-text">参考连接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="KNwfpTSddWcU5WANVkfl4KURyWDdKayHnDyK3KldRXk">
+
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="ivlU2dwGne">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="c,lua,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="An Overview of the C API C API既可以将lua作为library供c代码调用,也可以将c代码作为libraray供lua调用 c 和 lua之间通过一个virtual stack交流.所有的数据交换和API调用都发生在stack,stack上也可以保存一些中间变量.该stack主要解决c和lua之间的两个问题: lua是garbage collected,c需要显示的d">
+<meta name="keywords" content="c,lua">
+<meta property="og:type" content="article">
+<meta property="og:title" content="c和lua">
+<meta property="og:url" content="https://erpeng.github.io/2019/11/19/lua-c-api/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="An Overview of the C API C API既可以将lua作为library供c代码调用,也可以将c代码作为libraray供lua调用 c 和 lua之间通过一个virtual stack交流.所有的数据交换和API调用都发生在stack,stack上也可以保存一些中间变量.该stack主要解决c和lua之间的两个问题: lua是garbage collected,c需要显示的d">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-11-21T13:03:54.669Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="c和lua">
+<meta name="twitter:description" content="An Overview of the C API C API既可以将lua作为library供c代码调用,也可以将c代码作为libraray供lua调用 c 和 lua之间通过一个virtual stack交流.所有的数据交换和API调用都发生在stack,stack上也可以保存一些中间变量.该stack主要解决c和lua之间的两个问题: lua是garbage collected,c需要显示的d">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2019/11/19/lua-c-api/">
+
+
+
+
+
+  <title>c和lua | erpeng's code area</title>
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-134622925-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?ac985f15fdb83e931a8de1dbcfe7a366";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/11/19/lua-c-api/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="erpeng">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">c和lua</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-11-19T00:00:00+08:00">
+                2019-11-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/11/19/lua-c-api/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/11/19/lua-c-api/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="An-Overview-of-the-C-API"><a href="#An-Overview-of-the-C-API" class="headerlink" title="An Overview of the C API"></a>An Overview of the C API</h2><ul>
+<li>C API既可以将lua作为library供c代码调用,也可以将c代码作为libraray供lua调用</li>
+<li>c 和 lua之间通过一个virtual stack交流.所有的数据交换和API调用都发生在stack,stack上也可以保存一些中间变量.该stack主要解决c和lua之间的两个问题:<ul>
+<li>lua是garbage collected,c需要显示的deallocation</li>
+<li>lua是dynamic typing而c是static typing</li>
+</ul>
+</li>
+</ul>
+<h2 id="lua-interpreter"><a href="#lua-interpreter" class="headerlink" title="lua interpreter"></a>lua interpreter</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &lt;string.h&gt;</span><br><span class="line">#include &lt;lua.h&gt;</span><br><span class="line">#include &lt;lauxlib.h&gt;</span><br><span class="line">#include &lt;lualib.h&gt;</span><br><span class="line"></span><br><span class="line">int main (void) &#123;</span><br><span class="line">  char buff[256];</span><br><span class="line">  int error;</span><br><span class="line">  lua_State *L = lua_open();   /* opens Lua */</span><br><span class="line">  luaopen_base(L);             /* opens the basic library */</span><br><span class="line">  luaopen_table(L);            /* opens the table library */</span><br><span class="line">  luaopen_io(L);               /* opens the I/O library */</span><br><span class="line">  luaopen_string(L);           /* opens the string lib. */</span><br><span class="line">  luaopen_math(L);             /* opens the math lib. */</span><br><span class="line"></span><br><span class="line">  while (fgets(buff, sizeof(buff), stdin) != NULL) &#123;</span><br><span class="line">    error = luaL_loadbuffer(L, buff, strlen(buff), &quot;line&quot;) ||</span><br><span class="line">            lua_pcall(L, 0, 0, 0);</span><br><span class="line">    if (error) &#123;</span><br><span class="line">      fprintf(stderr, &quot;%s&quot;, lua_tostring(L, -1));</span><br><span class="line">      lua_pop(L, 1);  /* pop error message from the stack */</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  lua_close(L);</span><br><span class="line">  return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>lua.h 定义lua的basic functions,所有函数以lua_开头</li>
+<li>lauxlib.h定义auxlib.以luaL_开头,使用basic function定义一些更高层级抽象的函数</li>
+<li>lua_open打开一个fresh environment,没有任何预定义的函数.所有的标准库通过lualib.h定义的函数去加载</li>
+<li>luaL_loadbuffer编译lua代码,没有任何错误的话返回0并且将其放入stack,lua_pcall弹出该代码然后运行.如果有错误,会将错误押入stack,lua_tostring和lua_pop操作并弹出错误</li>
+</ul>
+<h2 id="The-Stack"><a href="#The-Stack" class="headerlink" title="The Stack"></a>The Stack</h2><p>lua代码<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">a[k] = v</span><br></pre></td></tr></table></figure></p>
+<p>a,k,v的类型都不确定.如果在C中按所有类型都写一遍settable会造成组合爆炸,当然,可以定义一个union例如lua_Value,写为如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">void lua_settable (lua_Value a, lua_Value k, lua_Value v);</span><br></pre></td></tr></table></figure></p>
+<p><strong>一来太复杂,不便与lua和其他语言交互,二来垃圾回收也不好处理</strong><br>因此使用一个stack.<strong>stack相当于将c和lua解耦合,只需要写不同类型的c函数处理即可.而且stack由lua管理,便于垃圾回收</strong></p>
+<p>注意lua操作时严格按LIFO,C code无此限制,可以自由操作</p>
+<h2 id="pushing-elements"><a href="#pushing-elements" class="headerlink" title="pushing elements"></a>pushing elements</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">void lua_pushnil (lua_State *L);</span><br><span class="line">void lua_pushboolean (lua_State *L, int bool);</span><br><span class="line">void lua_pushnumber (lua_State *L, double n);</span><br><span class="line">void lua_pushlstring (lua_State *L, const char *s,</span><br><span class="line">                                    size_t length);</span><br><span class="line">void lua_pushstring (lua_State *L, const char *s);</span><br></pre></td></tr></table></figure>
+<p>每种lua类型都有对应的c函数压入元素.lua每次都会对数据进行拷贝而不会使用指针(除了C functions).因此函数返回后可以free或者modify该buffer,不影响lua环境中的数据<br>每次lua调用c时,注意stack有20 free slots,因此需要自己用如下函数检查是否够用<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">int lua_checkstack(lua_State *L,int sz)</span><br></pre></td></tr></table></figure></p>
+<h2 id="Querying-Elements"><a href="#Querying-Elements" class="headerlink" title="Querying Elements"></a>Querying Elements</h2><p>stack从top到bottom的索引依次为-1,-2,-3…<br>如果从bottom到top,按1,2,3索引</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">int            lua_toboolean (lua_State *L, int index);</span><br><span class="line">double         lua_tonumber (lua_State *L, int index);</span><br><span class="line">const char    *lua_tostring (lua_State *L, int index);</span><br><span class="line">size_t         lua_strlen (lua_State *L, int index);</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">int lua_is... (lua_State *L, int index);</span><br><span class="line">lua_type</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">int   lua_gettop (lua_State *L);</span><br></pre></td></tr></table></figure>
+<p>返回栈中元素个数</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">void  lua_settop (lua_State *L, int index);</span><br></pre></td></tr></table></figure>
+<p>设置top元素为一个指定的值.lua_settop(L,0)清空stack.如果先前的top大于index,则清空top.反之push nil达到top</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">#define lua_pop(L,n) lua_settop(L,-(n)-1)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">void  lua_pushvalue (lua_State *L, int index);</span><br><span class="line">void  lua_remove (lua_State *L, int index);</span><br><span class="line">void  lua_insert (lua_State *L, int index);</span><br><span class="line">void  lua_replace (lua_State *L, int index);</span><br></pre></td></tr></table></figure>
+<p>lua_pushvalue拷贝index位置的元素到top,总长度+1<br>lua_remove将index位置的元素删除,总长度-1<br>lua_insert将top位置的元素放置到index位置,index位置以上的元素上移,总长度+1<br>lua_replace将top位置的元素弹出放置到index位置,总长度不变</p>
+<h2 id="call-function"><a href="#call-function" class="headerlink" title="call function"></a>call function</h2><figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">f</span> <span class="params">(x, y)</span></span></span><br><span class="line">  <span class="keyword">return</span> (x^<span class="number">2</span> * <span class="built_in">math</span>.<span class="built_in">sin</span>(y))/(<span class="number">1</span> - x)</span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* call a function `f' defined in Lua */</span></span><br><span class="line"><span class="function"><span class="keyword">double</span> <span class="title">f</span> <span class="params">(<span class="keyword">double</span> x, <span class="keyword">double</span> y)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">double</span> z;</span><br><span class="line"></span><br><span class="line">  <span class="comment">/* push functions and arguments */</span></span><br><span class="line">  lua_getglobal(L, <span class="string">"f"</span>);  <span class="comment">/* function to be called */</span></span><br><span class="line">  lua_pushnumber(L, x);   <span class="comment">/* push 1st argument */</span></span><br><span class="line">  lua_pushnumber(L, y);   <span class="comment">/* push 2nd argument */</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">/* do the call (2 arguments, 1 result) */</span></span><br><span class="line">  <span class="keyword">if</span> (lua_pcall(L, <span class="number">2</span>, <span class="number">1</span>, <span class="number">0</span>) != <span class="number">0</span>)</span><br><span class="line">    error(L, <span class="string">"error running function `f': %s"</span>,</span><br><span class="line">             lua_tostring(L, <span class="number">-1</span>));</span><br><span class="line"></span><br><span class="line">  <span class="comment">/* retrieve result */</span></span><br><span class="line">  <span class="keyword">if</span> (!lua_isnumber(L, <span class="number">-1</span>))</span><br><span class="line">    error(L, <span class="string">"function `f' must return a number"</span>);</span><br><span class="line">  z = lua_tonumber(L, <span class="number">-1</span>);</span><br><span class="line">  lua_pop(L, <span class="number">1</span>);  <span class="comment">/* pop returned value */</span></span><br><span class="line">  <span class="keyword">return</span> z;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>lua_getglobal会将f放到stack中,继续将参数x,y分别压栈,然后调用lua_pcall,调用完毕,栈中top位置要不是error要不是返回结果.lua_pcall的参数分别代表L,参数个数,结果个数,错误处理函数索引(需要提前压入stack)</p>
+<h2 id="calling-table"><a href="#calling-table" class="headerlink" title="calling table"></a>calling table</h2><figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">background = &#123;r=<span class="number">0.30</span>, g=<span class="number">0.10</span>, b=<span class="number">0</span>&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">lua_getglobal(L, <span class="string">"background"</span>);</span><br><span class="line"><span class="keyword">if</span> (!lua_istable(L, <span class="number">-1</span>))</span><br><span class="line">  error(L, <span class="string">"`background' is not a valid color table"</span>);</span><br><span class="line"></span><br><span class="line">red = getfield(<span class="string">"r"</span>);</span><br><span class="line">green = getfield(<span class="string">"g"</span>);</span><br><span class="line">blue = getfield(<span class="string">"b"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="meta">#<span class="meta-keyword">define</span> MAX_COLOR       255</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* assume that table is on the stack top */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">getfield</span> <span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *key)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> result;</span><br><span class="line">  lua_pushstring(L, key);</span><br><span class="line">  lua_gettable(L, <span class="number">-2</span>);  <span class="comment">/* get background[key] */</span></span><br><span class="line">  <span class="keyword">if</span> (!lua_isnumber(L, <span class="number">-1</span>))</span><br><span class="line">    error(L, <span class="string">"invalid component in background color"</span>);</span><br><span class="line">  result = (<span class="keyword">int</span>)lua_tonumber(L, <span class="number">-1</span>) * MAX_COLOR;</span><br><span class="line">  lua_pop(L, <span class="number">1</span>);  <span class="comment">/* remove number */</span></span><br><span class="line">  <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>lua_gettable获取指定field的值,将field压栈,然后指定table的index,value会放到top位置</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">setfield</span> <span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *index, <span class="keyword">int</span> value)</span> </span>&#123;</span><br><span class="line">  lua_pushstring(L, index);</span><br><span class="line">  lua_pushnumber(L, (<span class="keyword">double</span>)value/MAX_COLOR);</span><br><span class="line">  lua_settable(L, <span class="number">-3</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>同理,lua_settable将key和value压栈后,指定table的index,即可设置一个table.结束后会将key/value弹出</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">setcolor</span> <span class="params">(struct ColorTable *ct)</span> </span>&#123;</span><br><span class="line">  lua_newtable(L);               <span class="comment">/* creates a table */</span></span><br><span class="line">  setfield(<span class="string">"r"</span>, ct-&gt;red);        <span class="comment">/* table.r = ct-&gt;r */</span></span><br><span class="line">  setfield(<span class="string">"g"</span>, ct-&gt;green);      <span class="comment">/* table.g = ct-&gt;g */</span></span><br><span class="line">  setfield(<span class="string">"b"</span>, ct-&gt;blue);       <span class="comment">/* table.b = ct-&gt;b */</span></span><br><span class="line">  lua_setglobal(L, ct-&gt;name);    <span class="comment">/* `name' = table */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>lua_newtable生成一个table并压栈,lua_setglobal弹出table并且将其赋值给指定名称</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a href="https://www.lua.org/pil/24.html" target="_blank" rel="noopener">https://www.lua.org/pil/24.html</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/c/" rel="tag"># c</a>
+          
+            <a href="/tags/lua/" rel="tag"># lua</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/11/13/Redis-replication/" rel="next" title="Redis Replication,fullsync以及psync">
+                <i class="fa fa-chevron-left"></i> Redis Replication,fullsync以及psync
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/11/24/lua-c-api3/" rel="prev" title="c和lua-3">
+                c和lua-3 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">erpeng</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">79</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#An-Overview-of-the-C-API"><span class="nav-number">1.</span> <span class="nav-text">An Overview of the C API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#lua-interpreter"><span class="nav-number">2.</span> <span class="nav-text">lua interpreter</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#The-Stack"><span class="nav-number">3.</span> <span class="nav-text">The Stack</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#pushing-elements"><span class="nav-number">4.</span> <span class="nav-text">pushing elements</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Querying-Elements"><span class="nav-number">5.</span> <span class="nav-text">Querying Elements</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#call-function"><span class="nav-number">6.</span> <span class="nav-text">call function</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#calling-table"><span class="nav-number">7.</span> <span class="nav-text">calling table</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考链接"><span class="nav-number">8.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: '0eyJQuH6v7IBasQSBsXetOnm-gzGzoHsz',
+        appKey: 'HGeORCEErDlAdyi9NyyICLEP',
+        placeholder: '请在此输入您的留言',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
