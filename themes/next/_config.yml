@@ -385,7 +385,7 @@ valine:
   verify: false # Verification code
   placeholder: 请在此输入您的留言 # 默认留言框内的文字
   avatar: identicon # gravatar style
-  guest_info: mail # custom comment header
+  guest_info: nick,mail # custom comment header
   pageSize: 10 # pagination size
 
 
