@@ -24,10 +24,12 @@ Bitcask是一个基于log-structured hash table实现的k/v存储,提供了存�
 * value_pos:k1对应的v1在文件中的位置,假设为7600
 * timestamp:k1写入的时间戳
 那么我们查找k1时,直接通过hash table查找到需要在000001.data文件中的偏移量7600字节处读取长度为2的数据,即可以读取到v1.熟悉c api的同学,可以直接想到seek函数:
+
 ```
 #include <unistd.h>
 off_t lseek(int fd, off_t offset, int whence);
 ```
+
 通过一次磁盘io即可以将数据读取.
 有的同学可能会继续思考,那么如何删除呢?如果重复写入一个key如何处理呢?删除和重复写入也是以追加写的形式写入磁盘文件,只不过删除时写入的value是一个特殊标识（tombstone）,表明该键已经删除.每次写入都会更新hash table,因此读取时通过hash table读取到的是最新值.
 这种数据类型其实还有一个问题需要解决,如果键值对大量重复写入或者大量删除,磁盘文件会膨胀的很大,浪费磁盘空间,例如Redis中的AOF文件.当然解决方法也类似,Bitcask通过merge操作可以将多个文件合并为一个,文件中只保留最新的一个value,删除的key可以直接不保存,AOF文件也是通过一个单独的进程进行重写替换掉原来的文件.
@@ -35,13 +37,39 @@ off_t lseek(int fd, off_t offset, int whence);
 附带提一下kafka,我们知道kafka是一个消息中间件,可以吞吐大量写入,他的消息其实也是保存为日志追加的格式,学习完Bitcask对kafka消息保存格式看着会分外眼熟.
 
 ## LevelDB
+LevelDB是一个基于log-structured merge tree(LSM)实现的k/v存储,提供了k/v的存储和检索接口.LSM分为了两颗树,分别为存放在内存中的C0树以及存放在磁盘中的C1树.写入时,首先写入C0树中,直到C0树达到指定的大小时,批量写入磁盘的树中.在LevelDB中,C0树名称为Memtable,使用一个SkipList实现.当C0树达到指定大小时,将旧的MemTable变为一个只读的Immutable MemTable,然后将Immutable MemTable写入磁盘中.磁盘中的C1树在LevelDB中实际上为一个个SSTable文件,SSTable(Sorted String Table)会将key有序排列后保存.因此LevelDB整体的存储形式如下图所示:
+![leveldb-whole](/img/leveldb-whole.png)
+同样的问题,如何加速读取呢?通过写入可以看到,首先会写入MemTable,然后写入磁盘中的SSTable,因此读取时也是首先从MemTable中读取,接着从Immutable MemTable读取,如果都没有读取到,则需要开始读取磁盘中的SSTable了.
+LevelDB中的SSTable实际上不只有多个,还进行了分层,L0-L6,L0层最多有4个SSTable文件,文件之间的key值可能会有重复.而L1-L6层是通过总容量进行限制,L1层最大大小是10M,L2层最大大小是100M,依此类推,N+1层最大大小是N层最大大小的10倍.L1-L6层,每层的SSTable文件之间key值保证不会重复.
+为什么这么设计呢?我们进行一个假设,假设SSTable只有一个,那每次当内存中的MemTable文件大小超过指定大小后变为一个Immutable Memtable,此时需要将Immutable Memtable写入磁盘.因为磁盘中的SSTable只能有一个,因此需要将Immutable MemTable与磁盘中已经存在的SSTable进行合并,这也就是LSM中Merge Tree的含义.因为MemTable与SSTable中key都是有序保存的,此时只需要进行两路的归并排序然后生成新的SSTable即可.如下图所示:
+![leveldb-merge](/img/leveldb-merge.png)
+看上去很完美,读取时只需要按MemTable-Immutable MemTable-SSTable的顺序即可,有什么问题呢?问题就是当数据量越来越大,此时SSTable会达到几G或者几T的容量,进行一次归并排序需要巨量的磁盘IO,很明显是不可接受的.
+因此LevelDB中的Immutable MemTable生成磁盘文件时,不需要任何的merge操作,直接通过顺序写入磁盘在L0层生成一个SSTable文件即可,这也就是为何L0层的SSTable会有键值重叠的情况.那为何L0层需要限定只有4个文件呢?还是从读取角度考虑,因为L0层有键值重叠的情况,所以读取key时如果在内存中没有找到,需要查找L0层的所有文件,因此L0层不能有太多的文件.
+当L0中的文件达到4个时,此时会将L0中的文件与L1中有键值重叠的所有文件进行多路归并排序并在L1层生成新的SSTable文件.同理当L1中所有SSTable文件大小达到10M时,也会将L1中的一个文件与L2中有键值重叠的所有文件进行多路归并排序并在L2层生成新的SSTable文件.该过程称为Compaction.通过分层,LevelDB保证每次的Compaction导致的磁盘IO在可接受范围之内.
+我们继续考虑写入重复的key或者删除一个key如何操作?与Bitcask类似,这两种情况也都是追加写,只不过在LevelDB中通过一个SequenceNumber可以保持多个版本的key,通过一个tomestone标记来标识删除,实际的k/v存储格式如下图:
+![leveldb-entry](/img/leveldb-entry.png)
+
+* SequenceNumber:单调递增的整型,可以标识一个key的版本并实现快照
+* type:0x0表示删除一个key,0x1表示增加一个key
+* key_len:key的长度
+* key:key的内容
+* value_len:value的长度
+* value:value的内容
+
+与Bitcask类似,追加写入大量重复的key也会导致磁盘文件膨胀,浪费磁盘空间.因此Compaction时也会删除不再使用的key.
+回到读取一个key的情况,L0-L6层大量的SSTable,如何加速读取呢?这就涉及到SSTable的结构了,SSTable文件中不只保存数据还会保存索引,可以通过索引快速二分查找,不仅如此,SSTable中还会保存布隆过滤器的数据,快速过滤掉无效查找,减少磁盘IO.
+当然,还有一些其他的细节,例如如何保证崩溃时数据不丢失?与Mysql类似,需要有预写日志(WAL-Write Ahead Log)机制.而且L0-L6每一层包括哪些文件,每个文件中的key范围这些信息都会保存在一个Manifest文件中.
 
 
+## 总结
+Bitcask,LevelDB都是log-structured类的数据库,有很多相似之处.包括文中提到的Redis的AOF文件也是追加写格式,Kakfa的消息也是追加写的格式,了解一个之后看到其他一些组件的实现会觉着分外眼熟.LevelDB中还有快照、预写日志、LRUCache的实现,都可以和Mysql中对应的实现互相参考比对.之前读钱钟书的<宋诗选注>,就为他的旁征博引与互相印证大呼痛快,技术实现大概也大抵如此吧.
+最后,推广一下我参与写作的新书,<精通LevelDB>,书中不只有LevelDB的使用,还会详细分析其代码实现,包括MemTable读取写入以及如何转换为SSTable,SSTable的构成以及读取写入,SSTable的Compaction过程,当然还包括布隆过滤器以及LRUCache的实现.
+![leveldb-book](/img/leveldb-book.jpeg)
 
 
 ## 参考链接
 * https://riak.com/assets/bitcask-intro.pdf
-* 
+
 
 
 
