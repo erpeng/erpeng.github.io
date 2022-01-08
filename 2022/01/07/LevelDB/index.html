@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="LevelDB," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="关于数据库大家都不陌生,例如关系型数据库Mysql,其InnoDB存储引擎以一颗B+树来组织数据;Key-Value存储Redis,数据放到内存中,以一个HashTable来组织数据,根据Value的数据类型,又会使用双向链表、SkipList等结构来组织Value数据;分布式数据库Etcd,需要使用一致性协议Raft保证多个节点数据的一致,使用单机存储BoltDB来存储具体的数据.数据也可以直">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何实现一个数据库">
+<meta property="og:url" content="https://erpeng.github.io/2022/01/07/LevelDB/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="关于数据库大家都不陌生,例如关系型数据库Mysql,其InnoDB存储引擎以一颗B+树来组织数据;Key-Value存储Redis,数据放到内存中,以一个HashTable来组织数据,根据Value的数据类型,又会使用双向链表、SkipList等结构来组织Value数据;分布式数据库Etcd,需要使用一致性协议Raft保证多个节点数据的一致,使用单机存储BoltDB来存储具体的数据.数据也可以直">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/bitcask-disk.png">
+<meta property="og:image" content="https://erpeng.github.io/img/bitcask-entry.png">
+<meta property="og:image" content="https://erpeng.github.io/img/bitcask-keydir.png">
+<meta property="og:image" content="https://erpeng.github.io/img/leveldb-whole.png">
+<meta property="og:image" content="https://erpeng.github.io/img/leveldb-merge.png">
+<meta property="og:image" content="https://erpeng.github.io/img/leveldb-entry.png">
+<meta property="og:image" content="https://erpeng.github.io/img/leveldb-book.jpeg">
+<meta property="article:published_time" content="2022-01-06T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-01-08T09:40:46.695Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="LevelDB">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/bitcask-disk.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2022/01/07/LevelDB/"/>
+
+
+
+
+
+  <title>如何实现一个数据库 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2022/01/07/LevelDB/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">如何实现一个数据库</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-01-07T00:00:00+08:00">
+                2022-01-07
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2022/01/07/LevelDB/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2022/01/07/LevelDB/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>关于数据库大家都不陌生,例如关系型数据库Mysql,其InnoDB存储引擎以一颗B+树来组织数据;Key-Value存储Redis,数据放到内存中,以一个HashTable来组织数据,根据Value的数据类型,又会使用双向链表、SkipList等结构来组织Value数据;分布式数据库Etcd,需要使用一致性协议Raft保证多个节点数据的一致,使用单机存储BoltDB来存储具体的数据.<br>数据也可以直接存储到文件,例如我们平时代码中打日志就是将数据直接输出到一个文件.常见的数据操作包括增加、删除和查找,从这三种操作来继续思考打日志这个事情.首先我们会以追加的形式写入日志文件,写入磁盘时由于是顺序写入,写入效率不错.查找日志时需要使用Linux系统中的grep命令抓取关键字,grep会顺序遍历一下日志文件,如果日志很大,命令执行起来会很慢.假设不只需要查找，还需要汇总统计,那我们需要继续加管道使用wc,sort或者写一个awk脚本.删除操作呢,首先需要查找,然后执行删除.<br>总结一下,数据库使用各种数据结构,例如B+树、SkipList是为了平衡增加、删除和查找三种操作,使之都有不错的性能表现.而追加写日志这种操作写入速度很快,但是查找和删除比较慢,有没有办法优化查找和删除呢?<br>日志格式的追加写方式有一个专门的术语叫log-structured,下边我们看两种数据库,一个是Bitcask,使用的数据结构叫log-structured hash table,一个是LevelDB,使用的数据结构是log-structured merge tree(LSM).这两个数据库都适合写多读少的情况,我们详细看看他们如何去优化读取.</p>
+<h2 id="Bitcask"><a href="#Bitcask" class="headerlink" title="Bitcask"></a>Bitcask</h2><p>Bitcask是一个基于log-structured hash table实现的k/v存储,提供了存储和检索k/v的接口.写入时以日志追加的模式顺序写磁盘文件,当文件大小达到一个指定的值时,关闭该文件,然后重新打开一个文件继续写入.此时旧文件变为只读.因此磁盘存储格式如下图所示:<br><img src="/img/bitcask-disk.png" alt="bitcask-disk"><br>磁盘上只有一个活跃文件可以写入,剩余的文件只可以读取.继续观察每一组k/v是如何存储的,如下图:<br><img src="/img/bitcask-entry.png" alt="bitcask-entry"><br>比较通用的一种保存形式,第一个字段crc来校验数据完整性,然后是一个时间戳,key的大小,value的大小,接着是key的值和value的值.<br>这种方式写入很简单,那么如何加快读取速度呢?Bitcask是通过在内存中建立一个hash table,hash table的格式如下图:<br><img src="/img/bitcask-keydir.png" alt="bitcask-entry"><br>我们假设写入一个键值对k1=&gt;v1.此时hash table的key就是k1,hash table的value中保存了四个字段</p>
+<ul>
+<li>file_id:可以理解为磁盘文件的名称,假设文件名称为000001.data</li>
+<li>value_size:k1对应的v1的长度,为2</li>
+<li>value_pos:k1对应的v1在文件中的位置,假设为7600</li>
+<li>timestamp:k1写入的时间戳<br>那么我们查找k1时,直接通过hash table查找到需要在000001.data文件中的偏移量7600字节处读取长度为2的数据,即可以读取到v1.熟悉c api的同学,可以直接想到seek函数:</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;unistd.h&gt;</span><br><span class="line">off_t lseek(int fd, off_t offset, int whence);</span><br></pre></td></tr></table></figure>
+
+<p>通过一次磁盘io即可以将数据读取.<br>有的同学可能会继续思考,那么如何删除呢?如果重复写入一个key如何处理呢?删除和重复写入也是以追加写的形式写入磁盘文件,只不过删除时写入的value是一个特殊标识（tombstone）,表明该键已经删除.每次写入都会更新hash table,因此读取时通过hash table读取到的是最新值.<br>这种数据类型其实还有一个问题需要解决,如果键值对大量重复写入或者大量删除,磁盘文件会膨胀的很大,浪费磁盘空间,例如Redis中的AOF文件.当然解决方法也类似,Bitcask通过merge操作可以将多个文件合并为一个,文件中只保留最新的一个value,删除的key可以直接不保存,AOF文件也是通过一个单独的进程进行重写替换掉原来的文件.<br>最后一个问题,如果意外宕机或者机器迁移导致关机重启,内存中的hash table如何重建.当然首先可以通过磁盘文件重建,但这样会拖慢启动速度.具体方法大家可以参考链接中的论文,只有6页,留待自己挖掘.<br>附带提一下kafka,我们知道kafka是一个消息中间件,可以吞吐大量写入,他的消息其实也是保存为日志追加的格式,学习完Bitcask对kafka消息保存格式看着会分外眼熟.</p>
+<h2 id="LevelDB"><a href="#LevelDB" class="headerlink" title="LevelDB"></a>LevelDB</h2><p>LevelDB是一个基于log-structured merge tree(LSM)实现的k/v存储,提供了k/v的存储和检索接口.LSM分为了两颗树,分别为存放在内存中的C0树以及存放在磁盘中的C1树.写入时,首先写入C0树中,直到C0树达到指定的大小时,批量写入磁盘的树中.在LevelDB中,C0树名称为Memtable,使用一个SkipList实现.当C0树达到指定大小时,将旧的MemTable变为一个只读的Immutable MemTable,然后将Immutable MemTable写入磁盘中.磁盘中的C1树在LevelDB中实际上为一个个SSTable文件,SSTable(Sorted String Table)会将key有序排列后保存.因此LevelDB整体的存储形式如下图所示:<br><img src="/img/leveldb-whole.png" alt="leveldb-whole"><br>同样的问题,如何加速读取呢?通过写入可以看到,首先会写入MemTable,然后写入磁盘中的SSTable,因此读取时也是首先从MemTable中读取,接着从Immutable MemTable读取,如果都没有读取到,则需要开始读取磁盘中的SSTable了.<br>LevelDB中的SSTable实际上不只有多个,还进行了分层,L0-L6,L0层最多有4个SSTable文件,文件之间的key值可能会有重复.而L1-L6层是通过总容量进行限制,L1层最大大小是10M,L2层最大大小是100M,依此类推,N+1层最大大小是N层最大大小的10倍.L1-L6层,每层的SSTable文件之间key值保证不会重复.<br>为什么这么设计呢?我们进行一个假设,假设SSTable只有一个,那每次当内存中的MemTable文件大小超过指定大小后变为一个Immutable Memtable,此时需要将Immutable Memtable写入磁盘.因为磁盘中的SSTable只能有一个,因此需要将Immutable MemTable与磁盘中已经存在的SSTable进行合并,这也就是LSM中Merge Tree的含义.因为MemTable与SSTable中key都是有序保存的,此时只需要进行两路的归并排序然后生成新的SSTable即可.如下图所示:<br><img src="/img/leveldb-merge.png" alt="leveldb-merge"><br>看上去很完美,读取时只需要按MemTable-Immutable MemTable-SSTable的顺序即可,有什么问题呢?问题就是当数据量越来越大,此时SSTable会达到几G或者几T的容量,进行一次归并排序需要巨量的磁盘IO,很明显是不可接受的.<br>因此LevelDB中的Immutable MemTable生成磁盘文件时,不需要任何的merge操作,直接通过顺序写入磁盘在L0层生成一个SSTable文件即可,这也就是为何L0层的SSTable会有键值重叠的情况.那为何L0层需要限定只有4个文件呢?还是从读取角度考虑,因为L0层有键值重叠的情况,所以读取key时如果在内存中没有找到,需要查找L0层的所有文件,因此L0层不能有太多的文件.<br>当L0中的文件达到4个时,此时会将L0中的文件与L1中有键值重叠的所有文件进行多路归并排序并在L1层生成新的SSTable文件.同理当L1中所有SSTable文件大小达到10M时,也会将L1中的一个文件与L2中有键值重叠的所有文件进行多路归并排序并在L2层生成新的SSTable文件.该过程称为Compaction.通过分层,LevelDB保证每次的Compaction导致的磁盘IO在可接受范围之内.<br>我们继续考虑写入重复的key或者删除一个key如何操作?与Bitcask类似,这两种情况也都是追加写,只不过在LevelDB中通过一个SequenceNumber可以保持多个版本的key,通过一个tomestone标记来标识删除,实际的k/v存储格式如下图:<br><img src="/img/leveldb-entry.png" alt="leveldb-entry"></p>
+<ul>
+<li>SequenceNumber:单调递增的整型,可以标识一个key的版本并实现快照</li>
+<li>type:0x0表示删除一个key,0x1表示增加一个key</li>
+<li>key_len:key的长度</li>
+<li>key:key的内容</li>
+<li>value_len:value的长度</li>
+<li>value:value的内容</li>
+</ul>
+<p>与Bitcask类似,追加写入大量重复的key也会导致磁盘文件膨胀,浪费磁盘空间.因此Compaction时也会删除不再使用的key.<br>回到读取一个key的情况,L0-L6层大量的SSTable,如何加速读取呢?这就涉及到SSTable的结构了,SSTable文件中不只保存数据还会保存索引,可以通过索引快速二分查找,不仅如此,SSTable中还会保存布隆过滤器的数据,快速过滤掉无效查找,减少磁盘IO.<br>当然,还有一些其他的细节,例如如何保证崩溃时数据不丢失?与Mysql类似,需要有预写日志(WAL-Write Ahead Log)机制.而且L0-L6每一层包括哪些文件,每个文件中的key范围这些信息都会保存在一个Manifest文件中.</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Bitcask,LevelDB都是log-structured类的数据库,有很多相似之处.包括文中提到的Redis的AOF文件也是追加写格式,Kakfa的消息也是追加写的格式,了解一个之后看到其他一些组件的实现会觉着分外眼熟.LevelDB中还有快照、预写日志、LRUCache的实现,都可以和Mysql中对应的实现互相参考比对.之前读钱钟书的&lt;宋诗选注&gt;,就为他的旁征博引与互相印证大呼痛快,技术实现大概也大抵如此吧.<br>最后,推广一下我参与写作的新书,&lt;精通LevelDB&gt;,书中不只有LevelDB的使用,还会详细分析其代码实现,包括MemTable读取写入以及如何转换为SSTable,SSTable的构成以及读取写入,SSTable的Compaction过程,当然还包括布隆过滤器以及LRUCache的实现.<br><img src="/img/leveldb-book.jpeg" alt="leveldb-book"></p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://riak.com/assets/bitcask-intro.pdf">https://riak.com/assets/bitcask-intro.pdf</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/LevelDB/" rel="tag"># LevelDB</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/01/06/mqtt-client/" rel="next" title="MQTT GO客户端实现">
+                <i class="fa fa-chevron-left"></i> MQTT GO客户端实现
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">80</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">40</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Bitcask"><span class="nav-number">1.</span> <span class="nav-text">Bitcask</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LevelDB"><span class="nav-number">2.</span> <span class="nav-text">LevelDB</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">4.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'fGrp5ezQvYAyfB3iLgaod86F-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'identicon',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
