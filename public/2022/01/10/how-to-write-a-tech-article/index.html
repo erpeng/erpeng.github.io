@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="GO,Writing," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="提炼一种能够写出通熟易懂技术文章的方法,以Go语言的网络轮询器netpoller的介绍为例  Morsing’s BlogThe Go NetpollerMorsing’ Blog中关于netpoller的文章在码农桃花源讲调度器以及Draven的&lt;&lt;Go语言设计与实现&gt;&gt;中都有引用,我们先看看博客是如何写的.文章共三段,都是文字.第一部分引言忽略,第二部分为Blocki">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何写一篇技术文章">
+<meta property="og:url" content="https://erpeng.github.io/2022/01/10/how-to-write-a-tech-article/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="提炼一种能够写出通熟易懂技术文章的方法,以Go语言的网络轮询器netpoller的介绍为例  Morsing’s BlogThe Go NetpollerMorsing’ Blog中关于netpoller的文章在码农桃花源讲调度器以及Draven的&lt;&lt;Go语言设计与实现&gt;&gt;中都有引用,我们先看看博客是如何写的.文章共三段,都是文字.第一部分引言忽略,第二部分为Blocki">
+<meta property="og:locale">
+<meta property="article:published_time" content="2022-01-09T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-01-11T07:09:03.033Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="GO">
+<meta property="article:tag" content="Writing">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2022/01/10/how-to-write-a-tech-article/"/>
+
+
+
+
+
+  <title>如何写一篇技术文章 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2022/01/10/how-to-write-a-tech-article/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">如何写一篇技术文章</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-01-10T00:00:00+08:00">
+                2022-01-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2022/01/10/how-to-write-a-tech-article/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2022/01/10/how-to-write-a-tech-article/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>提炼一种能够写出通熟易懂技术文章的方法,以Go语言的网络轮询器netpoller的介绍为例</p>
+</blockquote>
+<h2 id="Morsing’s-Blog"><a href="#Morsing’s-Blog" class="headerlink" title="Morsing’s Blog"></a>Morsing’s Blog</h2><h3 id="The-Go-Netpoller"><a href="#The-Go-Netpoller" class="headerlink" title="The Go Netpoller"></a>The Go Netpoller</h3><p>Morsing’ Blog中关于netpoller的文章在码农桃花源讲调度器以及Draven的&lt;&lt;Go语言设计与实现&gt;&gt;中都有引用,我们先看看博客是如何写的.<br>文章共三段,都是文字.第一部分引言忽略,第二部分为Blocking</p>
+<h4 id="Blocking"><a href="#Blocking" class="headerlink" title="Blocking"></a>Blocking</h4><p>第二部分第一段如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Blocking</span><br><span class="line">In Go, all I/O is blocking.</span><br></pre></td></tr></table></figure>
+
+<p>抛出结论,Go语言中所有的I/O都是阻塞的,并且说明Go通过Goroutine和Channel处理并发.然后举了net/http的例子,说明这样设计的好处:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">This construct means that the request handler can be written in a very straightforward manner. First do this, then do that.</span><br></pre></td></tr></table></figure>
+
+<p>代码可以以一种非常直接或者直观的方式书写.首先做这个,然后做这个.</p>
+<p>第二部分第一段最后一句继续引出下文-“但是我们不能直接拿操作系统的阻塞I/O来实现Go想要的阻塞I/O”,为什么呢?引出第二部分第二段,关键结论是:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">To handle a blocking syscall, we need a thread that can be blocked inside the operating system.</span><br></pre></td></tr></table></figure>
+
+<p>每一个阻塞的操作系统I/O都需要一个线程去处理,因此不可行.接着引出第二部分第三段:需要使用操作系统的异步I/O去处理,但是通过在goroutines处阻塞来实现Go的阻塞式IO.</p>
+<p>第二部分总结如下:抛出设计结论-举例说明这样设计的好处-如何实现这样的设计,接着引出第三部分,netpoller</p>
+<h4 id="The-netpoller"><a href="#The-netpoller" class="headerlink" title="The netpoller"></a>The netpoller</h4><p>第一段:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">The part that converts asynchronous I/O into blocking I/O is called the netpoller</span><br></pre></td></tr></table></figure>
+
+<p>将异步I/O转换为阻塞I/O的部分称为netpoller.第一段剩下部分举例说明netpoller在Linux下使用epoll,BSD使用kqueue….</p>
+<p>第二段讲述每一个文件句柄都会设置为非阻塞,如果一个文件句柄没有ready,就会直接返回错误码.此时通过调度器和netpoller去把goroutine调度出去,直到有数据时再调度回来.</p>
+<p>第三段讲了如果netpoller收到了os可以在某个文件句柄执行I/O的信号,netpoller会将阻塞到这个句柄上的goroutine调度回来重试I/O操作.</p>
+<p>第四段讲了这种方法屏蔽了函数指针和一些状态信息(这些信息都通过goroutine去表达),比直接用epoll要方便不少.</p>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>文章写的高屋建瓴,第二段首先说明Go的I/O设计,然后举例说明,引出如何实现.第三段说明具体实现.整体结构是结论-举例-总结.</p>
+<h3 id="The-Go-scheduler"><a href="#The-Go-scheduler" class="headerlink" title="The Go scheduler"></a>The Go scheduler</h3><p>具体内容不再详细叙述,整体逻辑为 </p>
+<ul>
+<li>引言</li>
+<li>为什么go需要一个应用层的调度器</li>
+<li>调度器模型（M:N的模型,分为M、P、G三个角色）并介绍模型标准状态</li>
+<li>为什么需要P?当执行syscall时的非标准态</li>
+<li>偷取任务这种非标准态</li>
+<li>其他待讨论细节,例如cgo threads,netpoller</li>
+</ul>
+<h3 id="总结-1"><a href="#总结-1" class="headerlink" title="总结"></a>总结</h3><p>两篇文章都是偏设计与实现,首先是讲解设计以及为什么这样设计,然后用汇总性的语言讲解实现,没有源码分析</p>
+<h2 id="Go语言设计与实现"><a href="#Go语言设计与实现" class="headerlink" title="Go语言设计与实现"></a>Go语言设计与实现</h2><p>并发编程这一部分分为7个章节,其中一个章节为网络轮询器.7个章节中每个章节的前两部分都是如下:</p>
+<ul>
+<li>设计原理</li>
+<li>数据结构</li>
+</ul>
+<p>整体逻辑比较清晰,先讲解调度器、Channel或者网络轮询器的设计原理,并补充一下背景知识,然后讲解实现.根据</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">程序 = 数据结构 + 算法</span><br></pre></td></tr></table></figure>
+<p>讲解数据结构之后,每个章节继续讨论其具体实现.我们以网络轮询器章节为例继续说明</p>
+<h3 id="设计原理"><a href="#设计原理" class="headerlink" title="设计原理"></a>设计原理</h3><p>讲解I/O模型,包括阻塞I/O,非阻塞I/O,I/O多路复用这些,然后引出netpoll的接口定义:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">func netpollinit()</span><br><span class="line">func netpollopen(fd uintptr, pd *pollDesc) int32</span><br><span class="line">func netpoll(delta int64) gList</span><br><span class="line">func netpollBreak()</span><br><span class="line">func netpollIsPollDescriptor(fd uintptr) bool</span><br></pre></td></tr></table></figure>
+<p>接着说明了一下多模块实现,即Epoll、Kqueue等等<br>但这块关于接口为什么设计成这样其实缺少一些背景,最好是能补充一下Morsing’s Blog中关于为什么需要netpoller,以及netpoller的功能.</p>
+<h3 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h3><p>讲解了poolDesc数据结构,该结构比较关键.接着讲解了poolCache,用来分配和回收poolDesc,但其实poolCache跟下文关系不大,似乎可以省略.</p>
+<h3 id="多路复用"><a href="#多路复用" class="headerlink" title="多路复用"></a>多路复用</h3><p>分别讲解了网络轮询器的初始化、如何向网络轮询器加入待监控的任务、如何从网络轮询器获取触发的事件</p>
+<h3 id="小结-amp-amp-延伸阅读"><a href="#小结-amp-amp-延伸阅读" class="headerlink" title="小结&amp;&amp;延伸阅读"></a>小结&amp;&amp;延伸阅读</h3><p>不再详细叙述</p>
+<h3 id="总结-2"><a href="#总结-2" class="headerlink" title="总结"></a>总结</h3><p>Go语言设计与实现是本非常好的书,单就这个章节来说,netpoller与计时器以及调度器的关系只是引导了一下,没有一些叙述或者与前边章节的关联.</p>
+<h2 id="Redis设计与实现"><a href="#Redis设计与实现" class="headerlink" title="Redis设计与实现"></a>Redis设计与实现</h2><p>第12章事件关于网络I/O,分为文件事件、时间事件、事件的调度与执行、重点回顾以及参考资料五个章节.</p>
+<h3 id="文件事件"><a href="#文件事件" class="headerlink" title="文件事件"></a>文件事件</h3><p>文件事件章节分为:</p>
+<ul>
+<li>文件事件处理器的构成</li>
+<li>I/O多路复用程序的实现</li>
+<li>事件的类型</li>
+<li>API</li>
+<li>文件事件的处理器</li>
+</ul>
+<h3 id="时间事件"><a href="#时间事件" class="headerlink" title="时间事件"></a>时间事件</h3><p>时间事件章节分为:</p>
+<ul>
+<li>实现</li>
+<li>API</li>
+<li>时间事件应用实例:serverCron函数</li>
+</ul>
+<p>时间事件首先是一段概括性叙述,包括两部分,Redis时间事件的分类:定时与周期性,时间事件的三个属性:id,when,timeProc,讲解并没有写出具体的数据结构,只是文字介绍.<br>时间事件的第一部分讲解实现,一个无序列表,画图举例说明.第二部分API通过图片举例和伪代码对API进行了介绍.第三部分也是文字介绍</p>
+<h3 id="事件的调度与执行"><a href="#事件的调度与执行" class="headerlink" title="事件的调度与执行:"></a>事件的调度与执行:</h3><p>首先通过伪代码介绍aeProcessEvents函数,负责统一调度执行文件事件和时间事件.接着用伪代码和图片介绍了Redis的main函数流程,最后举例子说明</p>
+<p>重点回顾和参考资料不再详细叙述</p>
+<h3 id="总结-3"><a href="#总结-3" class="headerlink" title="总结"></a>总结</h3><p>Redis设计与实现很少出现代码,非得出现,就用伪代码,降低阅读难度.整体感特别好,图片说明以及示例多.Go语言设计与实现中开始讲解具体实现时其实也可以参考这种做法.</p>
+<h2 id="最佳模版"><a href="#最佳模版" class="headerlink" title="最佳模版"></a>最佳模版</h2><p>以netpoll为例:</p>
+<h3 id="示例引出问题"><a href="#示例引出问题" class="headerlink" title="示例引出问题"></a>示例引出问题</h3><p>学习的最佳模式其实是带着问题来,所以开头最好通过示例或者其他方式引出疑问,例如如下一个常见的写法:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">func main() &#123;</span><br><span class="line">	l, err := net.Listen(&quot;tcp&quot;, &quot;:8080&quot;)-----1</span><br><span class="line">    ...</span><br><span class="line">	for &#123;</span><br><span class="line">		conn, err := l.Accept()----2</span><br><span class="line">        ...</span><br><span class="line">		go serve(conn)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func serve(conn net.Conn) &#123;</span><br><span class="line">	for &#123;</span><br><span class="line">		data := make([]byte, 1024)</span><br><span class="line">		conn.SetDeadline(time.Now().Add(5 * time.Second))----3</span><br><span class="line">		n, err := conn.Read(data)----4</span><br><span class="line">        ...</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上文标注1,2,3,4处都与netpoller相关,监听一个套接字之后netpoller做了什么,Accept一个连接以及在连接上设置Deadline,在连接上读取netpoller又分别做了什么</p>
+<h3 id="设计原理-1"><a href="#设计原理-1" class="headerlink" title="设计原理"></a>设计原理</h3><h4 id="Go-I-O的设计哲学"><a href="#Go-I-O的设计哲学" class="headerlink" title="Go I/O的设计哲学"></a>Go I/O的设计哲学</h4><p>Morsing’s Blog中的内容,Go I/O都是阻塞的,但没法直接用操作系统的阻塞I/O实现,如何实现呢?通过netpoller来桥接两者</p>
+<h4 id="操作系统I-O模型"><a href="#操作系统I-O模型" class="headerlink" title="操作系统I/O模型"></a>操作系统I/O模型</h4><p>阻塞I/O,非阻塞I/O,多路复用</p>
+<h4 id="netpoller的接口设计以及具体实现"><a href="#netpoller的接口设计以及具体实现" class="headerlink" title="netpoller的接口设计以及具体实现"></a>netpoller的接口设计以及具体实现</h4><p>介绍接口设计时需要包含为什么这么设计,这就需要涉及到netpoller调用方的使用方式,netpoller的触发时机</p>
+<h3 id="数据结构-1"><a href="#数据结构-1" class="headerlink" title="数据结构"></a>数据结构</h3><p>pollerDesc,Glist等介绍</p>
+<h3 id="API"><a href="#API" class="headerlink" title="API"></a>API</h3><p>具体的API介绍,可以用伪代码和图片以及文字描述,不需要具体的代码</p>
+<h3 id="示例说明"><a href="#示例说明" class="headerlink" title="示例说明"></a>示例说明</h3><p>介绍到此处,可以用具体实现来阐述例子中的问题</p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><h3 id="拓展资料"><a href="#拓展资料" class="headerlink" title="拓展资料"></a>拓展资料</h3><h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://morsmachine.dk/netpoller">Morsing’s Blog netpoller</a></li>
+<li><a target="_blank" rel="noopener" href="https://morsmachine.dk/go-scheduler">Morsing’s Blog scheduler</a></li>
+<li><a target="_blank" rel="noopener" href="https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-netpoller/">Go语言设计与实现-网络轮询器</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/GO/" rel="tag"># GO</a>
+          
+            <a href="/tags/Writing/" rel="tag"># Writing</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/01/07/LevelDB/" rel="next" title="如何实现一个数据库">
+                <i class="fa fa-chevron-left"></i> 如何实现一个数据库
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">81</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">41</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Morsing%E2%80%99s-Blog"><span class="nav-number">1.</span> <span class="nav-text">Morsing’s Blog</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#The-Go-Netpoller"><span class="nav-number">1.1.</span> <span class="nav-text">The Go Netpoller</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Blocking"><span class="nav-number">1.1.1.</span> <span class="nav-text">Blocking</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#The-netpoller"><span class="nav-number">1.1.2.</span> <span class="nav-text">The netpoller</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">1.1.3.</span> <span class="nav-text">总结</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#The-Go-scheduler"><span class="nav-number">1.2.</span> <span class="nav-text">The Go scheduler</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93-1"><span class="nav-number">1.3.</span> <span class="nav-text">总结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Go%E8%AF%AD%E8%A8%80%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">Go语言设计与实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BE%E8%AE%A1%E5%8E%9F%E7%90%86"><span class="nav-number">2.1.</span> <span class="nav-text">设计原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">2.2.</span> <span class="nav-text">数据结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8"><span class="nav-number">2.3.</span> <span class="nav-text">多路复用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93-amp-amp-%E5%BB%B6%E4%BC%B8%E9%98%85%E8%AF%BB"><span class="nav-number">2.4.</span> <span class="nav-text">小结&amp;&amp;延伸阅读</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93-2"><span class="nav-number">2.5.</span> <span class="nav-text">总结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Redis%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">Redis设计与实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E4%BA%8B%E4%BB%B6"><span class="nav-number">3.1.</span> <span class="nav-text">文件事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%B6%E9%97%B4%E4%BA%8B%E4%BB%B6"><span class="nav-number">3.2.</span> <span class="nav-text">时间事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%8B%E4%BB%B6%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%E6%89%A7%E8%A1%8C"><span class="nav-number">3.3.</span> <span class="nav-text">事件的调度与执行:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93-3"><span class="nav-number">3.4.</span> <span class="nav-text">总结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E4%BD%B3%E6%A8%A1%E7%89%88"><span class="nav-number">4.</span> <span class="nav-text">最佳模版</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B%E5%BC%95%E5%87%BA%E9%97%AE%E9%A2%98"><span class="nav-number">4.1.</span> <span class="nav-text">示例引出问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BE%E8%AE%A1%E5%8E%9F%E7%90%86-1"><span class="nav-number">4.2.</span> <span class="nav-text">设计原理</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Go-I-O%E7%9A%84%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6"><span class="nav-number">4.2.1.</span> <span class="nav-text">Go I&#x2F;O的设计哲学</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9FI-O%E6%A8%A1%E5%9E%8B"><span class="nav-number">4.2.2.</span> <span class="nav-text">操作系统I&#x2F;O模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#netpoller%E7%9A%84%E6%8E%A5%E5%8F%A3%E8%AE%BE%E8%AE%A1%E4%BB%A5%E5%8F%8A%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0"><span class="nav-number">4.2.3.</span> <span class="nav-text">netpoller的接口设计以及具体实现</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-1"><span class="nav-number">4.3.</span> <span class="nav-text">数据结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#API"><span class="nav-number">4.4.</span> <span class="nav-text">API</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B%E8%AF%B4%E6%98%8E"><span class="nav-number">4.5.</span> <span class="nav-text">示例说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">4.6.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8B%93%E5%B1%95%E8%B5%84%E6%96%99"><span class="nav-number">4.7.</span> <span class="nav-text">拓展资料</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">5.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'fGrp5ezQvYAyfB3iLgaod86F-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'identicon',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
