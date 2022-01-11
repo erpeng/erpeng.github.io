@@ -239,6 +239,147 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/05/13/how-to-design-a-log-system/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/05/13/how-to-design-a-log-system/" itemprop="url">如何设计一个高并发的日志系统</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-05-13T00:00:00+08:00">
+                2019-05-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/05/13/how-to-design-a-log-system/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/05/13/how-to-design-a-log-system/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+          日志系统基本概念日志系统必要的因素
+日志级别:FATAL,WARNING,NOTICE,DEBUG,ALL …
+调用栈:文件,函数,行数,日期php可以通过debug_backtrace()获取,go通过runtime.Caller()获取
+日志信息:自定义
+
+日志系统性能考量我们知道日志系统是需要
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2019/05/13/how-to-design-a-log-system/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/05/10/Redis-handle-client/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1476,148 +1617,11 @@ Sqlite WAL原文链接:https://www.sqlite.org/wal.html
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2019/04/13/Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="erpeng's code area">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/04/13/Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7/" itemprop="url">Sqlite如何实现ACID中的原子性</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-04-13T09:42:00+08:00">
-                2019-04-13
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2019/04/13/Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/04/13/Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-          
-这个文章序列关注Sqlite的原子性实现.首先翻译一篇官方文章,介绍Sqlite的 rollback journal,然后结合一些问题通过源码分析一下具体实现.后续几篇关注Sqlite3.7.0之后的另一种保证原子性的实现 WAL(write ahead log).注意Sqlite以静态或者动态库
-          ...
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2019/04/13/Sqlite%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0ACID%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/6/">&lt;</a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/page/8/">8</a><a class="extend next" rel="next" href="/page/8/">&gt;</a>
+    <a class="extend prev" rel="prev" href="/page/6/">&lt;</a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/page/8/">8</a><a class="page-number" href="/page/9/">9</a><a class="extend next" rel="next" href="/page/8/">&gt;</a>
   </nav>
 
 
@@ -1663,7 +1667,7 @@ Sqlite WAL原文链接:https://www.sqlite.org/wal.html
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">80</span>
+                  <span class="site-state-item-count">81</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -1676,7 +1680,7 @@ Sqlite WAL原文链接:https://www.sqlite.org/wal.html
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">40</span>
+                  <span class="site-state-item-count">41</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
