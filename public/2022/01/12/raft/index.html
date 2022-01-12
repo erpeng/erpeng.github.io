@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="raft," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="raft论文  服务状态每个服务都会保存如下状态:  CurrentTerm:当前的term值.如果接收到请求或者响应的term T &gt; CurrentTerm,则变更CurrentTerm为T,并且变更角色为follower VotedFor:投票的候选人ID.如果没有投票或者候选人的candidateId等于votedFor并且候选人的日志比当前服务要新或者一致,则投票给候选人.日志比">
+<meta property="og:type" content="article">
+<meta property="og:title" content="raft">
+<meta property="og:url" content="https://erpeng.github.io/2022/01/12/raft/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="raft论文  服务状态每个服务都会保存如下状态:  CurrentTerm:当前的term值.如果接收到请求或者响应的term T &gt; CurrentTerm,则变更CurrentTerm为T,并且变更角色为follower VotedFor:投票的候选人ID.如果没有投票或者候选人的candidateId等于votedFor并且候选人的日志比当前服务要新或者一致,则投票给候选人.日志比">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/raft-status.png">
+<meta property="og:image" content="https://erpeng.github.io/img/raft-AppendEntries.png">
+<meta property="og:image" content="https://erpeng.github.io/img/raft-RequestVote.png">
+<meta property="og:image" content="https://erpeng.github.io/img/raft-properties.png">
+<meta property="article:published_time" content="2022-01-11T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-01-12T09:31:05.647Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="raft">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/raft-status.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2022/01/12/raft/"/>
+
+
+
+
+
+  <title>raft | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2022/01/12/raft/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">raft</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-01-12T00:00:00+08:00">
+                2022-01-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2022/01/12/raft/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2022/01/12/raft/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>raft论文</p>
+</blockquote>
+<h2 id="服务状态"><a href="#服务状态" class="headerlink" title="服务状态"></a>服务状态</h2><p>每个服务都会保存如下状态:</p>
+<ul>
+<li>CurrentTerm:当前的term值.如果接收到请求或者响应的term T &gt; CurrentTerm,则变更CurrentTerm为T,并且变更角色为follower</li>
+<li>VotedFor:投票的候选人ID.如果没有投票或者候选人的candidateId等于votedFor并且候选人的日志比当前服务要新或者一致,则投票给候选人.日志比较规则为:如果最后一条日志的term小于候选人日志的term,或者term相等,但是日志索引小于候选人的日志索引,则候选人日志比当前服务新.如果最后一条日志的term和index与候选人一致,则当前服务和候选人的日志一致.</li>
+<li>log[]:日志条目,每个日志条目包括term和index两个指标,分别表示该条日志被leader接收到时的term以及日志条目在数组中的索引</li>
+<li>CommitIndex:commited日志索引.</li>
+<li>LastApplied:应用到状态机的日志索引.如果lastapplied &lt; commitIndex,则apply lastApplied处的日志.并且增加lastapplied</li>
+</ul>
+<p>Leader中独有:</p>
+<ul>
+<li>nextIndex[]:对每一个服务,默认需要发送给服务的下一个log entry的index</li>
+<li>matchIndex[]:对每一个服务,已经被复制到该服务上的最大的log entry的index</li>
+</ul>
+<p><img src="/img/raft-status.png" alt="status"></p>
+<h2 id="两种rpc请求"><a href="#两种rpc请求" class="headerlink" title="两种rpc请求"></a>两种rpc请求</h2><ul>
+<li>AppendEntry:<br><img src="/img/raft-AppendEntries.png" alt="appendEntry"></li>
+</ul>
+<ul>
+<li>RequestVote:<br><img src="/img/raft-RequestVote.png" alt="requestVote"></li>
+</ul>
+<h2 id="三种角色"><a href="#三种角色" class="headerlink" title="三种角色"></a>三种角色</h2><ul>
+<li>Leader、Follower、Candidate,写入请求由Leader统一处理,当Leader发送AppendEntry请求,并且大多数follower都响应之后,此时认为该请求是处于commited状态,Leader将该条日志应用到状态机之后返回</li>
+<li>所有处于commited的请求,假定此时发生了Leader crash,重新选举的Leader也必然会有该条日志</li>
+<li>初始状态为Follower,当在election timeout范围之内没有收到Leader的心跳（也为AppendEntry RPC）,则转换为Candidate进行选举</li>
+<li>转换为Candidate角色之后,首先将CurrentTerm加1,并且给自己投一票,重置定时器,然后给其他服务发送RequestVote RPC请求,请求投票.如果收到大多数成员的投票,则转换为Leader,如果在election timeout之内没有收到大多数投票并且没有新的Leader发送心跳信息,则重新选举,如果收到新的Leader发送的心跳信息,则转换为Follower.</li>
+</ul>
+<h2 id="五个完备性"><a href="#五个完备性" class="headerlink" title="五个完备性"></a>五个完备性</h2><p><img src="/img/raft-properties.png" alt="properties"></p>
+<h2 id="成员变更"><a href="#成员变更" class="headerlink" title="成员变更"></a>成员变更</h2><p>为了防止成员变更时同时出现两个主,增加了一个中间状态,称之为M.<br>假设原来有三个节点,A,B,C,增加了两个节点D,E,此时C的配置已经变更,那么A可以被选为Leader,投票人为A,B（旧配置有三个节点,两票已经符合大多数）.E节点也可以被选为Leader,投票人为C,D,E(因为C已经更新为最新配置,新配置有5个节点,3票符合大多数)</p>
+<p>增加中间状态M后,不会直接变更为新配置,M状态下新旧配置同时存在,通过提交一个新旧配置同时存在的command,该command发送到新旧所有的服务,需要新的大多数和旧的大多数同时通过才可以commit,然后再创建一个新配置的command,此时需要新服务的大多数同意才能commit.确保不会有一个时刻,新旧配置能够同时生效</p>
+<p>还有三点需要注意:</p>
+<ul>
+<li>新加入节点需要同步log,时间可能会比较久,因此增加了一个步骤,使该服务此时只同步不投票,赶上日志之后再进入正常状态(Learner角色？)</li>
+<li>有可能Leader不属于新的配置,此时提交新的配置命令时,由一个不属于集群的节点管理集群,并且Leader也不属于大多数</li>
+<li>下线的服务收不到心跳会变为candidate,持续发起选举.因此如果在election timeout之内收到选举请求时不予理睬</li>
+</ul>
+<h2 id="Log-Compaction"><a href="#Log-Compaction" class="headerlink" title="Log Compaction"></a>Log Compaction</h2><p>为了防止日志太大,占用太多磁盘空间,raft通过将日志打快照并在快照中保存一些元信息,例如last included index和last included term,也就是状态机应用的最后一条log entry的index和term.也会保存最近的配置信息.</p>
+<p>为了帮助一些慢follower或者新加入节点同步日志,实现一个InstallSnapshot RPC,专门用来同步快照.</p>
+<h2 id="客户端交互"><a href="#客户端交互" class="headerlink" title="客户端交互"></a>客户端交互</h2><p>写入通过Leader进行,幂等性通过客户端传唯一键,状态机验重.为了读取时不会读取到stale data,每次leader当选后首先提交一个no op log,并且通过给大多数节点发送心跳并收取回复来保证数据的正确性.</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><h1 id="raft"><a href="#raft" class="headerlink" title="raft"></a><a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">raft</a></h1>
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/raft/" rel="tag"># raft</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/01/10/how-to-write-a-tech-article/" rel="next" title="如何写一篇技术文章">
+                <i class="fa fa-chevron-left"></i> 如何写一篇技术文章
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">82</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">42</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E7%8A%B6%E6%80%81"><span class="nav-number">1.</span> <span class="nav-text">服务状态</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%A4%E7%A7%8Drpc%E8%AF%B7%E6%B1%82"><span class="nav-number">2.</span> <span class="nav-text">两种rpc请求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E7%A7%8D%E8%A7%92%E8%89%B2"><span class="nav-number">3.</span> <span class="nav-text">三种角色</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E4%B8%AA%E5%AE%8C%E5%A4%87%E6%80%A7"><span class="nav-number">4.</span> <span class="nav-text">五个完备性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%88%90%E5%91%98%E5%8F%98%E6%9B%B4"><span class="nav-number">5.</span> <span class="nav-text">成员变更</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Log-Compaction"><span class="nav-number">6.</span> <span class="nav-text">Log Compaction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BA%A4%E4%BA%92"><span class="nav-number">7.</span> <span class="nav-text">客户端交互</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">8.</span> <span class="nav-text">参考链接</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#raft"><span class="nav-number"></span> <span class="nav-text">raft</span></a></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'fGrp5ezQvYAyfB3iLgaod86F-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'identicon',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
