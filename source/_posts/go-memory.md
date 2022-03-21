@@ -1,0 +1,82 @@
+---
+title: Go语言内存管理
+date: 2022-03-21
+tags: Go
+---
+> 内存管理涉及初始化、分配以及回收三个方面。文中使用Go版本为1.17.6
+
+## 系统调用
+
+GO使用mmap和munmap调用操作系统进行内存分配和释放。mmap和munmap原型如下：
+```
+       #include <sys/mman.h>
+
+       void *mmap(void *addr, size_t length, int prot, int flags,
+                  int fd, off_t offset);
+       int munmap(void *addr, size_t length);
+
+```
+mmap中addr代表建议分配的地址，如果为NULL，则由kernel自己选择地址；length为分配的内存大小；prot描述内存的安全性，包括PROT_EXEC(pages可执行)，
+PROT_READ（pages可读），PROT_WRITE(pages可写)，PROT_NONE(pages不可访问)；flags比较多，此处只需要关注MAP_FIXED，代表必须从addr开始的位置进行分配，fd与offset代表映射一个文件到内存中，Go中未使用。nummap中addr和length代表需要释放的内存地址和大小。
+
+Go还会使用madvise给kernel一些建议，通过这种方式提高系统或者应用性能。madvise原型如下：
+```
+       #include <sys/mman.h>
+
+       int madvise(void *addr, size_t length, int advice);
+```
+addr与length仍然是内存地址与大小，advice关注MADV_HUGEPAGE（适用于Linux 2.6.38之后，kernel收到这个建议之后会使用大页管理分配的内存空间），MADV_FREE（kernel收到此建议后，当有内存压力时，可以释放指定内存空间的pages。注意此时内存空间仍然可以写入，之后之后的应用写入不会丢失）
+
+## 内存状态
+
+Go通过抽象出四种内存状态屏蔽底层具体的操作系统实现，四种状态通过调用函数可以相互转换，具体如下图所示：
+![memory](/img/Go-memory-state.png)
+关注两条转换线路，一条是标绿的sysAlloc和sysFree，其底层实现如下：
+```
+func sysAlloc(n uintptr, sysStat *sysMemStat) unsafe.Pointer {
+	p, err := mmap(nil, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_PRIVATE, -1, 0)
+    ...
+	return p
+}
+func sysFree(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) {
+    ...
+	munmap(v, n)
+}
+```
+调用sysAlloc，内存状态为Ready，可以直接使用，调用 所以sysFree释放内存，不能再使用
+另一条线路紫色线路，分别调用sysReserve转换为Reserved状态，此时该内存不可以使用，sysReserve函数如下：
+```
+func sysReserve(v unsafe.Pointer, n uintptr) unsafe.Pointer {
+	p, err := mmap(v, n, _PROT_NONE, _MAP_ANON|_MAP_PRIVATE, -1, 0)
+    ...
+	return p
+}
+```
+注意此时使用mmap时prot为PROT_NONE，因此该内存不能访问。继续调用sysMap转换为Prepared状态：
+```
+func sysMap(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) {
+    ...
+	p, err := mmap(v, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_FIXED|_MAP_PRIVATE, -1, 0)
+    ...
+}
+```
+此时flag中有MAP_FIXED，并且指定了addr和length字段，此时从操作系统层面该内存空间已经可用，那么Prepared状态和Ready状态有啥区别呢？
+madvise可以上场了，我们知道madvise可以用来在内存管理中提高系统或者应用性能，在Go中Prepared状态的内存仍然不可使用，需要继续调用sysUsed将状态转换为Ready，sysUsed函数如下：
+```
+func sysUsed(v unsafe.Pointer, n uintptr) {
+	sysHugePage(v, n)
+}
+
+func sysHugePage(v unsafe.Pointer, n uintptr) {
+	if physHugePageSize != 0 {
+		beg := alignUp(uintptr(v), physHugePageSize)
+		end := alignDown(uintptr(v)+n, physHugePageSize)
+		if beg < end {
+			madvise(unsafe.Pointer(beg), end-beg, _MADV_HUGEPAGE)
+		}
+	}
+}
+```
+使用MADV_HUGEPAGE建议内核如果内存比较大，使用大页管理。同理，sysUnUsed除了大页管理，还会设置MADV_FREE，告诉kernel如果内存告急，可以回收该内存。
+
+
