@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Go," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="内存管理涉及初始化、分配以及回收三个方面。文中使用Go版本为1.17.6  系统调用GO使用mmap和munmap调用操作系统进行内存分配和释放。mmap和munmap原型如下： 123456#include &lt;sys&#x2F;mman.h&gt;void *mmap(void *addr, size_t length, int prot, int flags,           int fd,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Go语言内存管理">
+<meta property="og:url" content="https://erpeng.github.io/2022/03/21/go-memory/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="内存管理涉及初始化、分配以及回收三个方面。文中使用Go版本为1.17.6  系统调用GO使用mmap和munmap调用操作系统进行内存分配和释放。mmap和munmap原型如下： 123456#include &lt;sys&#x2F;mman.h&gt;void *mmap(void *addr, size_t length, int prot, int flags,           int fd,">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/Go-memory-state.png">
+<meta property="article:published_time" content="2022-03-20T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-03-23T11:37:46.857Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="Go">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/Go-memory-state.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2022/03/21/go-memory/"/>
+
+
+
+
+
+  <title>Go语言内存管理 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2022/03/21/go-memory/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Go语言内存管理</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-03-21T00:00:00+08:00">
+                2022-03-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2022/03/21/go-memory/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2022/03/21/go-memory/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>内存管理涉及初始化、分配以及回收三个方面。文中使用Go版本为1.17.6</p>
+</blockquote>
+<h2 id="系统调用"><a href="#系统调用" class="headerlink" title="系统调用"></a>系统调用</h2><p>GO使用mmap和munmap调用操作系统进行内存分配和释放。mmap和munmap原型如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;sys/mman.h&gt;</span><br><span class="line"></span><br><span class="line">void *mmap(void *addr, size_t length, int prot, int flags,</span><br><span class="line">           int fd, off_t offset);</span><br><span class="line">int munmap(void *addr, size_t length);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>mmap中addr代表建议分配的地址，如果为NULL，则由kernel自己选择地址；length为分配的内存大小；prot描述内存的安全性，包括PROT_EXEC(可执行)，PROT_READ（可读），PROT_WRITE(可写)，PROT_NONE(不可访问)；flags比较多，此处只需要关注MAP_FIXED，代表必须从addr开始的位置进行分配，fd与offset代表映射一个文件到内存中，Go中未使用。nummap中addr和length代表需要释放的内存地址和大小。</p>
+<p>Go还会使用madvise给kernel一些建议，通过这种方式提高系统或者应用性能。madvise原型如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;sys/mman.h&gt;</span><br><span class="line"></span><br><span class="line">int madvise(void *addr, size_t length, int advice);</span><br></pre></td></tr></table></figure>
+<p>addr与length仍然是内存地址与大小，advice关注MADV_HUGEPAGE（适用于Linux 2.6.38之后，kernel收到这个建议之后会使用大页管理分配的内存空间），MADV_FREE（kernel收到此建议后，当有内存压力时，可以释放指定内存空间的pages。注意此时内存空间仍然可以写入，并且之后的应用写入不会丢失）</p>
+<h2 id="内存状态"><a href="#内存状态" class="headerlink" title="内存状态"></a>内存状态</h2><p>Go通过抽象出四种内存状态屏蔽底层具体的操作系统实现，四种状态通过调用函数可以相互转换，具体如下图所示：<br><img src="/img/Go-memory-state.png" alt="memory"><br>关注两条转换线路，一条是标绿的sysAlloc和sysFree，其底层实现如下（状态转移图中函数均位于src/runtime/mem_linux.go文件）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">func sysAlloc(n uintptr, sysStat *sysMemStat) unsafe.Pointer &#123;</span><br><span class="line">	p, err := mmap(nil, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_PRIVATE, -1, 0)</span><br><span class="line">    ...</span><br><span class="line">	return p</span><br><span class="line">&#125;</span><br><span class="line">func sysFree(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) &#123;</span><br><span class="line">    ...</span><br><span class="line">	munmap(v, n)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>调用sysAlloc，内存状态为Ready，可以直接使用，调用sysFree释放内存，不能再使用<br>另一条紫色线路，分别调用sysReserve转换为Reserved状态，此时该内存不可以使用，sysReserve函数如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">func sysReserve(v unsafe.Pointer, n uintptr) unsafe.Pointer &#123;</span><br><span class="line">	p, err := mmap(v, n, _PROT_NONE, _MAP_ANON|_MAP_PRIVATE, -1, 0)</span><br><span class="line">    ...</span><br><span class="line">	return p</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意使用mmap时prot为PROT_NONE，因此该内存不能访问。继续调用sysMap转换为Prepared状态：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">func sysMap(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) &#123;</span><br><span class="line">    ...</span><br><span class="line">	p, err := mmap(v, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_FIXED|_MAP_PRIVATE, -1, 0)</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>此时flag中有MAP_FIXED，并且指定了addr和length字段，从操作系统层面该内存空间已经可用，那么Prepared状态和Ready状态有啥区别呢？<br>madvise可以上场了，我们知道madvise可以用来在内存管理中提高系统或者应用性能，在Go中Prepared状态的内存仍然不可使用，需要继续调用sysUsed将状态转换为Ready，sysUsed函数如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">func sysUsed(v unsafe.Pointer, n uintptr) &#123;</span><br><span class="line">	sysHugePage(v, n)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func sysHugePage(v unsafe.Pointer, n uintptr) &#123;</span><br><span class="line">	if physHugePageSize != 0 &#123;</span><br><span class="line">		beg := alignUp(uintptr(v), physHugePageSize)</span><br><span class="line">		end := alignDown(uintptr(v)+n, physHugePageSize)</span><br><span class="line">		if beg &lt; end &#123;</span><br><span class="line">			madvise(unsafe.Pointer(beg), end-beg, _MADV_HUGEPAGE)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用MADV_HUGEPAGE建议内核如果内存比较大，使用大页管理。同理，sysUnUsed除了大页管理，还会设置MADV_FREE，告诉kernel如果内存告急，可以回收该内存。</p>
+<h2 id="Go内存分配组件"><a href="#Go内存分配组件" class="headerlink" title="Go内存分配组件"></a>Go内存分配组件</h2><h3 id="绿色线路"><a href="#绿色线路" class="headerlink" title="绿色线路"></a>绿色线路</h3><p>通过全局搜索sysAlloc，可以观察Go在什么情况下会直接调用mmap分配内存空间。首先是src/runtime/malloc.go中的persistentalloc函数，通过该函数分配的内存空间会转换为notInHeap类型，定义如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">type notInHeap struct&#123;&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>Go内部内存管理结构体或者debug相关的内存需求都是通过persistentalloc进行分配，notInHeap也就是不在堆上，这些数据不会进行释放，除非Go程序退出。该函数分配时通过四个步骤获取内存：</p>
+<ul>
+<li>如果单次分配大于64K,直接调用sysAlloc后返回地址</li>
+<li>从每个p结构体的palloc成员变量获取，该成员变量类型为persistentAlloc，此时不需要加锁<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">type persistentAlloc struct &#123;</span><br><span class="line">	base *notInHeap   // 基地址</span><br><span class="line">	off  uintptr      // 偏移，分配时从偏移处开始</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+<li>从一个全局变量globalAlloc分配，此时需要加锁<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">var globalAlloc struct &#123;</span><br><span class="line">	mutex // 锁</span><br><span class="line">	persistentAlloc // 全局存储空间</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+<li>如果上述空间不足，则调用sysAlloc分配256K空间，保存到链表中，并且赋值给globalAlloc.persistentAlloc</li>
+</ul>
+<p>调用persistentalloc函数的地方很多，分配各种元数据都会用到</p>
+<h2 id="紫色线路"><a href="#紫色线路" class="headerlink" title="紫色线路"></a>紫色线路</h2><p>sysReserve：主要位于go/src/runtime/malloc.go中mheap的方法sysAlloc，该方法会分配 heap arena空间，空间大小为64MB，分配完毕后的空间状态为Reserved<br>sysMap：主要位于go/src/runtime/mheap.go中mheap的方法grow，grow方法会从mheap当前的heap arena分配空间，如果空间不够，则会调用mheap的sysAlloc方法继续分配heap arena<br>sysUsed：主要位于go/src/runtime/mheap.go中mheap的方法allocSpan<br>sysUnUsed：主要位于go/src/runtime/mgcscavenge.go中pageAlloc的方法scavengeRangeLocked，调用mheap的grow函数时会进行判断是否需要scavenge。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文从最底层的系统调用逐步追踪到上层Go的内存管理。Go内存管理整体思路类似TCMALLOC，分级管理，减少锁的竞争。涉及到的数据结构包括mspan，mcentral，mheap，mheap通过heapArena管理pages。详细细节下篇文章介绍。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Go/" rel="tag"># Go</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/01/12/raft/" rel="next" title="raft笔记">
+                <i class="fa fa-chevron-left"></i> raft笔记
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">83</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">43</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8"><span class="nav-number">1.</span> <span class="nav-text">系统调用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E7%8A%B6%E6%80%81"><span class="nav-number">2.</span> <span class="nav-text">内存状态</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Go%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E7%BB%84%E4%BB%B6"><span class="nav-number">3.</span> <span class="nav-text">Go内存分配组件</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%BF%E8%89%B2%E7%BA%BF%E8%B7%AF"><span class="nav-number">3.1.</span> <span class="nav-text">绿色线路</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B4%AB%E8%89%B2%E7%BA%BF%E8%B7%AF"><span class="nav-number">4.</span> <span class="nav-text">紫色线路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'fGrp5ezQvYAyfB3iLgaod86F-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'identicon',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
