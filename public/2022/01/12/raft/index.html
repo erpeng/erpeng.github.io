@@ -79,19 +79,19 @@
 
 
 
-<meta name="description" content="raft论文  服务状态每个服务都会保存如下状态:  CurrentTerm:当前的term值.如果接收到请求或者响应的term T &gt; CurrentTerm,则变更CurrentTerm为T,并且变更角色为follower VotedFor:投票的候选人ID.如果没有投票或者候选人的candidateId等于votedFor并且候选人的日志比当前服务要新或者一致,则投票给候选人.日志比">
+<meta name="description" content="raft论文笔记,备忘和参考.读取之前需要读一下链接中的论文  服务状态每个服务都会保存如下状态:  CurrentTerm:当前的term值.如果接收到请求或者响应的term T &gt; CurrentTerm,则变更CurrentTerm为T,并且变更角色为follower VotedFor:投票的候选人ID.如果没有投票或者候选人的candidateId等于votedFor并且候选人的日">
 <meta property="og:type" content="article">
-<meta property="og:title" content="raft">
+<meta property="og:title" content="raft笔记">
 <meta property="og:url" content="https://erpeng.github.io/2022/01/12/raft/index.html">
 <meta property="og:site_name" content="erpeng&#39;s code area">
-<meta property="og:description" content="raft论文  服务状态每个服务都会保存如下状态:  CurrentTerm:当前的term值.如果接收到请求或者响应的term T &gt; CurrentTerm,则变更CurrentTerm为T,并且变更角色为follower VotedFor:投票的候选人ID.如果没有投票或者候选人的candidateId等于votedFor并且候选人的日志比当前服务要新或者一致,则投票给候选人.日志比">
+<meta property="og:description" content="raft论文笔记,备忘和参考.读取之前需要读一下链接中的论文  服务状态每个服务都会保存如下状态:  CurrentTerm:当前的term值.如果接收到请求或者响应的term T &gt; CurrentTerm,则变更CurrentTerm为T,并且变更角色为follower VotedFor:投票的候选人ID.如果没有投票或者候选人的candidateId等于votedFor并且候选人的日">
 <meta property="og:locale">
 <meta property="og:image" content="https://erpeng.github.io/img/raft-status.png">
 <meta property="og:image" content="https://erpeng.github.io/img/raft-AppendEntries.png">
 <meta property="og:image" content="https://erpeng.github.io/img/raft-RequestVote.png">
 <meta property="og:image" content="https://erpeng.github.io/img/raft-properties.png">
 <meta property="article:published_time" content="2022-01-11T16:00:00.000Z">
-<meta property="article:modified_time" content="2022-01-12T09:31:05.647Z">
+<meta property="article:modified_time" content="2022-01-12T09:53:04.595Z">
 <meta property="article:author" content="erpeng">
 <meta property="article:tag" content="raft">
 <meta name="twitter:card" content="summary">
@@ -131,7 +131,7 @@
 
 
 
-  <title>raft | erpeng's code area</title>
+  <title>raft笔记 | erpeng's code area</title>
   
 
 
@@ -265,7 +265,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">raft</h1>
+          <h1 class="post-title" itemprop="name headline">raft笔记</h1>
         
 
         <div class="post-meta">
@@ -331,7 +331,7 @@
 
       
         <blockquote>
-<p>raft论文</p>
+<p>raft论文笔记,备忘和参考.读取之前需要读一下链接中的论文</p>
 </blockquote>
 <h2 id="服务状态"><a href="#服务状态" class="headerlink" title="服务状态"></a>服务状态</h2><p>每个服务都会保存如下状态:</p>
 <ul>
@@ -411,6 +411,10 @@
 
           <div class="post-nav-prev post-nav-item">
             
+              <a href="/2022/03/21/go-memory/" rel="prev" title="Go语言内存管理">
+                Go语言内存管理 <i class="fa fa-chevron-right"></i>
+              </a>
+            
           </div>
         </div>
       
@@ -489,7 +493,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">82</span>
+                  <span class="site-state-item-count">83</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -502,7 +506,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">42</span>
+                  <span class="site-state-item-count">43</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>

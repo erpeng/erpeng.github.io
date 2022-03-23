@@ -16,8 +16,7 @@ GO使用mmap和munmap调用操作系统进行内存分配和释放。mmap和munm
        int munmap(void *addr, size_t length);
 
 ```
-mmap中addr代表建议分配的地址，如果为NULL，则由kernel自己选择地址；length为分配的内存大小；prot描述内存的安全性，包括PROT_EXEC(pages可执行)，
-PROT_READ（pages可读），PROT_WRITE(pages可写)，PROT_NONE(pages不可访问)；flags比较多，此处只需要关注MAP_FIXED，代表必须从addr开始的位置进行分配，fd与offset代表映射一个文件到内存中，Go中未使用。nummap中addr和length代表需要释放的内存地址和大小。
+mmap中addr代表建议分配的地址，如果为NULL，则由kernel自己选择地址；length为分配的内存大小；prot描述内存的安全性，包括PROT_EXEC(可执行)，PROT_READ（可读），PROT_WRITE(可写)，PROT_NONE(不可访问)；flags比较多，此处只需要关注MAP_FIXED，代表必须从addr开始的位置进行分配，fd与offset代表映射一个文件到内存中，Go中未使用。nummap中addr和length代表需要释放的内存地址和大小。
 
 Go还会使用madvise给kernel一些建议，通过这种方式提高系统或者应用性能。madvise原型如下：
 ```
@@ -25,7 +24,7 @@ Go还会使用madvise给kernel一些建议，通过这种方式提高系统或�
 
        int madvise(void *addr, size_t length, int advice);
 ```
-addr与length仍然是内存地址与大小，advice关注MADV_HUGEPAGE（适用于Linux 2.6.38之后，kernel收到这个建议之后会使用大页管理分配的内存空间），MADV_FREE（kernel收到此建议后，当有内存压力时，可以释放指定内存空间的pages。注意此时内存空间仍然可以写入，之后之后的应用写入不会丢失）
+addr与length仍然是内存地址与大小，advice关注MADV_HUGEPAGE（适用于Linux 2.6.38之后，kernel收到这个建议之后会使用大页管理分配的内存空间），MADV_FREE（kernel收到此建议后，当有内存压力时，可以释放指定内存空间的pages。注意此时内存空间仍然可以写入，并且之后的应用写入不会丢失）
 
 ## 内存状态
 
@@ -43,8 +42,8 @@ func sysFree(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) {
 	munmap(v, n)
 }
 ```
-调用sysAlloc，内存状态为Ready，可以直接使用，调用 所以sysFree释放内存，不能再使用
-另一条线路紫色线路，分别调用sysReserve转换为Reserved状态，此时该内存不可以使用，sysReserve函数如下：
+调用sysAlloc，内存状态为Ready，可以直接使用，调用sysFree释放内存，不能再使用
+另一条紫色线路，分别调用sysReserve转换为Reserved状态，此时该内存不可以使用，sysReserve函数如下：
 ```
 func sysReserve(v unsafe.Pointer, n uintptr) unsafe.Pointer {
 	p, err := mmap(v, n, _PROT_NONE, _MAP_ANON|_MAP_PRIVATE, -1, 0)
@@ -52,7 +51,7 @@ func sysReserve(v unsafe.Pointer, n uintptr) unsafe.Pointer {
 	return p
 }
 ```
-注意此时使用mmap时prot为PROT_NONE，因此该内存不能访问。继续调用sysMap转换为Prepared状态：
+注意使用mmap时prot为PROT_NONE，因此该内存不能访问。继续调用sysMap转换为Prepared状态：
 ```
 func sysMap(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) {
     ...
@@ -60,7 +59,7 @@ func sysMap(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) {
     ...
 }
 ```
-此时flag中有MAP_FIXED，并且指定了addr和length字段，此时从操作系统层面该内存空间已经可用，那么Prepared状态和Ready状态有啥区别呢？
+此时flag中有MAP_FIXED，并且指定了addr和length字段，从操作系统层面该内存空间已经可用，那么Prepared状态和Ready状态有啥区别呢？
 madvise可以上场了，我们知道madvise可以用来在内存管理中提高系统或者应用性能，在Go中Prepared状态的内存仍然不可使用，需要继续调用sysUsed将状态转换为Ready，sysUsed函数如下：
 ```
 func sysUsed(v unsafe.Pointer, n uintptr) {
@@ -119,8 +118,8 @@ sysUnUsed：主要位于go/src/runtime/mgcscavenge.go中pageAlloc的方法scaven
 
 
 
+## 总结
 
-
-
+本文从最底层的系统调用逐步追踪到上层Go的内存管理。Go内存管理整体思路类似TCMALLOC，分级管理，减少锁的竞争。涉及到的数据结构包括mspan，mcentral，mheap，mheap通过heapArena管理pages。详细细节下篇文章介绍。
 
 
