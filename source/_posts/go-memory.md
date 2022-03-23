@@ -31,7 +31,7 @@ addr与length仍然是内存地址与大小，advice关注MADV_HUGEPAGE（适用
 
 Go通过抽象出四种内存状态屏蔽底层具体的操作系统实现，四种状态通过调用函数可以相互转换，具体如下图所示：
 ![memory](/img/Go-memory-state.png)
-关注两条转换线路，一条是标绿的sysAlloc和sysFree，其底层实现如下：
+关注两条转换线路，一条是标绿的sysAlloc和sysFree，其底层实现如下（状态转移图中函数均位于src/runtime/mem_linux.go文件）：
 ```
 func sysAlloc(n uintptr, sysStat *sysMemStat) unsafe.Pointer {
 	p, err := mmap(nil, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_PRIVATE, -1, 0)
@@ -78,5 +78,49 @@ func sysHugePage(v unsafe.Pointer, n uintptr) {
 }
 ```
 使用MADV_HUGEPAGE建议内核如果内存比较大，使用大页管理。同理，sysUnUsed除了大页管理，还会设置MADV_FREE，告诉kernel如果内存告急，可以回收该内存。
+
+
+## Go内存分配组件
+
+### 绿色线路
+
+通过全局搜索sysAlloc，可以观察Go在什么情况下会直接调用mmap分配内存空间。首先是src/runtime/malloc.go中的persistentalloc函数，通过该函数分配的内存空间会转换为notInHeap类型，定义如下：
+
+```
+type notInHeap struct{}
+
+```
+Go内部内存管理结构体或者debug相关的内存需求都是通过persistentalloc进行分配，notInHeap也就是不在堆上，这些数据不会进行释放，除非Go程序退出。该函数分配时通过四个步骤获取内存：
+* 如果单次分配大于64K,直接调用sysAlloc后返回地址
+* 从每个p结构体的palloc成员变量获取，该成员变量类型为persistentAlloc，此时不需要加锁
+```
+type persistentAlloc struct {
+	base *notInHeap   // 基地址
+	off  uintptr      // 偏移，分配时从偏移处开始
+}
+```
+* 从一个全局变量globalAlloc分配，此时需要加锁
+```
+var globalAlloc struct {
+	mutex // 锁
+	persistentAlloc // 全局存储空间
+}
+```
+* 如果上述空间不足，则调用sysAlloc分配256K空间，保存到链表中，并且赋值给globalAlloc.persistentAlloc
+
+调用persistentalloc函数的地方很多，分配各种元数据都会用到
+
+## 紫色线路
+
+sysReserve：主要位于go/src/runtime/malloc.go中mheap的方法sysAlloc，该方法会分配 heap arena空间，空间大小为64MB，分配完毕后的空间状态为Reserved
+sysMap：主要位于go/src/runtime/mheap.go中mheap的方法grow，grow方法会从mheap当前的heap arena分配空间，如果空间不够，则会调用mheap的sysAlloc方法继续分配heap arena
+sysUsed：主要位于go/src/runtime/mheap.go中mheap的方法allocSpan
+sysUnUsed：主要位于go/src/runtime/mgcscavenge.go中pageAlloc的方法scavengeRangeLocked，调用mheap的grow函数时会进行判断是否需要scavenge。
+
+
+
+
+
+
 
 
