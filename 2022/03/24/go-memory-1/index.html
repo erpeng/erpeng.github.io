@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Go," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="内存管理涉及初始化、分配以及回收三个方面。文中使用Go版本为1.17.6  概览为减少分配时的竞争，go内存管理借鉴TCMALLOC的分级管理思想，每一个P（G-M-P，参考Go的调度管理）有自己的内存结构mcache，同一个P内的G分配内存时不需要加锁。当P内无内存可分配时，通过加锁，使用mcenter中的内存，当mcenter中也无内存时，通过mheap申请新的内存。mheap结构中通过he">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Go语言内存管理-顶层视角">
+<meta property="og:url" content="https://erpeng.github.io/2022/03/24/go-memory-1/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="内存管理涉及初始化、分配以及回收三个方面。文中使用Go版本为1.17.6  概览为减少分配时的竞争，go内存管理借鉴TCMALLOC的分级管理思想，每一个P（G-M-P，参考Go的调度管理）有自己的内存结构mcache，同一个P内的G分配内存时不需要加锁。当P内无内存可分配时，通过加锁，使用mcenter中的内存，当mcenter中也无内存时，通过mheap申请新的内存。mheap结构中通过he">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/go-memory-level.png">
+<meta property="og:image" content="https://erpeng.github.io/img/go-memory-page-allocator.png">
+<meta property="article:published_time" content="2022-03-23T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-03-24T12:04:50.278Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="Go">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/go-memory-level.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2022/03/24/go-memory-1/"/>
+
+
+
+
+
+  <title>Go语言内存管理-顶层视角 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2022/03/24/go-memory-1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Go语言内存管理-顶层视角</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-03-24T00:00:00+08:00">
+                2022-03-24
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2022/03/24/go-memory-1/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2022/03/24/go-memory-1/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>内存管理涉及初始化、分配以及回收三个方面。文中使用Go版本为1.17.6</p>
+</blockquote>
+<h2 id="概览"><a href="#概览" class="headerlink" title="概览"></a>概览</h2><p>为减少分配时的竞争，go内存管理借鉴TCMALLOC的分级管理思想，每一个P（G-M-P，参考Go的调度管理）有自己的内存结构mcache，同一个P内的G分配内存时不需要加锁。当P内无内存可分配时，通过加锁，使用mcenter中的内存，当mcenter中也无内存时，通过mheap申请新的内存。<br>mheap结构中通过heapArena管理内存申请，每一个heapArena大小为64M，包括8192个pages，每个page的大小为8KB。<br>mcache中具体的内存管理单元是mspan，mspan分为68个级别，从8字节到32KB到大对象，如果分配一个13字节的对象，则需要使用一个大小为16字节的mspan<br>一个mspan可以占用一个或者多个page。总体概览图如下：<br><img src="/img/go-memory-level.png" alt="level"></p>
+<p>结构体的关键成员如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br></pre></td><td class="code"><pre><span class="line">type mspan struct &#123;</span><br><span class="line">	...</span><br><span class="line">	startAddr uintptr // span的开始地址</span><br><span class="line">	npages    uintptr // span包括的pages个数</span><br><span class="line">	freeindex uintptr // 从freeindex开始寻找下一个空闲的元素位置</span><br><span class="line">	nelems uintptr // span可以保存的元素个数</span><br><span class="line"></span><br><span class="line">	</span><br><span class="line">	allocCache uint64 // 辅助快速寻找空闲元素位置</span><br><span class="line">	allocBits  *gcBits // 位图，标记一个元素位置是否使用</span><br><span class="line">	gcmarkBits *gcBits // 位图，标记一个元素位置是否已经进行过标记</span><br><span class="line"></span><br><span class="line">	sweepgen    uint32 // h是mheap结构，根据他两的sweepgen，判断当前span的状态</span><br><span class="line"></span><br><span class="line">	// if sweepgen == h-&gt;sweepgen - 2, the span needs sweeping</span><br><span class="line">	// if sweepgen == h-&gt;sweepgen - 1, the span is currently being swept</span><br><span class="line">	// if sweepgen == h-&gt;sweepgen, the span is swept and ready to use</span><br><span class="line">	// if sweepgen == h-&gt;sweepgen + 1, the span was cached before sweep began and is still cached, and needs sweeping</span><br><span class="line">	// if sweepgen == h-&gt;sweepgen + 3, the span was swept and then cached and is still cached</span><br><span class="line">	// h-&gt;sweepgen is incremented by 2 after every GC</span><br><span class="line">	... </span><br><span class="line">	allocCount  uint16        // 已经分配的元素个数</span><br><span class="line">	spanclass   spanClass     // size class and noscan (uint8)</span><br><span class="line">	...</span><br><span class="line">	elemsize    uintptr       // 元素大小</span><br><span class="line">	limit       uintptr       // span结尾</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">type mcache struct &#123;</span><br><span class="line">	...</span><br><span class="line">	tiny       uintptr // 微小对象分配（&lt;16字节）地址</span><br><span class="line">	tinyoffset uintptr // 当前分配的偏移量 </span><br><span class="line">	tinyAllocs uintptr // 分配的个数</span><br><span class="line">	alloc [numSpanClasses]*mspan // 所有的span</span><br><span class="line">	...</span><br><span class="line">	flushGen uint32</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">type mcentral struct &#123;</span><br><span class="line">	spanclass spanClass // 类型</span><br><span class="line">	partial [2]spanSet // 有空闲元素位置的列表</span><br><span class="line">	full    [2]spanSet // 无空闲元素位置的列表</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">type mheap struct &#123;</span><br><span class="line"></span><br><span class="line">	lock  mutex</span><br><span class="line">	pages pageAlloc // page分配管理</span><br><span class="line"></span><br><span class="line">	sweepgen     uint32 // sweep generation, see comment in mspan; written during STW</span><br><span class="line">	sweepDrained uint32 // all spans are swept or are being swept</span><br><span class="line">	sweepers     uint32 // number of active sweepone calls</span><br><span class="line"></span><br><span class="line">	allspans []*mspan // 所有的mspan</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	arenas [1 &lt;&lt; arenaL1Bits]*[1 &lt;&lt; arenaL2Bits]*heapArena // 所有的heapArena</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	arenaHints *arenaHint // 指向heapArena的地址数组</span><br><span class="line">	allArenas []arenaIdx</span><br><span class="line"></span><br><span class="line">	curArena struct &#123;</span><br><span class="line">		base, end uintptr</span><br><span class="line">	&#125; // 当前可分配空间的heapArena</span><br><span class="line"></span><br><span class="line">	central [numSpanClasses]struct &#123;</span><br><span class="line">		mcentral mcentral</span><br><span class="line">		pad      [cpu.CacheLinePadSize - unsafe.Sizeof(mcentral&#123;&#125;)%cpu.CacheLinePadSize]byte</span><br><span class="line">	&#125; // mcenter数组</span><br><span class="line"></span><br><span class="line">	spanalloc             fixalloc // 分配span管理结构的分配器</span><br><span class="line">	cachealloc            fixalloc // allocator for mcache*</span><br><span class="line">	arenaHintAlloc        fixalloc // allocator for arenaHints</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="页分配器概览"><a href="#页分配器概览" class="headerlink" title="页分配器概览"></a>页分配器概览</h2><p>为了加快从mheap中申请pages的速度，1.17.6中的page allocator使用了一个分为5层的radix tree，tree中的每个叶子节点为一个chunk的summary，一个chunk包括512个pages，summary其实就是一个bitmap的汇总，每一个bit代表一个page是否使用，1为使用，0为未使用。summary会汇总一个chunk开头（start）、结尾（end）以及中间最大的连续0的个数（max），即可分配的连续pages个数。每8个叶子节点会再向上汇总，再形成一个8 chunks的summary，包括的内容还是start、max、end，注意当8个chunks汇总时，两个chunk的start和end可以合并，如果其值大于max，需要更新max的值。<br>为什么是5层呢，因为按5层计算，所有的叶子节点可表示的内存空间为 2^48字节，正好是48位地址总线能够寻找的最大地址。</p>
+<p><img src="/img/go-memory-page-allocator.png" alt="level"></p>
+<h2 id="入口"><a href="#入口" class="headerlink" title="入口"></a>入口</h2><p>分配内存的入口是src/runtime/malloc.go中的mallocgc</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer &#123;</span><br><span class="line">	...</span><br><span class="line">	var span *mspan</span><br><span class="line">	var x unsafe.Pointer</span><br><span class="line">	noscan := typ == nil || typ.ptrdata == 0</span><br><span class="line">	...</span><br><span class="line">	if size &lt;= maxSmallSize &#123; //  小于等于32K</span><br><span class="line">		if noscan &amp;&amp; size &lt; maxTinySize &#123; // 不包含指针并且小于16字节</span><br><span class="line">			// 微小对象分配</span><br><span class="line">		&#125; else &#123;</span><br><span class="line">			// 小对象分配</span><br><span class="line">		&#125;</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		// 大于32K的大对象分配</span><br><span class="line">	&#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>大对象分配:<br>分配后也会放到span中，调用链为mcache.allocLarge()-&gt;mheap.alloc-&gt;mheap.allocspan()，mheap.allocspan函数首先判断分配pages个数，如果较少，会首先在每个P自己的cache进行page分配，否则通过页分配器进行页面分配</p>
+<p>小对象分配:<br>会从mcache自己管理的span中进行分配，首先调用nextFreeFast，如果不行则继续调用nextFree。两个函数解释如下</p>
+<ul>
+<li>nextFreeFast ：通过一个64bit大小的alloCache来快速计算，看是否有空闲位置，详细代码及注释如下：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">func nextFreeFast(s *mspan) gclinkptr &#123;</span><br><span class="line">	theBit := sys.Ctz64(s.allocCache) // allocCache是allocBits的反码，因此1表示未使用。此函数计算allocCache结尾处0的个数，如果都是0，则返回64</span><br><span class="line">	if theBit &lt; 64 &#123; // allocCache为一个uint64类型，小于64说明找到了一个空闲位置</span><br><span class="line">		result := s.freeindex + uintptr(theBit) // 计算空闲位置在span中的索引</span><br><span class="line">		if result &lt; s.nelems &#123; // 必须小于总大小</span><br><span class="line">			freeidx := result + 1 // 计算span新的freeindex</span><br><span class="line">			// 如果新的freeindex是64的整数倍，并且因此如果不是最后的数据，则说明allocCache需要根据allocBits重新计算(因为allocCache只能表示64位的大小)，此处直接返回0</span><br><span class="line">			if freeidx%64 == 0 &amp;&amp; freeidx != s.nelems &#123;</span><br><span class="line">				return 0</span><br><span class="line">			&#125;</span><br><span class="line">			s.allocCache &gt;&gt;= uint(theBit + 1) // 将allocCache右移位，生成新的allocCache</span><br><span class="line">			s.freeindex = freeidx // span的freeindex重新赋值</span><br><span class="line">			s.allocCount++ // span的allocCount + 1</span><br><span class="line">			return gclinkptr(result*s.elemsize + s.base()) // 返回新元素的地址</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	return 0</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>nextFree：通过freeindex查找可用元素位置，如果该span已经满，则放回到mcentral，然后从mcentral重新获取一个span，如果mcentral中没有空闲span，调用mheap获取，调用链路为mcache.refill-&gt;mcentral.cacheSpan-&gt;mheap.alloc，可以看到，如果没有从mcache和mcentral中获取到span，最终又回到了大对象分配的链路</li>
+</ul>
+<p>微小对象分配:<br>微小对象为不含指针，并且大小小于16字节的内存空间分配<br>mcache中tiny，tinyoffset，tinyAllocs分别表示分配的地址，当前的偏移以及分配的元素个数。如果能分配则直接分配，否则调用nextFreeFast和nextFree从16字节大小的span中获取一个新的地址进行分配。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文从最上层的入口开始探究Go语言内存管理，最上层入口为mallocgc，涉及到的结构包括mspan、mcache、mcenter、mheap，分级管理，分类分配。未涉及到具体的页分配以及内存回收。内存回收涉及到了Go的GC流程，另文再述。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Go/" rel="tag"># Go</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/03/21/go-memory/" rel="next" title="Go语言内存管理-底层视角">
+                <i class="fa fa-chevron-left"></i> Go语言内存管理-底层视角
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">84</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">43</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E8%A7%88"><span class="nav-number">1.</span> <span class="nav-text">概览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A1%B5%E5%88%86%E9%85%8D%E5%99%A8%E6%A6%82%E8%A7%88"><span class="nav-number">2.</span> <span class="nav-text">页分配器概览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%A5%E5%8F%A3"><span class="nav-number">3.</span> <span class="nav-text">入口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'fGrp5ezQvYAyfB3iLgaod86F-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'identicon',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
