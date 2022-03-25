@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Go," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="内存管理涉及到的算法，主要包括队列、各种位运算。文中使用Go版本为1.17.6  位运算使用位移操作，实现各类算法 2的幂次判断一个正整型数字，是否是2的幂次方，例如 1&#x3D;&gt;false，2&#x3D;&gt;true 1234func IsPowerOf2 (n uint) bool &amp;#123;	return n&amp;(n - 1）&#x3D;&#x3D; 0 &amp;#125; 2幂次方的数字只有最高位为1，其余位都">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Go语言内存管理-番外篇之算法分析">
+<meta property="og:url" content="https://erpeng.github.io/2022/03/25/go-memory-2/index.html">
+<meta property="og:site_name" content="erpeng&#39;s code area">
+<meta property="og:description" content="内存管理涉及到的算法，主要包括队列、各种位运算。文中使用Go版本为1.17.6  位运算使用位移操作，实现各类算法 2的幂次判断一个正整型数字，是否是2的幂次方，例如 1&#x3D;&gt;false，2&#x3D;&gt;true 1234func IsPowerOf2 (n uint) bool &amp;#123;	return n&amp;(n - 1）&#x3D;&#x3D; 0 &amp;#125; 2幂次方的数字只有最高位为1，其余位都">
+<meta property="og:locale">
+<meta property="og:image" content="https://erpeng.github.io/img/go-memory-spanset.png">
+<meta property="article:published_time" content="2022-03-24T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-03-25T10:30:13.637Z">
+<meta property="article:author" content="erpeng">
+<meta property="article:tag" content="Go">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://erpeng.github.io/img/go-memory-spanset.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://erpeng.github.io/2022/03/25/go-memory-2/"/>
+
+
+
+
+
+  <title>Go语言内存管理-番外篇之算法分析 | erpeng's code area</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">erpeng's code area</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2022/03/25/go-memory-2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="erpeng's code area">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Go语言内存管理-番外篇之算法分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-03-25T00:00:00+08:00">
+                2022-03-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2022/03/25/go-memory-2/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2022/03/25/go-memory-2/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>内存管理涉及到的算法，主要包括队列、各种位运算。文中使用Go版本为1.17.6</p>
+</blockquote>
+<h2 id="位运算"><a href="#位运算" class="headerlink" title="位运算"></a>位运算</h2><p>使用位移操作，实现各类算法</p>
+<h3 id="2的幂次"><a href="#2的幂次" class="headerlink" title="2的幂次"></a>2的幂次</h3><p>判断一个正整型数字，是否是2的幂次方，例如 1=&gt;false，2=&gt;true</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">func IsPowerOf2 (n uint) bool &#123;</span><br><span class="line">	return n&amp;(n - 1）== 0 </span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>2幂次方的数字只有最高位为1，其余位都为0，例如2=&gt;10，4=&gt;100，8=&gt;1000。所以n&amp;(n-1)等于0</p>
+<h3 id="对齐"><a href="#对齐" class="headerlink" title="对齐"></a>对齐</h3><p>内存管理中会要求某个地址按2的幂次方对齐，常见的例如按8字节对齐，假设地址为100，则按8字节对齐后为 8 * 13 = 104 ,地址为 112，则对齐之后也为112。<br>对齐就是将地址调整为 8 的整数倍</p>
+<p>向上对齐</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">func alignUp(n, a uintptr) uintptr &#123;</span><br><span class="line">	return (n + a - 1) &amp;^ (a - 1)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>向下对齐</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">func alignDown(n, a uintptr) uintptr &#123;</span><br><span class="line">	return n &amp;^ (a - 1)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>向上，则n + a -1 ，向下，直接使用n，同理，计算ceil(n/a)，将n/a后向上取整</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">func divRoundUp(n, a uintptr) uintptr &#123;</span><br><span class="line">	return (n+a-1) / a</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<h3 id="正整数二进制表示后末尾连续0个数"><a href="#正整数二进制表示后末尾连续0个数" class="headerlink" title="正整数二进制表示后末尾连续0个数"></a>正整数二进制表示后末尾连续0个数</h3><p>例如4=&gt;100，则末尾连续0的个数为2，5=&gt;101，末尾连续0的个数为0。我们看下移位版64位正整型末尾0的个数</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">func trailingZeros(n uint64) int&#123;</span><br><span class="line">  var mask uint64 = 1</span><br><span class="line">  for i:=0;i&lt;64;i++ &#123;</span><br><span class="line">	if n&amp;mask != 0 &#123;</span><br><span class="line">	  return i</span><br><span class="line">	&#125;</span><br><span class="line">	mask = mask &lt;&lt; 1</span><br><span class="line">  &#125;</span><br><span class="line">  return 64</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>Go使用<a target="_blank" rel="noopener" href="http://supertech.csail.mit.edu/papers/debruijn.pdf">http://supertech.csail.mit.edu/papers/debruijn.pdf</a> 中的算法，代码为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">func Ctz64(x uint64) int &#123;</span><br><span class="line">	x &amp;= -x                       // isolate low-order bit</span><br><span class="line">	y := x * deBruijn64ctz &gt;&gt; 58  // extract part of deBruijn sequence</span><br><span class="line">	i := int(deBruijnIdx64ctz[y]) // convert to bit index</span><br><span class="line">	z := int((x - 1) &gt;&gt; 57 &amp; 64)  // adjustment if zero</span><br><span class="line">	return i + z</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>详细解释参考论文<br>Go中8位整型直接使用查表法获取，代码如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">func Ctz8(x uint8) int &#123;</span><br><span class="line">	return int(ntz8tab[x])</span><br><span class="line">&#125;</span><br><span class="line">var ntz8tab = [256]uint8&#123;</span><br><span class="line">	0x08, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x04, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x05, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x04, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x06, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x04, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x05, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x04, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x07, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x04, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x05, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x04, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x06, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x04, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x05, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">	0x04, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x00,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>8位只有256个元素，直接查表获取，例如0=&gt;0x08，1=&gt;0x00，2=&gt;0x01</p>
+<h2 id="无锁队列"><a href="#无锁队列" class="headerlink" title="无锁队列"></a>无锁队列</h2><p>Go内存管理mcenter结构体保存了两个span队列，一个是有空闲元素的，一个没有。span队列使用无锁队列实现，其结构体如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">type spanSet struct &#123;</span><br><span class="line">	spineLock mutex           // spine可以理解为二维数组，每一个数组有512个元素，每个元素是一个mspan。增加一个数组时，需要加锁</span><br><span class="line">	spine     unsafe.Pointer //  spine初始地址</span><br><span class="line">	spineLen  uintptr        //  spine当前长度</span><br><span class="line">	spineCap  uintptr        //  spine容量</span><br><span class="line">	index headTailIndex      //  索引，由头尾两个索引组成一个64位的整型，各占32个比特</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>一个mspan至少代表一个page，大小为8KB，则一个数组占用 512 * 8 KB = 2^9 * 2^13 B = 2^22 B = 4MB。spine初始容量为256，则一个spine可容纳 256 * 4MB = 2^8 * 2^22 B = 1GB。示意图如下：<br><img src="/img/go-memory-spanset.png" alt="spine"></p>
+<p>spine类似一个切片，大小不够时，会进行2倍的扩容，每次写入数据时通过尾部压入，弹出时通过头部弹出，除了扩充spine容量之外，其他时候不需要加锁，通过原子操作进行。代码如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">func (b *spanSet) push(s *mspan) &#123;</span><br><span class="line">	cursor := uintptr(b.index.incTail().tail() - 1) // 通过尾部插入</span><br><span class="line">	top, bottom := cursor/spanSetBlockEntries, cursor%spanSetBlockEntries // top和bottom分别代表第一维的索引和第二维的索引</span><br><span class="line"></span><br><span class="line">	spineLen := atomic.Loaduintptr(&amp;b.spineLen)</span><br><span class="line">	var block *spanSetBlock</span><br><span class="line">retry:</span><br><span class="line">	if top &lt; spineLen &#123;   // 如果仍然有空间可以插入mspan，则直接通过原子操作取出地址</span><br><span class="line">		spine := atomic.Loadp(unsafe.Pointer(&amp;b.spine))</span><br><span class="line">		blockp := add(spine, sys.PtrSize*top)</span><br><span class="line">		block = (*spanSetBlock)(atomic.Loadp(blockp))</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		// 否则增加一个spine数组</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	// 通过原子操作将mspan存入</span><br><span class="line">	atomic.StorepNoWB(unsafe.Pointer(&amp;block.spans[bottom]), unsafe.Pointer(s))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">func (b *spanSet) pop() *mspan &#123;</span><br><span class="line">	var head, tail uint32</span><br><span class="line">claimLoop:</span><br><span class="line">	for &#123; // 注意此处是一个循环，需要考虑两个goroutine同时获取一个mspan或者一个在push一个在pop，通过原子操作，成功获取后才会退出</span><br><span class="line">		headtail := b.index.load()</span><br><span class="line">		head, tail = headtail.split()</span><br><span class="line">		...</span><br><span class="line">		spineLen := atomic.Loaduintptr(&amp;b.spineLen)</span><br><span class="line">		want := head</span><br><span class="line">		for want == head &#123;</span><br><span class="line">			if b.index.cas(headtail, makeHeadTailIndex(want+1, tail)) &#123;</span><br><span class="line">				break claimLoop</span><br><span class="line">			&#125;</span><br><span class="line">			headtail = b.index.load()</span><br><span class="line">			head, tail = headtail.split()</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	top, bottom := head/spanSetBlockEntries, head%spanSetBlockEntries // top和bottom分别代表第一维的索引和第二维的索引</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	spine := atomic.Loadp(unsafe.Pointer(&amp;b.spine))</span><br><span class="line">	blockp := add(spine, sys.PtrSize*uintptr(top))</span><br><span class="line">	block := (*spanSetBlock)(atomic.Loadp(blockp))</span><br><span class="line">	s := (*mspan)(atomic.Loadp(unsafe.Pointer(&amp;block.spans[bottom])))</span><br><span class="line">	for s == nil &#123;</span><br><span class="line">		s = (*mspan)(atomic.Loadp(unsafe.Pointer(&amp;block.spans[bottom])))</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	atomic.StorepNoWB(unsafe.Pointer(&amp;block.spans[bottom]), nil)</span><br><span class="line"></span><br><span class="line">	if atomic.Xadd(&amp;block.popped, 1) == spanSetBlockEntries &#123;</span><br><span class="line">		// 清理回收</span><br><span class="line">	&#125;</span><br><span class="line">	return s</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Go语言代码需要极致考虑性能，因此其可读性并不高。并且语言功能和实现方法还在不断的更新变动之中，希望文章能给大家了解Go实现有所帮助。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Go/" rel="tag"># Go</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/03/24/go-memory-1/" rel="next" title="Go语言内存管理-顶层视角">
+                <i class="fa fa-chevron-left"></i> Go语言内存管理-顶层视角
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">85</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">43</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/erpeng" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%8D%E8%BF%90%E7%AE%97"><span class="nav-number">1.</span> <span class="nav-text">位运算</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E7%9A%84%E5%B9%82%E6%AC%A1"><span class="nav-number">1.1.</span> <span class="nav-text">2的幂次</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%B9%E9%BD%90"><span class="nav-number">1.2.</span> <span class="nav-text">对齐</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AD%A3%E6%95%B4%E6%95%B0%E4%BA%8C%E8%BF%9B%E5%88%B6%E8%A1%A8%E7%A4%BA%E5%90%8E%E6%9C%AB%E5%B0%BE%E8%BF%9E%E7%BB%AD0%E4%B8%AA%E6%95%B0"><span class="nav-number">1.3.</span> <span class="nav-text">正整数二进制表示后末尾连续0个数</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%97%A0%E9%94%81%E9%98%9F%E5%88%97"><span class="nav-number">2.</span> <span class="nav-text">无锁队列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">erpeng</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'fGrp5ezQvYAyfB3iLgaod86F-gzGzoHsz',
+        appKey: 'JzjLAEcvkcIk1rVY7bUkyM4o',
+        placeholder: '请在此输入您的留言',
+        avatar:'identicon',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
