@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="leveldb,rocksdb," />
+  <meta name="keywords" content="Go," />
 
 
 
@@ -79,18 +79,17 @@
 
 
 
-<meta name="description" content="主要介绍Rocksdb与Leveldb的不同之处,以及为何如此设计  基础概念 列簇（Column Family):默认为default,CF将一个数据库实例划分为多个partition.借鉴于Hbase.实现时WAL共用,保证跨CF的原子性,但Memtable和SSTable都是独立的,保证可以独自配置  Iterator和snapshot:都会提供某个时点的视图,但前台任务或者短暂的扫描适用">
+<meta name="description" content="内存管理中涉及到内存释放的部分。文中使用Go版本为1.17.6  释放方法在《Go语言内存管理-底层视角》中提到，位于go&#x2F;src&#x2F;runtime&#x2F;mgcscavenge.go中pageAlloc的方法scavengeRangeLocked会使用sysUnused将一段内存从ready状态转为prepared状态，此时内存可以被操作系统回收，详细看下该方法： 123456789101112131">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Rocksdb">
-<meta property="og:url" content="https://erpeng.github.io/2020/11/02/leveldb-start-4/index.html">
+<meta property="og:title" content="Go语言内存管理-内存释放">
+<meta property="og:url" content="https://erpeng.github.io/2022/03/28/go-memory-3/index.html">
 <meta property="og:site_name" content="erpeng&#39;s code area">
-<meta property="og:description" content="主要介绍Rocksdb与Leveldb的不同之处,以及为何如此设计  基础概念 列簇（Column Family):默认为default,CF将一个数据库实例划分为多个partition.借鉴于Hbase.实现时WAL共用,保证跨CF的原子性,但Memtable和SSTable都是独立的,保证可以独自配置  Iterator和snapshot:都会提供某个时点的视图,但前台任务或者短暂的扫描适用">
+<meta property="og:description" content="内存管理中涉及到内存释放的部分。文中使用Go版本为1.17.6  释放方法在《Go语言内存管理-底层视角》中提到，位于go&#x2F;src&#x2F;runtime&#x2F;mgcscavenge.go中pageAlloc的方法scavengeRangeLocked会使用sysUnused将一段内存从ready状态转为prepared状态，此时内存可以被操作系统回收，详细看下该方法： 123456789101112131">
 <meta property="og:locale">
-<meta property="article:published_time" content="2020-11-01T16:00:00.000Z">
-<meta property="article:modified_time" content="2020-11-03T08:37:59.669Z">
+<meta property="article:published_time" content="2022-03-27T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-04-01T12:03:04.872Z">
 <meta property="article:author" content="erpeng">
-<meta property="article:tag" content="leveldb">
-<meta property="article:tag" content="rocksdb">
+<meta property="article:tag" content="Go">
 <meta name="twitter:card" content="summary">
 
 
@@ -121,13 +120,13 @@
 
 
 
-  <link rel="canonical" href="https://erpeng.github.io/2020/11/02/leveldb-start-4/"/>
+  <link rel="canonical" href="https://erpeng.github.io/2022/03/28/go-memory-3/"/>
 
 
 
 
 
-  <title>Rocksdb | erpeng's code area</title>
+  <title>Go语言内存管理-内存释放 | erpeng's code area</title>
   
 
 
@@ -244,7 +243,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2020/11/02/leveldb-start-4/">
+    <link itemprop="mainEntityOfPage" href="https://erpeng.github.io/2022/03/28/go-memory-3/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="">
@@ -261,7 +260,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">Rocksdb</h1>
+          <h1 class="post-title" itemprop="name headline">Go语言内存管理-内存释放</h1>
         
 
         <div class="post-meta">
@@ -273,8 +272,8 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-11-02T00:00:00+08:00">
-                2020-11-02
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-03-28T00:00:00+08:00">
+                2022-03-28
               </time>
             
 
@@ -292,8 +291,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2020/11/02/leveldb-start-4/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2020/11/02/leveldb-start-4/" itemprop="commentCount"></span>
+                <a href="/2022/03/28/go-memory-3/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2022/03/28/go-memory-3/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -327,33 +326,25 @@
 
       
         <blockquote>
-<p>主要介绍Rocksdb与Leveldb的不同之处,以及为何如此设计</p>
+<p>内存管理中涉及到内存释放的部分。文中使用Go版本为1.17.6</p>
 </blockquote>
-<h2 id="基础概念"><a href="#基础概念" class="headerlink" title="基础概念"></a>基础概念</h2><ul>
-<li><p>列簇（Column Family):默认为default,CF将一个数据库实例划分为多个partition.借鉴于Hbase.实现时WAL共用,保证跨CF的原子性,但Memtable和SSTable都是独立的,保证可以独自配置</p>
-</li>
-<li><p>Iterator和snapshot:都会提供某个时点的视图,但前台任务或者短暂的扫描适用于Iterator,长时间任务或者后台任务适合于snapshot.Iterator会将每个使用的文件引用次数加1 ,因此直到Iterator释放Compaction才可以删除文件.而snapshot不会阻止删除文件,只会保证不会删除掉快照使用的key</p>
-</li>
-<li><p>Memtables:</p>
+<h2 id="释放方法"><a href="#释放方法" class="headerlink" title="释放方法"></a>释放方法</h2><p>在《Go语言内存管理-底层视角》中提到，位于go/src/runtime/mgcscavenge.go中pageAlloc的方法scavengeRangeLocked会使用sysUnused将一段内存从ready状态转为prepared状态，此时内存可以被操作系统回收，详细看下该方法：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">// pageAlloc中根据chunks的索引可以查到一个pallocData,每个pallocData代表一个chunk的bitmap.bitmap中分两部分，一部分是8个uint64，共代表8*64 </span><br><span class="line">// = 512个比特位(一个chunk正好为512个页)，每个比特位表明一个page是否使用，1为使用，0为未使用。第二部分是scavenged,代表一个page是否被回收，1为回</span><br><span class="line">// 收，0为未回收</span><br><span class="line">type pageAlloc struct &#123;</span><br><span class="line">	...</span><br><span class="line">	chunks [13]*[13]pallocData</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br><span class="line">type pallocData struct &#123;</span><br><span class="line">	pallocBits</span><br><span class="line">	scavenged pageBits</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">type pallocBits pageBits</span><br><span class="line">type pageBits [8]uint64</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">func (p *pageAlloc) scavengeRangeLocked(ci chunkIdx, base, npages uint) uintptr &#123;</span><br><span class="line">	assertLockHeld(p.mheapLock)</span><br><span class="line">	// 通过某个chunk的index找到代表该chunk的bitmap(bitmap中每一位代表一个page,1为使用，0为未使用).设置scavenged比特位，最后使用sysUnused释放</span><br><span class="line">	p.chunkOf(ci).scavenged.setRange(base, npages)</span><br><span class="line"></span><br><span class="line">	// 通过chunk索引计算该块空间的地址</span><br><span class="line">	addr := chunkBase(ci) + uintptr(base)*pageSize</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	// 调用sysUnused将该空间内存状态转换为prepared</span><br><span class="line">	sysUnused(unsafe.Pointer(addr), uintptr(npages)*pageSize)</span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	return addr</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>查看调用链，主要如下：</p>
 <ul>
-<li>Pluggable MemTables:LevelDB中的memtable是一个skiplist,适用于写入和范围扫描,但并不是所有场景都同时需要良好的写入和范围扫描,此时用skiplist就有点大材小用了.因此RocksDB的Memtable是一个插件式的,可以是skiplist,可以是vector,可以是prefix-hash memtable.vector是无序的,适用于大量写入,dump为sstable时再排序写入L0,但不适用于范围扫描.prefix-hash memtable适用于get,put和scan-within-a-key-prefix.</li>
-<li>Memtable Pipelining:当Memtable写满之后,会将其赋值给一个immutalbe memtable,然后由后台线程dump到磁盘生成一个sstable.但如果此时有大量的写入,Memtable迅速再次写满,此时就会阻塞写入.因此RocksDB使用一个队列,将immutable memtable放入,依次由后台线程处理,及可以同时存在多个immutable memtable.当使用慢速存储时,能够加大写吞吐量</li>
-<li>Garbage Collection:memtable dump为一个sstable时,会将重复的写入或者已经删除的key之前的写入都清理掉,这样能够减少存储大小和写放大效应</li>
+<li>gcenable-&gt;bgscavenge-&gt;scavenge-&gt;scavengeOne-&gt;scavengeRangeLocked</li>
+<li>mheap.grow-&gt;scavenge-&gt;scavengeOne-&gt;scavengeRangeLocked<br>第一条链路为后台gc进程，第二条链路为通过mheap扩展内存时触发，二者一个是主动一个是被动，首先看mheap扩容时的触发方式</li>
 </ul>
-</li>
-<li><p>Avoiding Stalls:突发大量写入时,如果immutalbe memtable达到了设置的最大值,仍然会阻塞写,因此后台的compaction线程可以保留一小部分专门用来将memtable dump为sstable,防止stalls</p>
-</li>
-<li><p>concurrent compaction:L0到L1不能并行.但多个无重叠的compaction可以并行执行.Memtable的flush和compaction可以使用单独的线程各自独立执行</p>
-</li>
-<li><p>Thread Pool</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">#include &quot;rocksdb/env.h&quot;</span><br><span class="line">#include &quot;rocksdb/db.h&quot;</span><br><span class="line"></span><br><span class="line">auto env = rocksdb::Env::Default();</span><br><span class="line">env-&gt;SetBackgroundThreads(2, rocksdb::Env::LOW); //低优先级队列</span><br><span class="line">env-&gt;SetBackgroundThreads(1, rocksdb::Env::HIGH);//高优先级队列</span><br><span class="line">rocksdb::DB* db;</span><br><span class="line">rocksdb::Options options;</span><br><span class="line">options.env = env;</span><br><span class="line">options.max_background_compactions = 2; //用来 compaction</span><br><span class="line">options.max_background_flushes = 1;  // 用来flush memtable</span><br><span class="line">rocksdb::Status status = rocksdb::DB::Open(options, &quot;/tmp/testdb&quot;, &amp;db);</span><br><span class="line">assert(status.ok());</span><br><span class="line">...</span><br></pre></td></tr></table></figure></li>
-<li><p>compaction:LevelDB L0的文件之间有重叠,每个文件都是有序的;L1及之上的层级不仅单个文件内key有序,并且全局有序,文件之间的key不会重叠.CompactionL1及以上时,基本上是Ln的一个文件和Ln+1的多个文件进行compaction.L0时略有不同,需要将L0中的所有重叠文件选出并且compaction.RocksDB提供了不同的compaction方法,例如将Ln的所有文件和Ln+1的一个文件进行compaction.此种情况下Ln(n&gt;=1)并不是全局有序,不同文件之间的key会重叠.</p>
-</li>
-<li><p>PlainTable Format:RocksDB通过自定义SSTable的格式,使其适用于SSD硬盘.例如PlainTable Format.大体思路为通过记录每行记录的偏移量作为索引,直接通过随机IO读取该行记录.比SSTable简单不少,不需维护LRUCache,Block Cache,避免了大量的内存拷贝</p>
-</li>
-<li><p>Merge Operator:RocksDB支持三种类型的操作,Put,Delete,Merge.当Compaction时如果遇到了merge操作,会回调业务层定义的Merge Operator,Merge能够将一个Put和多个Merge合并为一个操作.有此项功能之后,业务层可以自定义和扩展接口,例如Incr,将一个counter进行加1操作,Append,将一个字符串附加到一个value之后等等</p>
-</li>
+<h2 id="被动触发"><a href="#被动触发" class="headerlink" title="被动触发"></a>被动触发</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">if retained := heapRetained(); retained+uint64(totalGrowth) &gt; h.scavengeGoal &#123;</span><br><span class="line">	todo := totalGrowth</span><br><span class="line">	if overage := uintptr(retained + uint64(totalGrowth) - h.scavengeGoal); todo &gt; overage &#123;</span><br><span class="line">		todo = overage</span><br><span class="line">	&#125;</span><br><span class="line">	h.pages.scavenge(todo, false)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>查看已经申请的内存 + 本次申请的内存是否大于mheap中的scavengeGoal,scavengeGoal会根据GC触发策略动态变化，如果满足条件，则触发一次回收</p>
+<h2 id="主动触发"><a href="#主动触发" class="headerlink" title="主动触发"></a>主动触发</h2><p>Go程序启动时就会执行gcenable函数，该函数启动一个goroutine执行bgscavenge()函数</p>
+<p>bgscavenge()函数会根据权重计算逐步回收pages，但每次只回收一个page。如果没有回收任务可做，则通过调用gopark将自己调度出去。有两种情形可以再将回收goroutine调度执行，如下：</p>
+<ul>
+<li>通过调用readyForScavenger（当执行完毕sweepone后调用)，会将一个标记位置为1，sysmon通过判断该标记位判断是否需要调度回收任务</li>
+<li>当执行完所有spans的清扫后（finishsweep_m）会将回收任务调度执行</li>
 </ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文主要讲了内存回收流程，最后讲到GC部分会主动回收。具体GC的介绍待后续文章讲解。</p>
 
       
     </div>
@@ -371,9 +362,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/leveldb/" rel="tag"># leveldb</a>
-          
-            <a href="/tags/rocksdb/" rel="tag"># rocksdb</a>
+            <a href="/tags/Go/" rel="tag"># Go</a>
           
         </div>
       
@@ -386,8 +375,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/10/19/janus3/" rel="next" title="Janus笔记-3">
-                <i class="fa fa-chevron-left"></i> Janus笔记-3
+              <a href="/2022/03/25/go-memory-2/" rel="next" title="Go语言内存管理-番外篇之算法分析">
+                <i class="fa fa-chevron-left"></i> Go语言内存管理-番外篇之算法分析
               </a>
             
           </div>
@@ -395,10 +384,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2021/01/04/mqtt/" rel="prev" title="MQTT学习笔记">
-                MQTT学习笔记 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -534,7 +519,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%BA%E7%A1%80%E6%A6%82%E5%BF%B5"><span class="nav-number">1.</span> <span class="nav-text">基础概念</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8A%E6%94%BE%E6%96%B9%E6%B3%95"><span class="nav-number">1.</span> <span class="nav-text">释放方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A2%AB%E5%8A%A8%E8%A7%A6%E5%8F%91"><span class="nav-number">2.</span> <span class="nav-text">被动触发</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BB%E5%8A%A8%E8%A7%A6%E5%8F%91"><span class="nav-number">3.</span> <span class="nav-text">主动触发</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
             
 
           </div>
